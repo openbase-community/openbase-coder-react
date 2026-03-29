@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 210 79% 46%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 160 79% 38%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 222 84% 48%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5% 26%;
+    --sidebar-primary: 240 6% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 5% 96%;
+    --sidebar-accent-foreground: 240 6% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217 91% 60%;
+
+    /* Chart semantic tokens */
+    --warning: 28 95% 55%;
+    --warning-foreground: 210 40% 98%;
+
+    /* Deep agents UI tokens */
+    --color-user-message-bg: #e8f4f8;
+    --color-surface: #f9fafb;
+    --color-file-button: #ffffff;
+    --color-file-button-hover: #e5e7eb;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 79% 46%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 160 79% 38%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 222 84% 48%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 240 5% 98%;
+    --sidebar-primary: 240 6% 98%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 240 5% 10%;
+    --sidebar-accent-foreground: 240 6% 98%;
+    --sidebar-border: 220 13% 10%;
+    --sidebar-ring: 217 91% 40%;
+
+    /* Chart semantic tokens */
+    --warning: 28 95% 55%;
+    --warning-foreground: 210 40% 98%;
+
+    /* Deep agents UI tokens (dark) */
+    --color-user-message-bg: #1e3a4a;
+    --color-surface: #1f2937;
+    --color-file-button: #374151;
+    --color-file-button-hover: #4b5563;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* diff2html dark mode overrides */
+  .dark .diff-container .d2h-wrapper {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+  .dark .diff-container .d2h-file-header {
+    background: hsl(var(--muted));
+    border-color: hsl(var(--border));
+  }
+  .dark .diff-container .d2h-file-wrapper {
+    border-color: hsl(var(--border));
+  }
+  .dark .diff-container .d2h-diff-table {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+  .dark .diff-container .d2h-code-line-ctn,
+  .dark .diff-container .d2h-code-line {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+  .dark .diff-container .d2h-code-linenumber {
+    background: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+    border-color: hsl(var(--border));
+  }
+  .dark .diff-container .d2h-ins .d2h-code-line-ctn {
+    background: hsl(160 79% 38% / 0.15);
+  }
+  .dark .diff-container .d2h-del .d2h-code-line-ctn {
+    background: hsl(0 84% 60% / 0.15);
+  }
+  .dark .diff-container .d2h-ins .d2h-code-linenumber {
+    background: hsl(160 79% 38% / 0.25);
+  }
+  .dark .diff-container .d2h-del .d2h-code-linenumber {
+    background: hsl(0 84% 60% / 0.25);
+  }
+  .dark .diff-container .d2h-info {
+    background: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+    border-color: hsl(var(--border));
+  }
+
+  /* diff2html layout tweaks for split-panel view */
+  .diff-container .d2h-wrapper {
+    margin: 0;
+  }
+  .diff-container .d2h-file-wrapper {
+    border: none;
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+  .diff-container .d2h-file-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+}

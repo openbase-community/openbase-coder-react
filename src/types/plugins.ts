@@ -1,0 +1,29 @@
+import type { ComponentType } from "react";
+
+export type PluginComponentProps = {
+  projectPath?: string;
+  stack?: string;
+  pluginId: string;
+};
+
+export type PluginProjectViewProps = {
+  projectPath: string;
+  stack: string;
+  pluginId: string;
+};
+
+export type PluginConsolePage = {
+  pluginId: string;
+  key: string;
+  title: string;
+  route: string;
+  sidebar: boolean;
+  component: ComponentType<PluginComponentProps>;
+};
+
+export type PluginProjectView = {
+  pluginId: string;
+  stack: string;
+  title: string;
+  component: ComponentType<PluginProjectViewProps>;
+};
