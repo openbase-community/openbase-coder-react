@@ -26,6 +26,7 @@ import Crons from "./pages/Crons";
 import Inbox from "./pages/Inbox";
 import Agent from "./pages/Agent";
 import Status from "./pages/Status";
+import Tools from "./pages/Tools";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -166,6 +167,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Agent />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/tools"
+        element={
+          <ProtectedRoute>
+            <Tools />
           </ProtectedRoute>
         }
       />

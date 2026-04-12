@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import UserProfile from "@/components/UserProfile";
 import { usePluginRegistry } from "@/plugin-registry";
-import { Activity, Clock, FileText, FolderOpen, Home, Inbox, MessageSquare, Terminal, Zap } from "lucide-react";
+import { Activity, Clock, FileText, FolderOpen, Home, Inbox, MessageSquare, Terminal, Wrench, Zap } from "lucide-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -75,6 +75,11 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
       path: "/dashboard/status",
       icon: Activity,
       title: "Status",
+    },
+    {
+      path: "/dashboard/tools",
+      icon: Wrench,
+      title: "Tools",
     },
     ...pluginConsolePages
       .filter((page) => page.sidebar)
