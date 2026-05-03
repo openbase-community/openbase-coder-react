@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useQueryState } from "@/deep-agents/hooks/useQueryState";
-import { getConfig, saveConfig, StandaloneConfig } from "@/deep-agents/config";
-import { ConfigDialog } from "@/deep-agents/components/ConfigDialog";
+import { DEFAULT_AGENT_CONFIG, getConfig, StandaloneConfig } from "@/deep-agents/config";
 import { Button } from "@/components/ui/button";
 import { Assistant } from "@langchain/langgraph-sdk";
 import { ClientProvider, useClient } from "@/deep-agents/providers/ClientProvider";
-import { Settings, MessagesSquare, SquarePen } from "lucide-react";
+import { MessagesSquare, SquarePen } from "lucide-react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -18,16 +17,10 @@ import ExampleDashboardLayout from "@/components/layouts/ExampleLayout";
 
 interface AgentPageInnerProps {
   config: StandaloneConfig;
-  configDialogOpen: boolean;
-  setConfigDialogOpen: (open: boolean) => void;
-  handleSaveConfig: (config: StandaloneConfig) => void;
 }
 
 function AgentPageInner({
   config,
-  configDialogOpen,
-  setConfigDialogOpen,
-  handleSaveConfig,
 }: AgentPageInnerProps) {
   const client = useClient();
   const [threadId, setThreadId] = useQueryState("threadId");
@@ -99,168 +92,103 @@ function AgentPageInner({
   }, [fetchAssistant]);
 
   return (
-    <>
-      <ConfigDialog
-        open={configDialogOpen}
-        onOpenChange={setConfigDialogOpen}
-        onSave={handleSaveConfig}
-        initialConfig={config}
-      />
-      <div className="flex h-[calc(100vh-8rem)] flex-col">
-        <div className="flex items-center justify-between border-b border-border px-4 py-2">
-          <div className="flex items-center gap-4">
-            {!sidebar && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebar("1")}
-                className="rounded-md border border-border bg-card p-3 text-foreground hover:bg-accent"
-              >
-                <MessagesSquare className="mr-2 h-4 w-4" />
-                Threads
-                {interruptCount > 0 && (
-                  <span className="ml-2 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">
-                    {interruptCount}
-                  </span>
-                )}
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-sm text-muted-foreground">
-              <span className="font-medium">Assistant:</span>{" "}
-              {config.assistantId}
-            </div>
+    <div className="flex h-[calc(100vh-8rem)] flex-col">
+      <div className="flex items-center justify-between border-b border-border px-4 py-2">
+        <div className="flex items-center gap-4">
+          {!sidebar && (
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              onClick={() => setConfigDialogOpen(true)}
+              onClick={() => setSidebar("1")}
+              className="rounded-md border border-border bg-card p-3 text-foreground hover:bg-accent"
             >
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
+              <MessagesSquare className="mr-2 h-4 w-4" />
+              Threads
+              {interruptCount > 0 && (
+                <span className="ml-2 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">
+                  {interruptCount}
+                </span>
+              )}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setThreadId(null)}
-              disabled={!threadId}
-              className="border-[#2F6868] bg-[#2F6868] text-white hover:bg-[#2F6868]/80"
-            >
-              <SquarePen className="mr-2 h-4 w-4" />
-              New Thread
-            </Button>
-          </div>
+          )}
         </div>
-
-        <div className="flex-1 overflow-hidden">
-          <ResizablePanelGroup
-            direction="horizontal"
-            autoSaveId="agent-chat"
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-muted-foreground">
+            <span className="font-medium">Assistant:</span>{" "}
+            {config.assistantId}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setThreadId(null)}
+            disabled={!threadId}
+            className="border-[#2F6868] bg-[#2F6868] text-white hover:bg-[#2F6868]/80"
           >
-            {sidebar && (
-              <>
-                <ResizablePanel
-                  id="thread-history"
-                  order={1}
-                  defaultSize={25}
-                  minSize={20}
-                  className="relative min-w-[380px]"
-                >
-                  <ThreadList
-                    onThreadSelect={async (id) => {
-                      setThreadId(id);
-                    }}
-                    onMutateReady={(fn) => setMutateThreads(() => fn)}
-                    onClose={() => setSidebar(null)}
-                    onInterruptCountChange={setInterruptCount}
-                  />
-                </ResizablePanel>
-                <ResizableHandle />
-              </>
-            )}
-
-            <ResizablePanel
-              id="chat"
-              className="relative flex flex-col"
-              order={2}
-            >
-              <ChatProvider
-                activeAssistant={assistant}
-                onHistoryRevalidate={() => mutateThreads?.()}
-              >
-                <ChatInterface assistant={assistant} />
-              </ChatProvider>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+            <SquarePen className="mr-2 h-4 w-4" />
+            New Thread
+          </Button>
         </div>
       </div>
-    </>
+
+      <div className="flex-1 overflow-hidden">
+        <ResizablePanelGroup
+          direction="horizontal"
+          autoSaveId="agent-chat"
+        >
+          {sidebar && (
+            <>
+              <ResizablePanel
+                id="thread-history"
+                order={1}
+                defaultSize={25}
+                minSize={20}
+                className="relative min-w-[380px]"
+              >
+                <ThreadList
+                  onThreadSelect={async (id) => {
+                    setThreadId(id);
+                  }}
+                  onMutateReady={(fn) => setMutateThreads(() => fn)}
+                  onClose={() => setSidebar(null)}
+                  onInterruptCountChange={setInterruptCount}
+                />
+              </ResizablePanel>
+              <ResizableHandle />
+            </>
+          )}
+
+          <ResizablePanel
+            id="chat"
+            className="relative flex flex-col"
+            order={2}
+          >
+            <ChatProvider
+              activeAssistant={assistant}
+              onHistoryRevalidate={() => mutateThreads?.()}
+            >
+              <ChatInterface assistant={assistant} />
+            </ChatProvider>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+    </div>
   );
 }
 
 function AgentPageContent() {
-  const [config, setConfig] = useState<StandaloneConfig | null>(null);
-  const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [config] = useState<StandaloneConfig>(getConfig);
   const [assistantId, setAssistantId] = useQueryState("assistantId");
 
   useEffect(() => {
-    const savedConfig = getConfig();
-    if (savedConfig) {
-      setConfig(savedConfig);
-      if (!assistantId) {
-        setAssistantId(savedConfig.assistantId);
-      }
-    } else {
-      setConfigDialogOpen(true);
+    if (assistantId !== DEFAULT_AGENT_CONFIG.assistantId) {
+      setAssistantId(DEFAULT_AGENT_CONFIG.assistantId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (config && !assistantId) {
-      setAssistantId(config.assistantId);
-    }
-  }, [config, assistantId, setAssistantId]);
-
-  const handleSaveConfig = useCallback((newConfig: StandaloneConfig) => {
-    saveConfig(newConfig);
-    setConfig(newConfig);
-  }, []);
-
-  if (!config) {
-    return (
-      <>
-        <ConfigDialog
-          open={configDialogOpen}
-          onOpenChange={setConfigDialogOpen}
-          onSave={handleSaveConfig}
-        />
-        <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Welcome to Agent Chat</h1>
-            <p className="mt-2 text-muted-foreground">
-              Configure your deployment to get started
-            </p>
-            <Button
-              onClick={() => setConfigDialogOpen(true)}
-              className="mt-4"
-            >
-              Open Configuration
-            </Button>
-          </div>
-        </div>
-      </>
-    );
-  }
-
   return (
     <ClientProvider deploymentUrl={config.deploymentUrl}>
-      <AgentPageInner
-        config={config}
-        configDialogOpen={configDialogOpen}
-        setConfigDialogOpen={setConfigDialogOpen}
-        handleSaveConfig={handleSaveConfig}
-      />
+      <AgentPageInner config={config} />
     </ClientProvider>
   );
 }

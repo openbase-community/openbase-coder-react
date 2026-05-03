@@ -3,22 +3,15 @@ export interface StandaloneConfig {
   assistantId: string;
 }
 
-const CONFIG_KEY = "deep-agent-config";
+export const DEFAULT_AGENT_CONFIG: StandaloneConfig = {
+  deploymentUrl: "http://localhost:2024",
+  assistantId: "coder",
+};
 
-export function getConfig(): StandaloneConfig | null {
-  if (typeof window === "undefined") return null;
-
-  const stored = localStorage.getItem(CONFIG_KEY);
-  if (!stored) return null;
-
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return null;
-  }
+export function getConfig(): StandaloneConfig {
+  return DEFAULT_AGENT_CONFIG;
 }
 
 export function saveConfig(config: StandaloneConfig): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  void config;
 }

@@ -22,9 +22,9 @@ import SessionDetail from "./pages/SessionDetail";
 import Sessions from "./pages/Sessions";
 import Settings from "./pages/Settings";
 import Skills from "./pages/Skills";
-import Crons from "./pages/Crons";
 import Inbox from "./pages/Inbox";
 import Agent from "./pages/Agent";
+import Launchctl from "./pages/Launchctl";
 import Status from "./pages/Status";
 import Tools from "./pages/Tools";
 
@@ -139,14 +139,6 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/dashboard/crons"
-        element={
-          <ProtectedRoute>
-            <Crons />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/dashboard/inbox"
         element={
           <ProtectedRoute>
@@ -175,6 +167,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Tools />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/launchctl"
+        element={
+          <ProtectedRoute>
+            <Launchctl />
           </ProtectedRoute>
         }
       />

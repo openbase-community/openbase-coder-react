@@ -36,6 +36,18 @@ type UvToolsResponse = {
   error: string | null;
 };
 
+const extractErrorMessage = async (
+  res: Response,
+  fallback: string
+): Promise<string> => {
+  try {
+    const data = (await res.json()) as { error?: string; detail?: string };
+    return data.error ?? data.detail ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 const Tools = () => {
   const [tools, setTools] = useState<UvTool[]>([]);
   const [uvPath, setUvPath] = useState<string | null>(null);
@@ -44,17 +56,20 @@ const Tools = () => {
 
   const fetchTools = useCallback(async () => {
     setLoading(true);
-    setError(null);
-    const res = await apiFetch("/api/tools/uv/");
-    if (!res.ok) {
-      setError(`Unable to load uv tools: ${res.status}`);
-      setLoading(false);
-      return;
+    try {
+      const res = await apiFetch("/api/tools/uv/");
+      if (!res.ok) {
+        setError(await extractErrorMessage(res, `Unable to load uv tools: ${res.status}`));
+        setLoading(false);
+        return;
+      }
+      const data = (await res.json()) as UvToolsResponse;
+      setTools(data.tools);
+      setUvPath(data.uv_path);
+      setError(data.error);
+    } catch {
+      setError("Unable to reach the local API.");
     }
-    const data = (await res.json()) as UvToolsResponse;
-    setTools(data.tools);
-    setUvPath(data.uv_path);
-    setError(data.error);
     setLoading(false);
   }, []);
 
@@ -122,9 +137,7 @@ const Tools = () => {
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium text-gray-900">{tool.name}</p>
-                    {tool.is_editable ? (
-                      <Badge variant="secondary">Editable</Badge>
-                    ) : null}
+                    {tool.is_editable ? <Badge variant="secondary">Editable</Badge> : null}
                   </div>
                   <p className="mt-1 text-sm text-gray-500">v{tool.version}</p>
                   {tool.python_version ? (

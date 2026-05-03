@@ -84,6 +84,8 @@ export const ChatMessage = React.memo<ChatMessageProps>(
 
     return (
       <div
+        data-testid={isUser ? "chat-message-human" : "chat-message-ai"}
+        data-message-type={message.type}
         className={cn(
           "flex w-full max-w-full overflow-x-hidden",
           isUser && "flex-row-reverse"

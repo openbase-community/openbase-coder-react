@@ -496,6 +496,7 @@ export const ChatInterface = React.memo<ChatInterfaceProps>(({ assistant }) => {
             className="flex flex-col"
           >
             <textarea
+              data-testid="agent-chat-input"
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -507,6 +508,7 @@ export const ChatInterface = React.memo<ChatInterfaceProps>(({ assistant }) => {
             <div className="flex justify-between gap-2 p-3">
               <div className="flex justify-end gap-2">
                 <Button
+                  data-testid="agent-chat-send"
                   type={isLoading ? "button" : "submit"}
                   variant={isLoading ? "destructive" : "default"}
                   onClick={isLoading ? stopStream : handleSubmit}
