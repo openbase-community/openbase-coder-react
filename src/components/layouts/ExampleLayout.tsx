@@ -12,7 +12,16 @@ import {
 } from "@/components/ui/sidebar";
 import UserProfile from "@/components/UserProfile";
 import { usePluginRegistry } from "@/plugin-registry";
-import { Activity, FileText, FolderOpen, Home, Inbox, MessageSquare, Server, Terminal, Wrench, Zap } from "lucide-react";
+import {
+  Activity,
+  FolderOpen,
+  Home,
+  Server,
+  Settings as SettingsIcon,
+  Terminal,
+  Wrench,
+  Zap,
+} from "lucide-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -29,132 +38,108 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const navItems = [
-    {
-      path: "/dashboard",
-      icon: Home,
-      title: "Dashboard",
-      exact: true,
-    },
-    {
-      path: "/dashboard/projects",
-      icon: FolderOpen,
-      title: "Projects",
-    },
-    {
-      path: "/dashboard/sessions",
-      icon: Terminal,
-      title: "Sessions",
-    },
-    {
-      path: "/dashboard/claude-md",
-      icon: FileText,
-      title: "CLAUDE.md",
-    },
-    {
-      path: "/dashboard/skills",
-      icon: Zap,
-      title: "Skills",
-    },
-    {
-      path: "/dashboard/inbox",
-      icon: Inbox,
-      title: "Inbox",
-    },
-    {
-      path: "/dashboard/agent",
-      icon: MessageSquare,
-      title: "Agent",
-    },
-    {
-      path: "/dashboard/status",
-      icon: Activity,
-      title: "Status",
-    },
-    {
-      path: "/dashboard/tools",
-      icon: Wrench,
-      title: "Tools",
-    },
-    {
-      path: "/dashboard/launchctl",
-      icon: Server,
-      title: "Launchctl",
-    },
-    ...pluginConsolePages
-      .filter((page) => page.sidebar)
-      .map((page) => ({
-        path: page.route,
-        icon: Zap,
-        title: page.title,
-      })),
+  const primaryNav = [
+    { path: "/dashboard", icon: Home, title: "Overview", exact: true },
+    { path: "/dashboard/projects", icon: FolderOpen, title: "Projects" },
+    { path: "/dashboard/threads", icon: Terminal, title: "Threads" },
+    { path: "/dashboard/skills", icon: Zap, title: "Skills" },
   ];
+
+  const systemNav = [
+    { path: "/dashboard/status", icon: Activity, title: "Status" },
+    { path: "/dashboard/tools", icon: Wrench, title: "Tools" },
+    { path: "/dashboard/launchctl", icon: Server, title: "Launchctl" },
+    { path: "/dashboard/settings", icon: SettingsIcon, title: "Settings" },
+  ];
+
+  const pluginNav = pluginConsolePages
+    .filter((page) => page.sidebar)
+    .map((page) => ({ path: page.route, icon: Zap, title: page.title }));
+
+  const isActive = (path: string, exact?: boolean) =>
+    exact ? location.pathname === path : location.pathname.startsWith(path);
+
+  const renderNavItems = (items: typeof primaryNav) =>
+    items.map((item) => (
+      <SidebarMenuItem key={item.path}>
+        <SidebarMenuButton
+          isActive={isActive(item.path, "exact" in item ? item.exact : false)}
+          onClick={() => navigate(item.path)}
+          tooltip={item.title}
+          className="h-7 gap-2 rounded px-2 text-[12.5px] font-normal text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
+        >
+          <item.icon className="h-3.5 w-3.5" />
+          <span>{item.title}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    ));
 
   return (
     <SidebarProvider>
-      <div className={`flex w-full bg-slate-100 ${noPadding ? "h-screen" : "min-h-screen"}`}>
-        <Sidebar className="border-r border-slate-200/80 bg-white/90 backdrop-blur">
-          <SidebarHeader className="border-b border-slate-200/80 px-5 py-5">
-            <div className="flex items-center justify-start">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Local Workspace
-                </p>
-                <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
-                  Openbase Coder
-                </h1>
+      <div className={`flex w-full bg-background ${noPadding ? "h-screen" : "min-h-screen"}`}>
+        <Sidebar className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground" style={{ "--sidebar-width": "13rem" } as React.CSSProperties}>
+          <SidebarHeader className="border-b border-sidebar-border px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <div className="flex h-5 w-5 items-center justify-center rounded bg-sidebar-accent text-sidebar-primary">
+                <Terminal className="h-3 w-3" strokeWidth={2.25} />
               </div>
+              <span className="font-mono text-[12px] font-medium tracking-tight text-sidebar-primary">
+                openbase-coder
+              </span>
             </div>
           </SidebarHeader>
 
-          <SidebarContent>
-            <SidebarGroup className="px-3 py-4">
-              <SidebarGroupLabel className="px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                Navigation
+          <SidebarContent className="px-2 py-2">
+            <SidebarGroup>
+              <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
+                Workspace
               </SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu>
-                  {navItems.map((item) => {
-                    const isActive = item.exact
-                      ? location.pathname === item.path
-                      : location.pathname.startsWith(item.path);
-                    return (
-                      <SidebarMenuItem key={item.path}>
-                        <SidebarMenuButton
-                          isActive={isActive}
-                          onClick={() => navigate(item.path)}
-                          tooltip={item.title}
-                          className="h-11 rounded-xl px-3 text-[15px] font-medium text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900 data-[active=true]:bg-slate-900 data-[active=true]:text-white data-[active=true]:shadow-sm"
-                        >
-                          <item.icon />
-                          <span>{item.title}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
+                <SidebarMenu className="gap-px">{renderNavItems(primaryNav)}</SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
+
+            <SidebarGroup className="mt-2">
+              <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
+                System
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-px">{renderNavItems(systemNav)}</SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            {pluginNav.length > 0 ? (
+              <SidebarGroup className="mt-2">
+                <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
+                  Plugins
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu className="gap-px">{renderNavItems(pluginNav)}</SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ) : null}
           </SidebarContent>
         </Sidebar>
 
-        <div className={`flex-1 flex flex-col ${noPadding ? "overflow-hidden" : "overflow-auto"}`}>
-          <header className="sticky top-0 z-10 flex h-20 shrink-0 items-center border-b border-slate-200/80 bg-white/88 px-8 shadow-sm backdrop-blur">
-            <div className="flex flex-1 items-center justify-between">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Console
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-                Openbase Coder Console
-                </h2>
-              </div>
-              <div className="flex items-center space-x-1">
-                <UserProfile />
-              </div>
+        <div
+          className={`flex flex-1 flex-col ${noPadding ? "overflow-hidden" : "overflow-auto"}`}
+        >
+          <header className="sticky top-0 z-10 flex h-9 shrink-0 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" />
+              <span className="font-mono">localhost:7999</span>
             </div>
+            <UserProfile />
           </header>
-          <main className={`w-full ${noPadding ? "flex-1 min-h-0" : "p-8"}`}>{children}</main>
+          <main
+            className={
+              noPadding
+                ? "flex-1 min-h-0 w-full"
+                : "w-full px-5 py-5 max-w-[1100px]"
+            }
+          >
+            {children}
+          </main>
         </div>
       </div>
     </SidebarProvider>

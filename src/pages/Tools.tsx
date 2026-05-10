@@ -1,21 +1,15 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Wrench } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-type UvToolExecutable = {
-  name: string;
-  path: string;
-};
-
+type UvToolExecutable = { name: string; path: string };
 type EditablePackage = {
   name: string;
   version: string;
   editable_project_location: string;
 };
-
 type UvTool = {
   name: string;
   version: string;
@@ -28,7 +22,6 @@ type UvTool = {
   editable_packages: EditablePackage[];
   inspection_error: string | null;
 };
-
 type UvToolsResponse = {
   uv_available: boolean;
   uv_path: string | null;
@@ -38,7 +31,7 @@ type UvToolsResponse = {
 
 const extractErrorMessage = async (
   res: Response,
-  fallback: string
+  fallback: string,
 ): Promise<string> => {
   try {
     const data = (await res.json()) as { error?: string; detail?: string };
@@ -59,7 +52,12 @@ const Tools = () => {
     try {
       const res = await apiFetch("/api/tools/uv/");
       if (!res.ok) {
-        setError(await extractErrorMessage(res, `Unable to load uv tools: ${res.status}`));
+        setError(
+          await extractErrorMessage(
+            res,
+            `Unable to load uv tools: ${res.status}`,
+          ),
+        );
         setLoading(false);
         return;
       }
@@ -77,137 +75,139 @@ const Tools = () => {
     void fetchTools();
   }, [fetchTools]);
 
-  const editableCount = tools.filter((tool) => tool.is_editable).length;
+  const editableCount = tools.filter((t) => t.is_editable).length;
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="mb-2 text-3xl font-light">Global Tools</h1>
-            <p className="text-gray-600">uv tool install inventory</p>
-            {uvPath ? <p className="mt-1 text-xs text-gray-400">{uvPath}</p> : null}
+            <h1 className="text-base font-semibold tracking-tight text-foreground">
+              uv tools
+            </h1>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              {tools.length} installed · {editableCount} editable
+              {uvPath ? (
+                <span className="ml-2 font-mono text-[11px]">{uvPath}</span>
+              ) : null}
+            </p>
           </div>
-          <Button variant="outline" onClick={fetchTools} disabled={loading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2.5 text-[12px]"
+            onClick={fetchTools}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border bg-white p-4">
-            <p className="text-sm text-gray-500">Installed tools</p>
-            <p className="mt-2 text-2xl font-semibold">{tools.length}</p>
-          </div>
-          <div className="rounded-lg border bg-white p-4">
-            <p className="text-sm text-gray-500">Editable tools</p>
-            <p className="mt-2 text-2xl font-semibold">{editableCount}</p>
-          </div>
-          <div className="rounded-lg border bg-white p-4">
-            <p className="text-sm text-gray-500">uv status</p>
-            <p className="mt-2 text-2xl font-semibold">{error ? "Check" : "Ready"}</p>
-          </div>
-        </div>
-
         {error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
             {error}
           </div>
         ) : null}
 
-        <div className="overflow-hidden rounded-lg border bg-white">
-          <div className="hidden grid-cols-[minmax(180px,1fr)_minmax(220px,1.4fr)_minmax(240px,1.6fr)] gap-4 border-b bg-gray-50 px-4 py-3 text-xs font-semibold uppercase text-gray-500 lg:grid">
-            <div>Tool</div>
-            <div>Executables</div>
-            <div>Editable source</div>
+        {loading && tools.length === 0 ? (
+          <div className="text-[12px] text-muted-foreground">Loading…</div>
+        ) : tools.length === 0 ? (
+          <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
+            <Wrench className="mx-auto h-4 w-4 text-muted-foreground/40" />
+            <p className="mt-2 text-[12px] text-muted-foreground">
+              No uv tools.
+            </p>
           </div>
-          {loading && tools.length === 0 ? (
-            <div className="px-4 py-8 text-sm text-gray-500">Loading uv tools...</div>
-          ) : tools.length === 0 ? (
-            <div className="px-4 py-8 text-sm text-gray-500">No uv tools found.</div>
-          ) : (
-            tools.map((tool) => (
+        ) : (
+          <div className="overflow-hidden rounded border border-border bg-surface">
+            {tools.map((tool, idx) => (
               <div
                 key={tool.name}
-                className="grid grid-cols-1 gap-4 border-b px-4 py-4 last:border-b-0 lg:grid-cols-[minmax(180px,1fr)_minmax(220px,1.4fr)_minmax(240px,1.6fr)]"
+                className={`grid grid-cols-1 gap-3 px-3 py-2 lg:grid-cols-[minmax(160px,1fr)_minmax(200px,1.4fr)_minmax(200px,1.6fr)] ${
+                  idx > 0 ? "border-t border-border" : ""
+                }`}
               >
                 <div className="min-w-0">
-                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500 lg:hidden">
-                    Tool
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-gray-900">{tool.name}</p>
-                    {tool.is_editable ? <Badge variant="secondary">Editable</Badge> : null}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[12.5px] font-medium text-foreground">
+                      {tool.name}
+                    </span>
+                    {tool.is_editable ? (
+                      <span className="font-mono text-[10px] text-info">
+                        editable
+                      </span>
+                    ) : null}
+                    <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                      v{tool.version}
+                    </span>
                   </div>
-                  <p className="mt-1 text-sm text-gray-500">v{tool.version}</p>
                   {tool.python_version ? (
-                    <p className="mt-1 text-xs text-gray-400">{tool.python_version}</p>
+                    <p className="mt-0.5 font-mono text-[10.5px] text-muted-foreground/70">
+                      {tool.python_version}
+                    </p>
                   ) : null}
                   {tool.required_specifier ? (
-                    <p className="mt-2 break-all text-xs text-gray-400">
+                    <p className="mt-0.5 break-all font-mono text-[10.5px] text-muted-foreground/70">
                       {tool.required_specifier}
                     </p>
                   ) : null}
-                  <p className="mt-2 break-all text-xs text-gray-400">
+                  <p className="mt-0.5 break-all font-mono text-[10.5px] text-muted-foreground/60">
                     {tool.environment_path}
                   </p>
                 </div>
-                <div className="min-w-0 space-y-2">
-                  <p className="text-xs font-semibold uppercase text-gray-500 lg:hidden">
-                    Executables
-                  </p>
+
+                <div className="min-w-0 space-y-0.5">
                   {tool.executables.length === 0 ? (
-                    <p className="text-sm text-gray-500">No executables reported.</p>
+                    <p className="text-[12px] text-muted-foreground">—</p>
                   ) : (
                     tool.executables.map((executable) => (
                       <div key={`${tool.name}:${executable.path}`}>
-                        <p className="text-sm font-medium text-gray-800">
+                        <span className="font-mono text-[12px] font-medium text-foreground">
                           {executable.name}
-                        </p>
-                        <p className="break-all text-xs text-gray-400">
+                        </span>
+                        <p className="break-all font-mono text-[10.5px] text-muted-foreground/60">
                           {executable.path}
                         </p>
                       </div>
                     ))
                   )}
                 </div>
+
                 <div className="min-w-0">
-                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500 lg:hidden">
-                    Editable source
-                  </p>
                   {tool.editable_project_location ? (
-                    <p className="break-all text-sm text-gray-800">
+                    <p className="break-all font-mono text-[12px] text-foreground/80">
                       {tool.editable_project_location}
                     </p>
                   ) : (
-                    <p className="text-sm text-gray-500">Not editable</p>
+                    <p className="text-[12px] text-muted-foreground">—</p>
                   )}
                   {tool.editable_packages.length > 1 ? (
-                    <div className="mt-3 space-y-2">
-                      {tool.editable_packages.map((packageInfo) => (
+                    <div className="mt-1 space-y-1">
+                      {tool.editable_packages.map((pkg) => (
                         <div
-                          key={`${tool.name}:${packageInfo.name}:${packageInfo.editable_project_location}`}
+                          key={`${tool.name}:${pkg.name}:${pkg.editable_project_location}`}
                         >
-                          <p className="text-xs font-medium text-gray-500">
-                            {packageInfo.name} v{packageInfo.version}
-                          </p>
-                          <p className="break-all text-xs text-gray-400">
-                            {packageInfo.editable_project_location}
+                          <span className="font-mono text-[10.5px] text-muted-foreground">
+                            {pkg.name} v{pkg.version}
+                          </span>
+                          <p className="break-all font-mono text-[10.5px] text-muted-foreground/60">
+                            {pkg.editable_project_location}
                           </p>
                         </div>
                       ))}
                     </div>
                   ) : null}
                   {tool.inspection_error ? (
-                    <p className="mt-3 break-all text-xs text-red-600">
+                    <p className="mt-1 break-all text-[10.5px] text-destructive">
                       {tool.inspection_error}
                     </p>
                   ) : null}
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

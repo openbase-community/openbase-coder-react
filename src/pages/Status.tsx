@@ -1,5 +1,5 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import type { ServiceStatus } from "@/types/session";
 import { RefreshCw } from "lucide-react";
@@ -11,10 +11,7 @@ const Status = () => {
 
   const fetchStatus = useCallback(async () => {
     const res = await apiFetch("/api/status/");
-    if (res.ok) {
-      const data = await res.json();
-      setServices(data.services);
-    }
+    if (res.ok) setServices((await res.json()).services);
     setLoading(false);
   }, []);
 
@@ -25,55 +22,73 @@ const Status = () => {
   }, [fetchStatus]);
 
   const locationLabel = (svc: ServiceStatus) => {
-    if (svc.port != null) return `Port ${svc.port}`;
-    if (svc.url) return "Remote endpoint";
-    return "Endpoint";
+    if (svc.port != null) return `:${svc.port}`;
+    if (svc.url) return "remote";
+    return "—";
   };
+
+  const entries = Object.entries(services);
+  const runningCount = entries.filter(([, s]) => s.running).length;
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-light mb-2">Service Status</h1>
-            <p className="text-gray-600">Monitor related services</p>
+            <h1 className="text-base font-semibold tracking-tight text-foreground">
+              Service status
+            </h1>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              {runningCount}/{entries.length} running · auto-refresh 30s
+            </p>
           </div>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2.5 text-[12px]"
             onClick={fetchStatus}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            disabled={loading}
           >
-            <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
-          </button>
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {Object.entries(services).map(([key, svc]) => (
-            <Card key={key}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-3 text-base">
-                  <span
-                    className={`h-3 w-3 rounded-full ${
-                      svc.running ? "bg-green-500" : "bg-red-500"
-                    }`}
-                  />
+        {entries.length === 0 ? (
+          <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center text-[12px] text-muted-foreground">
+            No services configured.
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded border border-border bg-surface">
+            {entries.map(([key, svc], idx) => (
+              <div
+                key={key}
+                className={`flex items-center gap-2.5 px-3 py-1.5 ${
+                  idx > 0 ? "border-t border-border" : ""
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${
+                    svc.running ? "bg-success" : "bg-destructive"
+                  }`}
+                />
+                <span className="text-[12.5px] font-medium text-foreground">
                   {svc.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-gray-500">
-                  {locationLabel(svc)} &mdash;{" "}
-                  <span
-                    className={
-                      svc.running ? "text-green-600" : "text-red-600"
-                    }
-                  >
-                    {svc.running ? "Running" : "Stopped"}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </span>
+                <span className="font-mono text-[11px] text-muted-foreground/70">
+                  {locationLabel(svc)}
+                </span>
+                <span
+                  className={`ml-auto font-mono text-[10.5px] ${
+                    svc.running ? "text-success" : "text-destructive"
+                  }`}
+                >
+                  {svc.running ? "running" : "stopped"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

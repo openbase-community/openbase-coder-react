@@ -1,14 +1,7 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
-import { User } from "lucide-react";
+import { LogOut } from "lucide-react";
 import React from "react";
 
 const Settings: React.FC = () => {
@@ -16,28 +9,37 @@ const Settings: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div className="space-y-4">
         <div>
-          <h1 className="text-3xl font-light mb-2">Settings</h1>
-          <p className="text-gray-600">
-            Manage your connection settings
+          <h1 className="text-base font-semibold tracking-tight text-foreground">
+            Settings
+          </h1>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            Connection and authentication preferences.
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Authentication
-            </CardTitle>
-            <CardDescription>Openbase bearer JWT connection</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="destructive" onClick={logout}>
+        <div className="overflow-hidden rounded border border-border bg-surface">
+          <div className="flex items-center gap-3 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[12.5px] font-medium text-foreground">
+                Authentication
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Openbase bearer JWT, managed by the local CLI.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2.5 text-[12px]"
+              onClick={logout}
+            >
+              <LogOut className="h-3 w-3" />
               Log out
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

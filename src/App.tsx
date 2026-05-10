@@ -11,7 +11,6 @@ import {
   Routes,
   useSearchParams,
 } from "react-router-dom";
-import ClaudeMd from "./pages/ClaudeMd";
 import Dashboard from "./pages/Dashboard";
 import Diff from "./pages/Diff";
 import Login from "./pages/Login";
@@ -22,8 +21,6 @@ import SessionDetail from "./pages/SessionDetail";
 import Sessions from "./pages/Sessions";
 import Settings from "./pages/Settings";
 import Skills from "./pages/Skills";
-import Inbox from "./pages/Inbox";
-import Agent from "./pages/Agent";
 import Launchctl from "./pages/Launchctl";
 import Status from "./pages/Status";
 import Tools from "./pages/Tools";
@@ -99,7 +96,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/dashboard/sessions"
+        path="/dashboard/threads"
         element={
           <ProtectedRoute>
             <Sessions />
@@ -107,7 +104,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/dashboard/sessions/:sessionId"
+        path="/dashboard/threads/:threadId"
         element={
           <ProtectedRoute>
             <SessionDetail />
@@ -123,14 +120,6 @@ function AppRoutes() {
         element={<Navigate to="/dashboard/diff?mobile=true" replace />}
       />
       <Route
-        path="/dashboard/claude-md"
-        element={
-          <ProtectedRoute>
-            <ClaudeMd />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/dashboard/skills"
         element={
           <ProtectedRoute>
@@ -139,26 +128,10 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/dashboard/inbox"
-        element={
-          <ProtectedRoute>
-            <Inbox />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/dashboard/status"
         element={
           <ProtectedRoute>
             <Status />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard/agent"
-        element={
-          <ProtectedRoute>
-            <Agent />
           </ProtectedRoute>
         }
       />

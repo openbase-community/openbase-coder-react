@@ -4,7 +4,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import type { RunInfo } from "@/types/session";
+import type { TurnInfo } from "@/types/session";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 
@@ -12,7 +12,7 @@ export function RunDetail({
   run,
   defaultOpen = false,
 }: {
-  run: RunInfo;
+  run: TurnInfo;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -24,7 +24,7 @@ export function RunDetail({
           className={`h-4 w-4 transition-transform ${open ? "rotate-90" : ""}`}
         />
         <span className="flex-1 text-sm font-medium truncate">
-          {run.message}
+          {run.prompt}
         </span>
         <StatusBadge status={run.status} />
         {run.return_code !== null && (

@@ -1,8 +1,7 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Server } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 type LaunchctlService = {
@@ -28,29 +27,24 @@ type LaunchctlServicesResponse = {
   error: string | null;
 };
 
-const runtimeTone = (service: LaunchctlService) => {
-  if (service.running) {
-    return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
-  }
-  if (service.loaded) {
-    return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
-  }
-  return "bg-slate-100 text-slate-600 ring-1 ring-slate-200";
+const runtimeText = (svc: LaunchctlService) => {
+  if (svc.running) return "text-success";
+  if (svc.loaded) return "text-warning";
+  return "text-muted-foreground";
 };
 
-const runtimeLabel = (service: LaunchctlService) => {
-  if (service.running) {
-    return "Running";
-  }
-  if (service.loaded) {
-    return "Loaded";
-  }
-  return "Stopped";
+const runtimeDot = (svc: LaunchctlService) => {
+  if (svc.running) return "bg-success";
+  if (svc.loaded) return "bg-warning";
+  return "bg-muted-foreground/40";
 };
+
+const runtimeLabel = (svc: LaunchctlService) =>
+  svc.running ? "running" : svc.loaded ? "loaded" : "stopped";
 
 const extractErrorMessage = async (
   res: Response,
-  fallback: string
+  fallback: string,
 ): Promise<string> => {
   try {
     const data = (await res.json()) as { error?: string; detail?: string };
@@ -79,8 +73,8 @@ const Launchctl = () => {
         setError(
           await extractErrorMessage(
             res,
-            `Unable to load launchctl services: ${res.status}`
-          )
+            `Unable to load launchctl services: ${res.status}`,
+          ),
         );
         setLoading(false);
         return;
@@ -101,22 +95,23 @@ const Launchctl = () => {
       const nextActionKey = `${label}:${action}`;
       setActionKey(nextActionKey);
       try {
-        const res = await apiFetch(`/api/tools/launchctl/${encodeURIComponent(label)}/`, {
-          method: "POST",
-          body: JSON.stringify({ action }),
-        });
-
+        const res = await apiFetch(
+          `/api/tools/launchctl/${encodeURIComponent(label)}/`,
+          {
+            method: "POST",
+            body: JSON.stringify({ action }),
+          },
+        );
         if (!res.ok) {
           setError(
             await extractErrorMessage(
               res,
-              `Unable to ${action} launchctl service: ${res.status}`
-            )
+              `Unable to ${action} launchctl service: ${res.status}`,
+            ),
           );
           setActionKey(null);
           return;
         }
-
         applyPayload((await res.json()) as LaunchctlServicesResponse);
       } catch {
         setError("Unable to reach the local API.");
@@ -125,169 +120,155 @@ const Launchctl = () => {
       }
       setActionKey(null);
     },
-    [applyPayload]
+    [applyPayload],
   );
 
-  const runningCount = services.filter((service) => service.running).length;
-  const loadedCount = services.filter((service) => service.loaded).length;
-  const openbaseCount = services.filter((service) => service.is_openbase_managed).length;
+  const runningCount = services.filter((s) => s.running).length;
+  const openbaseCount = services.filter((s) => s.is_openbase_managed).length;
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="mb-2 text-3xl font-light">Launchctl</h1>
-            <p className="text-gray-600">
-              User LaunchAgents from `~/Library/LaunchAgents` with live launchctl state
+            <h1 className="text-base font-semibold tracking-tight text-foreground">
+              launchctl
+            </h1>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              {runningCount}/{services.length} running · {openbaseCount} openbase
+              · <span className="font-mono">~/Library/LaunchAgents</span>
             </p>
           </div>
           <Button
             variant="outline"
+            size="sm"
+            className="h-7 px-2.5 text-[12px]"
             onClick={fetchServices}
             disabled={loading || actionKey !== null}
           >
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-lg border bg-white p-4">
-            <p className="text-sm text-gray-500">Launch agents</p>
-            <p className="mt-2 text-2xl font-semibold">{services.length}</p>
-          </div>
-          <div className="rounded-lg border bg-white p-4">
-            <p className="text-sm text-gray-500">Loaded agents</p>
-            <p className="mt-2 text-2xl font-semibold">{loadedCount}</p>
-          </div>
-          <div className="rounded-lg border bg-white p-4">
-            <p className="text-sm text-gray-500">Running agents</p>
-            <p className="mt-2 text-2xl font-semibold">{runningCount}</p>
-          </div>
-          <div className="rounded-lg border bg-white p-4">
-            <p className="text-sm text-gray-500">Openbase managed</p>
-            <p className="mt-2 text-2xl font-semibold">{openbaseCount}</p>
-          </div>
-        </div>
-
         {error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
             {error}
           </div>
         ) : null}
 
-        <div className="overflow-hidden rounded-lg border bg-white">
-          <div className="hidden grid-cols-[minmax(220px,1.2fr)_minmax(220px,1.2fr)_minmax(160px,0.9fr)_minmax(220px,1fr)] gap-4 border-b bg-gray-50 px-4 py-3 text-xs font-semibold uppercase text-gray-500 lg:grid">
-            <div>Service</div>
-            <div>Command</div>
-            <div>Runtime</div>
-            <div>Actions</div>
+        {loading && services.length === 0 ? (
+          <div className="text-[12px] text-muted-foreground">Loading…</div>
+        ) : services.length === 0 ? (
+          <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
+            <Server className="mx-auto h-4 w-4 text-muted-foreground/40" />
+            <p className="mt-2 text-[12px] text-muted-foreground">
+              No LaunchAgents.
+            </p>
           </div>
-          {loading && services.length === 0 ? (
-            <div className="px-4 py-8 text-sm text-gray-500">Loading launchctl services...</div>
-          ) : services.length === 0 ? (
-            <div className="px-4 py-8 text-sm text-gray-500">
-              No user LaunchAgents found in `~/Library/LaunchAgents`.
-            </div>
-          ) : (
-            services.map((service) => (
+        ) : (
+          <div className="overflow-hidden rounded border border-border bg-surface">
+            {services.map((svc, idx) => (
               <div
-                key={service.label}
-                className="grid grid-cols-1 gap-4 border-b px-4 py-4 last:border-b-0 lg:grid-cols-[minmax(220px,1.2fr)_minmax(220px,1.2fr)_minmax(160px,0.9fr)_minmax(220px,1fr)]"
+                key={svc.label}
+                className={`grid grid-cols-1 gap-3 px-3 py-2 lg:grid-cols-[minmax(220px,1.2fr)_minmax(200px,1.2fr)_minmax(120px,0.7fr)_auto] ${
+                  idx > 0 ? "border-t border-border" : ""
+                }`}
               >
                 <div className="min-w-0">
-                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500 lg:hidden">
-                    Service
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-gray-900">{service.label}</p>
-                    {service.is_openbase_managed ? (
-                      <Badge variant="secondary">Openbase</Badge>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${runtimeDot(svc)}`}
+                    />
+                    <span className="font-mono text-[12.5px] font-medium text-foreground">
+                      {svc.label}
+                    </span>
+                    {svc.is_openbase_managed ? (
+                      <span className="font-mono text-[10px] text-info">
+                        openbase
+                      </span>
                     ) : null}
-                    {service.disabled ? <Badge variant="outline">Disabled</Badge> : null}
+                    {svc.disabled ? (
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        disabled
+                      </span>
+                    ) : null}
                   </div>
-                  <p className="mt-2 break-all text-xs text-gray-400">{service.plist_path}</p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
-                    {service.run_at_load ? <span>RunAtLoad</span> : null}
-                    {service.keep_alive ? <span>KeepAlive</span> : null}
+                  <p className="mt-0.5 break-all font-mono text-[10.5px] text-muted-foreground/70">
+                    {svc.plist_path}
+                  </p>
+                  <div className="mt-0.5 flex flex-wrap gap-2 font-mono text-[10px] text-muted-foreground">
+                    {svc.run_at_load ? <span>RunAtLoad</span> : null}
+                    {svc.keep_alive ? <span>KeepAlive</span> : null}
                   </div>
-                  {service.plist_error ? (
-                    <p className="mt-3 break-all text-xs text-red-600">
-                      {service.plist_error}
+                  {svc.plist_error ? (
+                    <p className="mt-1 break-all text-[10.5px] text-destructive">
+                      {svc.plist_error}
                     </p>
                   ) : null}
                 </div>
 
                 <div className="min-w-0">
-                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500 lg:hidden">
-                    Command
-                  </p>
-                  {service.command ? (
-                    <p className="break-all text-sm text-gray-800">{service.command}</p>
+                  {svc.command ? (
+                    <p className="break-all font-mono text-[11.5px] text-foreground/80">
+                      {svc.command}
+                    </p>
                   ) : (
-                    <p className="text-sm text-gray-500">No command metadata in plist.</p>
+                    <p className="text-[12px] text-muted-foreground">—</p>
                   )}
-                  {service.working_directory ? (
-                    <p className="mt-2 break-all text-xs text-gray-400">
-                      cwd: {service.working_directory}
+                  {svc.working_directory ? (
+                    <p className="mt-0.5 break-all font-mono text-[10.5px] text-muted-foreground/70">
+                      cwd: {svc.working_directory}
                     </p>
                   ) : null}
                 </div>
 
-                <div className="min-w-0">
-                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500 lg:hidden">
-                    Runtime
-                  </p>
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${runtimeTone(service)}`}
-                  >
-                    {runtimeLabel(service)}
-                  </span>
-                  {service.pid !== null ? (
-                    <p className="mt-2 text-sm text-gray-700">PID {service.pid}</p>
+                <div className="min-w-0 font-mono text-[11px]">
+                  <p className={runtimeText(svc)}>{runtimeLabel(svc)}</p>
+                  {svc.pid !== null ? (
+                    <p className="text-muted-foreground tabular-nums">
+                      pid {svc.pid}
+                    </p>
                   ) : null}
-                  {service.status !== null ? (
-                    <p className="mt-1 text-xs text-gray-500">status {service.status}</p>
+                  {svc.status !== null ? (
+                    <p className="text-muted-foreground/70 tabular-nums">
+                      status {svc.status}
+                    </p>
                   ) : null}
                 </div>
 
-                <div className="min-w-0">
-                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500 lg:hidden">
-                    Actions
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={actionKey !== null || service.running}
-                      onClick={() => void handleAction(service.label, "start")}
-                    >
-                      {actionKey === `${service.label}:start` ? "Starting..." : "Start"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={actionKey !== null || !service.loaded}
-                      onClick={() => void handleAction(service.label, "stop")}
-                    >
-                      {actionKey === `${service.label}:stop` ? "Stopping..." : "Stop"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      disabled={actionKey !== null}
-                      onClick={() => void handleAction(service.label, "restart")}
-                    >
-                      {actionKey === `${service.label}:restart`
-                        ? "Restarting..."
-                        : "Restart"}
-                    </Button>
-                  </div>
+                <div className="flex flex-wrap items-start gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    disabled={actionKey !== null || svc.running}
+                    onClick={() => void handleAction(svc.label, "start")}
+                  >
+                    {actionKey === `${svc.label}:start` ? "…" : "Start"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    disabled={actionKey !== null || !svc.loaded}
+                    onClick={() => void handleAction(svc.label, "stop")}
+                  >
+                    {actionKey === `${svc.label}:stop` ? "…" : "Stop"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    disabled={actionKey !== null}
+                    onClick={() => void handleAction(svc.label, "restart")}
+                  >
+                    {actionKey === `${svc.label}:restart` ? "…" : "Restart"}
+                  </Button>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

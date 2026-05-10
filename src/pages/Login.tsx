@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
+import { ArrowRight, Terminal } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -31,37 +32,48 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-b from-white to-gray-50 px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-          <h1 className="text-2xl font-light text-center mb-2 text-gray-900">
-            Openbase Coder Console
-          </h1>
-          <p className="text-sm text-gray-500 text-center mb-8">
-            Authentication is managed by the local CLI
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-4 flex items-center gap-2">
+          <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground text-background">
+            <Terminal className="h-3 w-3" strokeWidth={2.25} />
+          </div>
+          <span className="font-mono text-[12px] font-medium text-foreground">
+            openbase-coder
+          </span>
+        </div>
+
+        <div className="rounded border border-border bg-surface p-5">
+          <h1 className="text-sm font-semibold text-foreground">Sign in</h1>
+          <p className="mt-1 text-[12px] text-muted-foreground">
+            Authentication is managed by the local CLI.
           </p>
+
           {message ? (
-            <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mt-4 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
               {message}
             </div>
           ) : null}
 
-          <div className="space-y-6">
-            <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-              Run <code className="font-mono">openbase-coder login</code> in a terminal on
-              this machine, then return here and continue.
-            </div>
-
-            <Button
-              type="button"
-              onClick={onContinue}
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800"
-            >
-              {isLoading ? "Checking login..." : "I already logged in"}
-            </Button>
+          <div className="mt-4 rounded border border-border bg-background px-3 py-2 font-mono text-[12px] text-foreground/80">
+            $ openbase-coder login
           </div>
+
+          <Button
+            type="button"
+            onClick={onContinue}
+            disabled={isLoading}
+            size="sm"
+            className="mt-4 h-8 w-full text-[12.5px]"
+          >
+            {isLoading ? "Checking…" : "I already logged in"}
+            {!isLoading ? <ArrowRight className="h-3 w-3" /> : null}
+          </Button>
         </div>
+
+        <p className="mt-3 text-center font-mono text-[11px] text-muted-foreground">
+          {window.location.host || "localhost"}
+        </p>
       </div>
     </div>
   );

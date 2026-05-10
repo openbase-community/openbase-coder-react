@@ -1,23 +1,24 @@
-export type SessionStatus = "idle" | "running" | "completed" | "error";
+export type ThreadStatus = "idle" | "running" | "completed" | "error";
 
-export interface RunInfo {
-  run_id: string;
+export interface TurnInfo {
+  turn_id: string;
   started_at: string;
   completed_at: string | null;
-  status: SessionStatus;
+  status: ThreadStatus;
   accumulated_output: string;
   accumulated_stderr: string;
   return_code: number | null;
-  message: string;
+  prompt: string;
 }
 
-export interface SessionInfo {
-  session_id: string;
+export interface ThreadInfo {
+  thread_id: string;
   directory: string;
   created_at: string;
-  current_run: RunInfo | null;
-  run_history: RunInfo[];
-  status: SessionStatus;
+  current_turn: TurnInfo | null;
+  turn_history: TurnInfo[];
+  status: ThreadStatus;
+  is_livekit_shared?: boolean;
 }
 
 export type GitStatus = "clean" | "dirty" | "unpushed" | "no_git";

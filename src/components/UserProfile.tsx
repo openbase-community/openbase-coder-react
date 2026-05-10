@@ -19,14 +19,16 @@ const UserProfile = () => {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-10 w-10 rounded-full p-0 ml-4"
+          className="relative h-6 w-6 rounded-full p-0 hover:ring-1 hover:ring-border"
         >
-          <Avatar>
-            <AvatarFallback>U</AvatarFallback>
+          <Avatar className="h-6 w-6">
+            <AvatarFallback className="bg-foreground text-background text-[10px] font-medium">
+              U
+            </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={12} className="w-56">
+      <DropdownMenuContent align="end" sideOffset={6} className="w-44 text-[13px]">
         <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
           Settings
         </DropdownMenuItem>

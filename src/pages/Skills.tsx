@@ -1,15 +1,8 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
-import { ArrowLeft, Plus, Save, Trash2, Zap } from "lucide-react";
+import { ArrowLeft, ChevronRight, Plus, Save, Trash2, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -29,7 +22,6 @@ const Skills = () => {
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
 
-  // Editor state
   const [content, setContent] = useState("");
   const [filePath, setFilePath] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,7 +45,6 @@ const Skills = () => {
     fetchSkills();
   }, [fetchSkills]);
 
-  // Load skill content when editing
   useEffect(() => {
     if (!editingSkill) return;
     setEditorLoading(true);
@@ -65,7 +56,7 @@ const Skills = () => {
           setFilePath(data.path);
         }
         setEditorLoading(false);
-      }
+      },
     );
   }, [editingSkill, apiParams]);
 
@@ -103,124 +94,119 @@ const Skills = () => {
     setSaving(true);
     const res = await apiFetch(
       `/api/skills/${encodeURIComponent(editingSkill)}/${apiParams}`,
-      {
-        method: "PUT",
-        body: JSON.stringify({ content }),
-      }
+      { method: "PUT", body: JSON.stringify({ content }) },
     );
     setSaving(false);
-    if (res.ok) {
-      toast.success("Skill saved");
-    } else {
-      toast.error("Failed to save skill");
-    }
+    if (res.ok) toast.success("Saved");
+    else toast.error("Failed to save");
   };
 
   const handleDelete = async () => {
     const res = await apiFetch(
       `/api/skills/${encodeURIComponent(editingSkill)}/${apiParams}`,
-      { method: "DELETE" }
+      { method: "DELETE" },
     );
     if (res.ok) {
-      toast.success(`Skill '${editingSkill}' deleted`);
+      toast.success(`Deleted /${editingSkill}`);
       backToList();
       fetchSkills();
     } else {
-      toast.error("Failed to delete skill");
+      toast.error("Failed to delete");
     }
   };
 
-  const scopeLabel = projectPath
-    ? projectPath.split("/").pop()
-    : "Global";
+  const scopeLabel = projectPath ? projectPath.split("/").pop() : "global";
 
-  // ---- Editor view ----
   if (editingSkill) {
     return (
       <DashboardLayout>
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={backToList}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-surface-muted hover:text-foreground"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-3.5 w-3.5" />
             </button>
-            <div>
-              <h1 className="text-3xl font-light">/{editingSkill}</h1>
-              <p className="text-gray-600 text-sm">{filePath}</p>
-            </div>
+            <h1 className="font-mono text-sm font-medium text-foreground">
+              /{editingSkill}
+            </h1>
+            <span className="font-mono text-[11px] text-muted-foreground/70">
+              {filePath}
+            </span>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>SKILL.md Editor</CardTitle>
-              <CardDescription>
-                YAML frontmatter between --- markers, then markdown instructions
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {editorLoading ? (
-                <div className="h-64 flex items-center justify-center text-gray-400">
-                  Loading...
-                </div>
-              ) : (
-                <textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full h-96 font-mono text-sm p-4 border rounded-lg resize-y bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={`---\nname: ${editingSkill}\ndescription: What this skill does\n---\n\nYour skill instructions here...`}
-                />
-              )}
-              <div className="flex gap-2">
-                <Button onClick={handleSave} disabled={saving || editorLoading}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {saving ? "Saving..." : "Save"}
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={editorLoading}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </Button>
+          <div className="overflow-hidden rounded border border-border bg-surface">
+            {editorLoading ? (
+              <div className="flex h-72 items-center justify-center text-[12px] text-muted-foreground">
+                Loading…
               </div>
-            </CardContent>
-          </Card>
+            ) : (
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="h-[26rem] w-full resize-y bg-transparent p-3 font-mono text-[12.5px] leading-relaxed text-foreground focus:outline-none"
+                placeholder={`---\nname: ${editingSkill}\ndescription: What this skill does\n---\n\nYour skill instructions…`}
+              />
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSave}
+              disabled={saving || editorLoading}
+              size="sm"
+              className="h-7 px-2.5 text-[12px]"
+            >
+              <Save className="h-3 w-3" />
+              {saving ? "Saving…" : "Save"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDelete}
+              disabled={editorLoading}
+              className="h-7 px-2.5 text-[12px] text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="h-3 w-3" />
+              Delete
+            </Button>
+          </div>
         </div>
       </DashboardLayout>
     );
   }
 
-  // ---- List view ----
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-light mb-2">Skills</h1>
-          <p className="text-gray-600">
-            {scopeLabel} custom slash commands
-          </p>
-          <p className="text-xs text-gray-400 mt-1">{skillsDir}</p>
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant={projectPath ? "outline" : "default"}
-            size="sm"
-            onClick={() => {
-              const params = new URLSearchParams();
-              setSearchParams(params);
-            }}
-          >
-            Global
-          </Button>
-          {projectPath && (
-            <Button size="sm">
-              {projectPath.split("/").pop()}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-base font-semibold tracking-tight text-foreground">
+              Skills
+            </h1>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              {scopeLabel} ·{" "}
+              {skillsDir ? (
+                <span className="font-mono text-[11px]">{skillsDir}</span>
+              ) : null}
+            </p>
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant={projectPath ? "outline" : "default"}
+              size="sm"
+              className="h-7 px-2.5 text-[12px]"
+              onClick={() => setSearchParams(new URLSearchParams())}
+            >
+              global
             </Button>
-          )}
+            {projectPath ? (
+              <Button size="sm" className="h-7 px-2.5 text-[12px]">
+                {projectPath.split("/").pop()}
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         <form
@@ -228,47 +214,53 @@ const Skills = () => {
             e.preventDefault();
             createSkill();
           }}
-          className="flex gap-2"
+          className="flex gap-1.5"
         >
           <Input
-            placeholder="New skill name (e.g. review-pr)"
+            placeholder="new-skill-name"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            className="flex-1"
+            className="h-7 flex-1 font-mono text-[12.5px]"
           />
-          <Button onClick={createSkill} disabled={!newName.trim()}>
-            <Plus className="h-4 w-4 mr-1" />
+          <Button
+            onClick={createSkill}
+            disabled={!newName.trim()}
+            size="sm"
+            className="h-7 px-2.5 text-[12px]"
+          >
+            <Plus className="h-3 w-3" />
             Create
           </Button>
         </form>
 
         {loading ? (
-          <div className="text-gray-400">Loading...</div>
+          <div className="text-[12px] text-muted-foreground">Loading…</div>
         ) : skills.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-gray-500">
-              <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              No skills found. Create one to get started.
-            </CardContent>
-          </Card>
+          <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
+            <Zap className="mx-auto h-4 w-4 text-muted-foreground/40" />
+            <p className="mt-2 text-[12px] text-muted-foreground">
+              No skills yet.
+            </p>
+          </div>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {skills.map((skill) => (
-              <Card
+          <div className="overflow-hidden rounded border border-border bg-surface">
+            {skills.map((skill, idx) => (
+              <button
                 key={skill.name}
-                className="cursor-pointer hover:border-gray-400 transition-colors"
                 onClick={() => openSkill(skill.name)}
+                className={`group flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-surface-muted ${
+                  idx > 0 ? "border-t border-border" : ""
+                }`}
               >
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Zap className="h-4 w-4" />
-                    /{skill.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-gray-500 truncate">{skill.path}</p>
-                </CardContent>
-              </Card>
+                <Zap className="h-3 w-3 shrink-0 text-muted-foreground" />
+                <span className="font-mono text-[12.5px] font-medium text-foreground">
+                  /{skill.name}
+                </span>
+                <span className="truncate font-mono text-[11px] text-muted-foreground/70">
+                  {skill.path}
+                </span>
+                <ChevronRight className="ml-auto h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
+              </button>
             ))}
           </div>
         )}

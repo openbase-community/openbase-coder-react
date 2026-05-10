@@ -1,20 +1,21 @@
 import { useAuth } from "@/contexts/auth";
 import { getBackendWebSocketUrl } from "@/lib/runtime-config";
-import type { SessionInfo } from "@/types/session";
+import type { ThreadInfo } from "@/types/session";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
-export function useSessionWebSocket(sessionId: string | undefined) {
+export function useThreadWebSocket(threadId: string | undefined) {
   const { token } = useAuth();
-  const [session, setSession] = useState<SessionInfo | null>(null);
+  const [thread, setThread] = useState<ThreadInfo | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const reconnectDelayRef = useRef(1000);
 
   const connect = useCallback(() => {
-    if (!sessionId || !token) return;
+    if (!threadId || !token) return;
 
-    const baseUrl = getBackendWebSocketUrl(`/ws/sessions/${sessionId}/`);
+    const baseUrl = getBackendWebSocketUrl(`/ws/threads/${threadId}/`);
     const url = `${baseUrl}?token=${token}`;
 
     const ws = new WebSocket(url);
@@ -42,45 +43,51 @@ export function useSessionWebSocket(sessionId: string | undefined) {
       const msg = JSON.parse(event.data);
 
       switch (msg.type) {
-        case "session_state":
-          setSession(msg.data);
+        case "thread_state":
+          setThread(msg.data);
           break;
 
-        case "run_started":
-          setSession((prev) => {
+        case "turn_started":
+          setThread((prev) => {
             if (!prev) return prev;
             return {
               ...prev,
-              current_run: msg.data,
+              current_turn: msg.data,
               status: "running",
             };
           });
           break;
 
         case "output_update":
-          setSession((prev) => {
-            if (!prev?.current_run) return prev;
+          setThread((prev) => {
+            if (!prev?.current_turn) return prev;
             const field =
               msg.data.stream === "stderr"
                 ? "accumulated_stderr"
                 : "accumulated_output";
+            const suffix = msg.data.chunk === true ? msg.data.line : `${msg.data.line}\n`;
             return {
               ...prev,
-              current_run: {
-                ...prev.current_run,
-                [field]:
-                  (prev.current_run[field] || "") + msg.data.line + "\n",
+              current_turn: {
+                ...prev.current_turn,
+                [field]: (prev.current_turn[field] || "") + suffix,
               },
             };
           });
           break;
 
-        case "run_completed":
-          setSession(msg.data);
+        case "turn_completed":
+          setThread(msg.data);
           break;
+
+        case "error": {
+          const message = msg.data?.message ?? "Server error";
+          toast.error(message);
+          break;
+        }
       }
     };
-  }, [sessionId, token]);
+  }, [threadId, token]);
 
   useEffect(() => {
     connect();
@@ -95,18 +102,18 @@ export function useSessionWebSocket(sessionId: string | undefined) {
     };
   }, [connect]);
 
-  const sendMessage = useCallback(
-    (message: string) => {
+  const startTurn = useCallback(
+    (prompt: string) => {
       wsRef.current?.send(
-        JSON.stringify({ action: "send_message", message })
+        JSON.stringify({ action: "start_turn", prompt })
       );
     },
     []
   );
 
-  const cancelRun = useCallback(() => {
-    wsRef.current?.send(JSON.stringify({ action: "cancel_run" }));
+  const interruptTurn = useCallback(() => {
+    wsRef.current?.send(JSON.stringify({ action: "interrupt_turn" }));
   }, []);
 
-  return { session, isConnected, sendMessage, cancelRun };
+  return { thread, isConnected, startTurn, interruptTurn };
 }

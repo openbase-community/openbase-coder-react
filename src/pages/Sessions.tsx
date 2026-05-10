@@ -2,43 +2,34 @@ import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
-import type { Project, SessionInfo } from "@/types/session";
-import { Plus, Terminal, Trash2 } from "lucide-react";
+import type { Project, ThreadInfo } from "@/types/session";
+import { ChevronRight, FolderOpen, Plus, Terminal, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const Sessions = () => {
   const navigate = useNavigate();
-  const [sessions, setSessions] = useState<SessionInfo[]>([]);
+  const [threads, setThreads] = useState<ThreadInfo[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     const [sessRes, projRes] = await Promise.all([
-      apiFetch("/api/sessions/"),
+      apiFetch("/api/threads/"),
       apiFetch("/api/projects/recent/"),
     ]);
-    if (sessRes.ok) {
-      const data = await sessRes.json();
-      setSessions(data.sessions);
-    }
-    if (projRes.ok) {
-      const data = await projRes.json();
-      setProjects(data.projects);
-    }
+    if (sessRes.ok) setThreads((await sessRes.json()).threads);
+    if (projRes.ok) setProjects((await projRes.json()).projects);
     setLoading(false);
   }, []);
 
@@ -46,71 +37,84 @@ const Sessions = () => {
     fetchData();
   }, [fetchData]);
 
-  const deleteSession = async (sessionId: string) => {
-    const res = await apiFetch(`/api/sessions/${sessionId}/`, {
+  const deleteThread = async (threadId: string) => {
+    const res = await apiFetch(`/api/threads/${threadId}/`, {
       method: "DELETE",
     });
     if (res.ok) {
-      setSessions((prev) => prev.filter((s) => s.session_id !== sessionId));
-      toast.success("Session deleted");
+      setThreads((prev) => prev.filter((t) => t.thread_id !== threadId));
+      toast.success("Thread archived");
     } else {
-      toast.error("Failed to delete session");
+      toast.error("Failed to archive thread");
     }
   };
 
-  const createSession = async (directory: string) => {
-    const res = await apiFetch("/api/sessions/", {
+  const createThread = async (directory: string) => {
+    const res = await apiFetch("/api/threads/", {
       method: "POST",
       body: JSON.stringify({ directory }),
     });
     if (res.ok) {
       const data = await res.json();
       setDialogOpen(false);
-      navigate(`/dashboard/sessions/${data.session_id}`);
+      navigate(`/dashboard/threads/${data.thread_id}`);
     } else {
-      toast.error("Failed to create session");
+      toast.error("Failed to create thread");
     }
   };
 
   const projectName = (path: string) => path.split("/").pop() || path;
+  const activeCount = threads.filter((t) => t.status === "running").length;
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-light mb-2">Sessions</h1>
-            <p className="text-gray-600">Active Claude Code sessions</p>
+            <h1 className="text-base font-semibold tracking-tight text-foreground">
+              Threads
+            </h1>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              {activeCount} active · {threads.length} total
+            </p>
           </div>
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Session
+              <Button size="sm" className="h-7 px-2.5 text-[12px]">
+                <Plus className="h-3 w-3" />
+                New thread
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Create New Session</DialogTitle>
+                <DialogTitle className="text-sm font-semibold">
+                  Start a new thread
+                </DialogTitle>
+                <DialogDescription className="text-[12px]">
+                  Pick a project to launch a Codex session against.
+                </DialogDescription>
               </DialogHeader>
-              <div className="space-y-2 max-h-80 overflow-y-auto">
+              <div className="mt-1 max-h-72 space-y-px overflow-y-auto">
                 {projects.length === 0 ? (
-                  <p className="text-sm text-gray-500 py-4 text-center">
-                    No recent projects found
+                  <p className="py-6 text-center text-[12px] text-muted-foreground">
+                    No recent projects
                   </p>
                 ) : (
                   projects.map((project) => (
                     <button
                       key={project.path}
-                      className="w-full text-left p-3 rounded-lg hover:bg-gray-100 transition-colors"
-                      onClick={() => createSession(project.path)}
+                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-surface-muted"
+                      onClick={() => createThread(project.path)}
                     >
-                      <div className="font-medium text-sm">
-                        {projectName(project.path)}
-                      </div>
-                      <div className="text-xs text-gray-500 truncate">
-                        {project.path}
+                      <FolderOpen className="h-3 w-3 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[12.5px] font-medium">
+                          {projectName(project.path)}
+                        </div>
+                        <div className="truncate font-mono text-[11px] text-muted-foreground">
+                          {project.path}
+                        </div>
                       </div>
                     </button>
                   ))
@@ -121,50 +125,62 @@ const Sessions = () => {
         </div>
 
         {loading ? (
-          <div className="text-gray-400">Loading...</div>
-        ) : sessions.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-gray-500">
-              <Terminal className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              No sessions yet. Create one to get started.
-            </CardContent>
-          </Card>
+          <div className="text-[12px] text-muted-foreground">Loading…</div>
+        ) : threads.length === 0 ? (
+          <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
+            <Terminal className="mx-auto h-4 w-4 text-muted-foreground/40" />
+            <p className="mt-2 text-[12px] text-muted-foreground">
+              No threads yet.
+            </p>
+          </div>
         ) : (
-          <div className="space-y-2">
-            {sessions.map((session) => (
-              <Card
-                key={session.session_id}
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
+          <div className="overflow-hidden rounded border border-border bg-surface">
+            {threads.map((thread, idx) => (
+              <div
+                key={thread.thread_id}
                 onClick={() =>
-                  navigate(`/dashboard/sessions/${session.session_id}`)
+                  navigate(`/dashboard/threads/${thread.thread_id}`)
                 }
+                className={`group flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-surface-muted ${
+                  idx > 0 ? "border-t border-border" : ""
+                }`}
               >
-                <CardContent className="py-4 flex items-center gap-4">
-                  <Terminal className="h-5 w-5 text-gray-400 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm">
-                      {projectName(session.directory)}
-                    </div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {session.directory}
-                    </div>
-                  </div>
-                  <StatusBadge status={session.status} />
-                  <span className="text-xs text-gray-400">
-                    {new Date(session.created_at).toLocaleString()}
+                <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
+                <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                  <span className="truncate text-[12.5px] font-medium text-foreground">
+                    {projectName(thread.directory)}
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteSession(session.session_id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-gray-400" />
-                  </Button>
-                </CardContent>
-              </Card>
+                  {thread.is_livekit_shared ? (
+                    <span className="font-mono text-[10px] text-warning">
+                      livekit
+                    </span>
+                  ) : null}
+                  <span className="truncate font-mono text-[11px] text-muted-foreground/70">
+                    {thread.directory}
+                  </span>
+                </div>
+                <StatusBadge status={thread.status} />
+                <span className="hidden font-mono text-[10.5px] text-muted-foreground tabular-nums sm:inline">
+                  {new Date(thread.created_at).toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteThread(thread.thread_id);
+                  }}
+                >
+                  <Trash2 className="h-3 w-3 text-muted-foreground" />
+                </Button>
+                <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
+              </div>
             ))}
           </div>
         )}

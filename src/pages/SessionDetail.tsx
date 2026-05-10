@@ -2,160 +2,163 @@ import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { RunDetail } from "@/components/RunDetail";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { useSessionWebSocket } from "@/hooks/use-session-websocket";
-import { FolderOpen, Send, Square, Wifi, WifiOff } from "lucide-react";
+import { useThreadWebSocket } from "@/hooks/use-session-websocket";
+import { Send, Square, Wifi, WifiOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 
 const SessionDetail = () => {
-  const { sessionId } = useParams<{ sessionId: string }>();
-  const { session, isConnected, sendMessage, cancelRun } =
-    useSessionWebSocket(sessionId);
-  const [message, setMessage] = useState("");
+  const { threadId } = useParams<{ threadId: string }>();
+  const { thread, isConnected, startTurn, interruptTurn } =
+    useThreadWebSocket(threadId);
+  const [prompt, setPrompt] = useState("");
   const outputRef = useRef<HTMLPreElement>(null);
 
-  // Auto-scroll output
   useEffect(() => {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
-  }, [session?.current_run?.accumulated_output]);
+  }, [thread?.current_turn?.accumulated_output]);
 
-  const handleSend = () => {
-    const trimmed = message.trim();
+  const handleStartTurn = () => {
+    const trimmed = prompt.trim();
     if (!trimmed) return;
-    sendMessage(trimmed);
-    setMessage("");
+    startTurn(trimmed);
+    setPrompt("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      handleStartTurn();
     }
   };
 
-  const isRunning = session?.status === "running";
+  const isRunning = thread?.status === "running";
+  const projectName = (path: string) => path.split("/").pop() || path;
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 pb-24">
-        {/* Connection indicator */}
-        <div className="flex items-center gap-2 text-sm">
-          {isConnected ? (
-            <>
-              <Wifi className="h-4 w-4 text-green-500" />
-              <span className="text-green-600">Connected</span>
-            </>
-          ) : (
-            <>
-              <WifiOff className="h-4 w-4 text-red-500" />
-              <span className="text-red-600">Disconnected</span>
-            </>
-          )}
-        </div>
-
-        {/* Info card */}
-        {session && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-3 text-base">
-                <FolderOpen className="h-4 w-4" />
-                {session.directory.split("/").pop()}
-                <StatusBadge status={session.status} />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-gray-500 space-y-1">
-              <div>{session.directory}</div>
-              <div className="text-xs">Session: {session.session_id}</div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Current run */}
-        {session?.current_run && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center justify-between text-base">
-                <span>Current Run</span>
-                {isRunning && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={cancelRun}
-                  >
-                    <Square className="h-3 w-3 mr-1" />
-                    Cancel
-                  </Button>
+      <div className="space-y-3 pb-24">
+        {thread ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-semibold text-foreground">
+                {projectName(thread.directory)}
+              </h1>
+              <StatusBadge status={thread.status} />
+              {thread.is_livekit_shared ? (
+                <span className="font-mono text-[10px] text-warning">livekit</span>
+              ) : null}
+              <span className="ml-auto flex items-center gap-1 font-mono text-[10.5px]">
+                {isConnected ? (
+                  <>
+                    <Wifi className="h-3 w-3 text-success" />
+                    <span className="text-success">connected</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-3 w-3 text-destructive" />
+                    <span className="text-destructive">disconnected</span>
+                  </>
                 )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-sm">
-                <span className="font-medium">Message:</span>{" "}
-                {session.current_run.message}
+              </span>
+            </div>
+            <p className="truncate font-mono text-[11px] text-muted-foreground">
+              {thread.directory}
+            </p>
+            <p className="truncate font-mono text-[10.5px] text-muted-foreground/60">
+              {thread.thread_id}
+            </p>
+          </div>
+        ) : null}
+
+        {thread?.current_turn ? (
+          <section className="overflow-hidden rounded border border-border bg-surface">
+            <div className="flex items-center justify-between border-b border-border bg-surface-muted px-3 py-1.5">
+              <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
+                current turn
+              </p>
+              {isRunning ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={interruptTurn}
+                  className="h-6 px-2 text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Square className="h-2.5 w-2.5" />
+                  Interrupt
+                </Button>
+              ) : null}
+            </div>
+            <div className="space-y-2 p-3">
+              <div className="rounded border border-border bg-surface-muted px-2.5 py-1.5">
+                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  prompt
+                </p>
+                <p className="mt-0.5 text-[12.5px] text-foreground">
+                  {thread.current_turn.prompt}
+                </p>
               </div>
-              {session.current_run.accumulated_output && (
+              {thread.current_turn.accumulated_output ? (
                 <pre
                   ref={outputRef}
-                  className="text-xs bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap"
+                  className="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-foreground p-2.5 font-mono text-[11.5px] text-background"
                 >
-                  {session.current_run.accumulated_output}
+                  {thread.current_turn.accumulated_output}
                 </pre>
-              )}
-              {session.current_run.accumulated_stderr && (
-                <pre className="text-xs bg-red-950 text-red-200 p-3 rounded-lg overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap">
-                  {session.current_run.accumulated_stderr}
+              ) : null}
+              {thread.current_turn.accumulated_stderr ? (
+                <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded bg-destructive/95 p-2.5 font-mono text-[11.5px] text-destructive-foreground">
+                  {thread.current_turn.accumulated_stderr}
                 </pre>
-              )}
-            </CardContent>
-          </Card>
-        )}
+              ) : null}
+            </div>
+          </section>
+        ) : null}
 
-        {/* Run history */}
-        {session && session.run_history.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Run History</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {[...session.run_history].reverse().map((run) => (
-                <RunDetail key={run.run_id} run={run} />
+        {thread && thread.turn_history.length > 0 ? (
+          <section className="overflow-hidden rounded border border-border bg-surface">
+            <div className="border-b border-border bg-surface-muted px-3 py-1.5">
+              <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
+                turn history
+              </p>
+            </div>
+            <div className="space-y-px p-2">
+              {[...thread.turn_history].reverse().map((turn) => (
+                <RunDetail key={turn.turn_id} run={turn} />
               ))}
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </section>
+        ) : null}
 
-        {/* Message input bar */}
-        {session && !isRunning && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
-            <div className="max-w-4xl mx-auto flex gap-2">
+        {thread && !isRunning ? (
+          <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-2.5 backdrop-blur md:left-[13rem]">
+            <div className="mx-auto flex max-w-3xl gap-1.5">
               <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Send a message to Claude..."
-                className="flex-1 resize-none border rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Start a Codex turn…"
+                className="flex-1 resize-none rounded border border-border bg-surface p-2 text-[12.5px] text-foreground focus:border-ring focus:outline-none"
                 rows={1}
               />
-              <Button onClick={handleSend} disabled={!message.trim()}>
-                <Send className="h-4 w-4" />
+              <Button
+                onClick={handleStartTurn}
+                disabled={!prompt.trim()}
+                size="sm"
+              >
+                <Send className="h-3 w-3" />
               </Button>
             </div>
           </div>
-        )}
+        ) : null}
 
-        {!session && (
-          <div className="text-center text-gray-400 py-16">
-            {isConnected ? "Loading session..." : "Connecting..."}
+        {!thread ? (
+          <div className="py-12 text-center text-[12px] text-muted-foreground">
+            {isConnected ? "Loading…" : "Connecting…"}
           </div>
-        )}
+        ) : null}
       </div>
     </DashboardLayout>
   );
