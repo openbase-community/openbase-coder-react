@@ -26,6 +26,8 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchData();
+    const interval = window.setInterval(fetchData, 5000);
+    return () => window.clearInterval(interval);
   }, [fetchData]);
 
   const activeThreads = threads.filter((t) => t.status === "running");

@@ -49,6 +49,8 @@ const Projects = () => {
 
   useEffect(() => {
     fetchData();
+    const interval = window.setInterval(fetchData, 5000);
+    return () => window.clearInterval(interval);
   }, [fetchData]);
 
   const getActiveThreads = (path: string) =>
