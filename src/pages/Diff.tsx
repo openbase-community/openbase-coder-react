@@ -1,7 +1,10 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/contexts/auth";
-import { DiffViewer, type Repository } from "@boilersync/visual-renderer";
+import {
+  DiffViewer,
+  type Repository,
+} from "@/vendor/visual-renderer";
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
