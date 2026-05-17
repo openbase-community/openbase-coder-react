@@ -1,9 +1,9 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
-import { StatusBadge } from "@/components/StatusBadge";
+import { ThreadListItem } from "@/components/ThreadListItem";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import type { Project, ServiceStatus, ThreadInfo } from "@/types/session";
-import { ChevronRight, Plus, Terminal } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -32,10 +32,9 @@ const Dashboard = () => {
 
   const activeThreads = threads.filter((t) => t.status === "running");
   const recentThreads = [...threads]
-    .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
+    .sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at))
     .slice(0, 8);
   const runningServices = Object.values(services).filter((s) => s.running);
-  const projectName = (path: string) => path.split("/").pop() || path;
 
   const stats = [
     {
@@ -125,35 +124,14 @@ const Dashboard = () => {
           ) : (
             <div className="overflow-hidden rounded border border-border bg-surface">
               {recentThreads.map((thread, idx) => (
-                <button
+                <ThreadListItem
                   key={thread.thread_id}
+                  thread={thread}
+                  showTopBorder={idx > 0}
                   onClick={() =>
                     navigate(`/dashboard/threads/${thread.thread_id}`)
                   }
-                  className={`group flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors hover:bg-surface-muted ${
-                    idx > 0 ? "border-t border-border" : ""
-                  }`}
-                >
-                  <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
-                  <span className="truncate text-[12.5px] font-medium text-foreground">
-                    {projectName(thread.directory)}
-                  </span>
-                  <span className="truncate font-mono text-[11px] text-muted-foreground/70">
-                    {thread.directory}
-                  </span>
-                  <span className="ml-auto flex shrink-0 items-center gap-2.5">
-                    <StatusBadge status={thread.status} />
-                    <span className="hidden font-mono text-[10.5px] text-muted-foreground tabular-nums sm:inline">
-                      {new Date(thread.created_at).toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    <ChevronRight className="h-3 w-3 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
-                  </span>
-                </button>
+                />
               ))}
             </div>
           )}

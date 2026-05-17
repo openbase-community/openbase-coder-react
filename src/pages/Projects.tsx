@@ -8,9 +8,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { apiFetch } from "@/lib/api";
-import { usePluginRegistry } from "@/plugin-registry";
 import type { GitStatus, Project, ThreadInfo } from "@/types/session";
-import { FolderOpen, GitBranch, Plus, Zap } from "lucide-react";
+import {
+  ChevronRight,
+  FileText,
+  FolderOpen,
+  GitBranch,
+  Plus,
+  Zap,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -29,7 +35,6 @@ const GIT_STATUS: Record<GitStatus, GitStyle> = {
 };
 
 const Projects = () => {
-  const { pluginProjectViews } = usePluginRegistry();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [threads, setThreads] = useState<ThreadInfo[]>([]);
@@ -56,19 +61,6 @@ const Projects = () => {
   const getActiveThreads = (path: string) =>
     threads.filter((t) => t.directory === path && t.status === "running");
 
-  const createThread = async (directory: string) => {
-    const res = await apiFetch("/api/threads/", {
-      method: "POST",
-      body: JSON.stringify({ directory }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      navigate(`/dashboard/threads/${data.thread_id}`);
-    } else {
-      toast.error("Failed to create thread");
-    }
-  };
-
   const addProject = async () => {
     const trimmed = newPath.trim();
     if (!trimmed) return;
@@ -87,17 +79,20 @@ const Projects = () => {
   };
 
   const projectName = (path: string) => path.split("/").pop() || path;
-  const hasProjectView = (stack: string | null | undefined) =>
-    !!stack && pluginProjectViews.some((item) => item.stack === stack);
+  const openProject = (project: Project) =>
+    navigate(`/dashboard/project?path=${encodeURIComponent(project.path)}`);
 
-  const openProjectView = (project: Project) => {
-    if (!project.stack) {
-      toast.error("Project stack not set");
-      return;
+  const createThread = async (directory: string) => {
+    const res = await apiFetch("/api/threads/", {
+      method: "POST",
+      body: JSON.stringify({ directory }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      navigate(`/dashboard/threads/${data.thread_id}`);
+    } else {
+      toast.error("Failed to create thread");
     }
-    navigate(
-      `/dashboard/project-view?path=${encodeURIComponent(project.path)}&stack=${encodeURIComponent(project.stack)}`,
-    );
   };
 
   const filtered = useMemo(() => {
@@ -176,33 +171,34 @@ const Projects = () => {
               const gs = GIT_STATUS[project.git_status ?? "clean"];
               return (
                 <div
+                  role="button"
+                  tabIndex={0}
                   key={project.path}
-                  className={`group flex items-center gap-3 px-3 py-2 transition-colors hover:bg-surface-muted ${
+                  onClick={() => openProject(project)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openProject(project);
+                    }
+                  }}
+                  className={`group flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-muted ${
                     idx > 0 ? "border-t border-border" : ""
                   }`}
                 >
                   <TooltipProvider delayDuration={150}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(
-                              `/dashboard/diff?path=${encodeURIComponent(project.path)}`,
-                            )
-                          }
-                          className="shrink-0"
-                        >
+                        <span className="shrink-0">
                           <span
                             className={`block h-2 w-2 rounded-full ${gs.dot}`}
                           />
-                        </button>
+                        </span>
                       </TooltipTrigger>
                       <TooltipContent>{gs.label}</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
 
-                  <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
                     <span className="truncate text-[13px] font-medium text-foreground">
                       {projectName(project.path)}
                     </span>
@@ -211,37 +207,23 @@ const Projects = () => {
                     </span>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2 font-mono text-[10.5px]">
-                    {project.stack ? (
-                      <span className="text-muted-foreground">
-                        {project.stack}
-                      </span>
-                    ) : null}
+                  <div className="hidden shrink-0 items-center gap-2 font-mono text-[10.5px] md:flex">
                     {active.length > 0 ? (
                       <span className="text-info">{active.length} active</span>
                     ) : null}
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-0.5 opacity-60 transition-opacity group-hover:opacity-100">
-                    {hasProjectView(project.stack) ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-[11px]"
-                        onClick={() => openProjectView(project)}
-                      >
-                        Open
-                      </Button>
-                    ) : null}
+                  <div className="hidden shrink-0 flex-wrap items-center justify-end gap-0.5 sm:flex">
                     <Button
                       size="sm"
                       variant="ghost"
                       className="h-6 px-2 text-[11px]"
-                      onClick={() =>
+                      onClick={(event) => {
+                        event.stopPropagation();
                         navigate(
                           `/dashboard/diff?path=${encodeURIComponent(project.path)}`,
-                        )
-                      }
+                        );
+                      }}
                     >
                       <GitBranch className="h-3 w-3" />
                       Diff
@@ -250,11 +232,24 @@ const Projects = () => {
                       size="sm"
                       variant="ghost"
                       className="h-6 px-2 text-[11px]"
-                      onClick={() =>
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openProject(project);
+                      }}
+                    >
+                      <FileText className="h-3 w-3" />
+                      Reports
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-[11px]"
+                      onClick={(event) => {
+                        event.stopPropagation();
                         navigate(
                           `/dashboard/skills?path=${encodeURIComponent(project.path)}`,
-                        )
-                      }
+                        );
+                      }}
                     >
                       <Zap className="h-3 w-3" />
                       Skills
@@ -262,12 +257,17 @@ const Projects = () => {
                     <Button
                       size="sm"
                       className="h-6 px-2 text-[11px]"
-                      onClick={() => createThread(project.path)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        createThread(project.path);
+                      }}
                     >
                       <Plus className="h-3 w-3" />
                       Thread
                     </Button>
                   </div>
+
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
                 </div>
               );
             })}

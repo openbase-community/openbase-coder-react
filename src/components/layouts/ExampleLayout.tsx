@@ -9,13 +9,17 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import UserProfile from "@/components/UserProfile";
 import { usePluginRegistry } from "@/plugin-registry";
 import {
   Activity,
+  FilePenLine,
+  FileText,
   FolderOpen,
   Home,
+  PackageOpen,
   Server,
   Settings as SettingsIcon,
   Terminal,
@@ -41,12 +45,15 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
   const primaryNav = [
     { path: "/dashboard", icon: Home, title: "Overview", exact: true },
     { path: "/dashboard/projects", icon: FolderOpen, title: "Projects" },
+    { path: "/dashboard/reports", icon: FileText, title: "Reports" },
     { path: "/dashboard/threads", icon: Terminal, title: "Threads" },
     { path: "/dashboard/skills", icon: Zap, title: "Skills" },
+    { path: "/dashboard/boilersync", icon: PackageOpen, title: "BoilerSync" },
   ];
 
   const systemNav = [
     { path: "/dashboard/status", icon: Activity, title: "Status" },
+    { path: "/dashboard/agents-md", icon: FilePenLine, title: "AGENTS.md" },
     { path: "/dashboard/tools", icon: Wrench, title: "Tools" },
     { path: "/dashboard/launchctl", icon: Server, title: "Launchctl" },
     { path: "/dashboard/settings", icon: SettingsIcon, title: "Settings" },
@@ -75,9 +82,11 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
     ));
 
   return (
-    <SidebarProvider>
+    <SidebarProvider
+      style={{ "--sidebar-width": "13rem" } as React.CSSProperties}
+    >
       <div className={`flex w-full bg-background ${noPadding ? "h-screen" : "min-h-screen"}`}>
-        <Sidebar className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground" style={{ "--sidebar-width": "13rem" } as React.CSSProperties}>
+        <Sidebar className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
           <SidebarHeader className="border-b border-sidebar-border px-3 py-2.5">
             <div className="flex items-center gap-2">
               <div className="flex h-5 w-5 items-center justify-center rounded bg-sidebar-accent text-sidebar-primary">
@@ -124,10 +133,13 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
         <div
           className={`flex flex-1 flex-col ${noPadding ? "overflow-hidden" : "overflow-auto"}`}
         >
-          <header className="sticky top-0 z-10 flex h-9 shrink-0 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur">
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-success" />
-              <span className="font-mono">localhost:7999</span>
+          <header className="sticky top-0 z-10 flex h-9 shrink-0 items-center justify-between border-b border-border bg-background/90 px-3 backdrop-blur md:px-4">
+            <div className="flex min-w-0 items-center gap-2">
+              <SidebarTrigger className="md:hidden" />
+              <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
+                <span className="truncate font-mono">localhost:7999</span>
+              </div>
             </div>
             <UserProfile />
           </header>

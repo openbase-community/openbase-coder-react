@@ -11,10 +11,14 @@ import {
   Routes,
   useSearchParams,
 } from "react-router-dom";
+import AgentsMd from "./pages/AgentsMd";
+import BoilerSync from "./pages/BoilerSync";
 import Dashboard from "./pages/Dashboard";
+import Reports from "./pages/Reports";
 import Diff from "./pages/Diff";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import ProjectDetail from "./pages/ProjectDetail";
 import ProjectView from "./pages/ProjectView";
 import Projects from "./pages/Projects";
 import SessionDetail from "./pages/SessionDetail";
@@ -23,6 +27,7 @@ import Settings from "./pages/Settings";
 import Skills from "./pages/Skills";
 import Launchctl from "./pages/Launchctl";
 import Status from "./pages/Status";
+import ToolDetail from "./pages/ToolDetail";
 import Tools from "./pages/Tools";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -96,6 +101,22 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/dashboard/project"
+        element={
+          <ProtectedRoute>
+            <ProjectDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/reports"
+        element={
+          <ProtectedRoute>
+            <Reports />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/dashboard/threads"
         element={
           <ProtectedRoute>
@@ -128,10 +149,26 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/dashboard/boilersync"
+        element={
+          <ProtectedRoute>
+            <BoilerSync />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/dashboard/status"
         element={
           <ProtectedRoute>
             <Status />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/agents-md"
+        element={
+          <ProtectedRoute>
+            <AgentsMd />
           </ProtectedRoute>
         }
       />
@@ -144,7 +181,23 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/dashboard/tools/:toolName"
+        element={
+          <ProtectedRoute>
+            <ToolDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/dashboard/launchctl"
+        element={
+          <ProtectedRoute>
+            <Launchctl />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/launchctl/:serviceLabel"
         element={
           <ProtectedRoute>
             <Launchctl />

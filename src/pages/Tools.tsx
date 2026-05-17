@@ -1,45 +1,9 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { Button } from "@/components/ui/button";
-import { apiFetch } from "@/lib/api";
-import { RefreshCw, Wrench } from "lucide-react";
+import { fetchUvTools, type UvTool } from "@/lib/uv-tools";
+import { ChevronRight, RefreshCw, Wrench } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-
-type UvToolExecutable = { name: string; path: string };
-type EditablePackage = {
-  name: string;
-  version: string;
-  editable_project_location: string;
-};
-type UvTool = {
-  name: string;
-  version: string;
-  environment_path: string;
-  required_specifier: string | null;
-  python_version: string | null;
-  executables: UvToolExecutable[];
-  is_editable: boolean;
-  editable_project_location: string | null;
-  editable_packages: EditablePackage[];
-  inspection_error: string | null;
-};
-type UvToolsResponse = {
-  uv_available: boolean;
-  uv_path: string | null;
-  tools: UvTool[];
-  error: string | null;
-};
-
-const extractErrorMessage = async (
-  res: Response,
-  fallback: string,
-): Promise<string> => {
-  try {
-    const data = (await res.json()) as { error?: string; detail?: string };
-    return data.error ?? data.detail ?? fallback;
-  } catch {
-    return fallback;
-  }
-};
+import { Link } from "react-router-dom";
 
 const Tools = () => {
   const [tools, setTools] = useState<UvTool[]>([]);
@@ -50,23 +14,14 @@ const Tools = () => {
   const fetchTools = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiFetch("/api/tools/uv/");
-      if (!res.ok) {
-        setError(
-          await extractErrorMessage(
-            res,
-            `Unable to load uv tools: ${res.status}`,
-          ),
-        );
-        setLoading(false);
-        return;
-      }
-      const data = (await res.json()) as UvToolsResponse;
+      const data = await fetchUvTools();
       setTools(data.tools);
       setUvPath(data.uv_path);
       setError(data.error);
-    } catch {
-      setError("Unable to reach the local API.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to reach the local API.",
+      );
     }
     setLoading(false);
   }, []);
@@ -122,89 +77,77 @@ const Tools = () => {
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
             {tools.map((tool, idx) => (
-              <div
+              <Link
                 key={tool.name}
-                className={`grid grid-cols-1 gap-3 px-3 py-2 lg:grid-cols-[minmax(160px,1fr)_minmax(200px,1.4fr)_minmax(200px,1.6fr)] ${
+                to={`/dashboard/tools/${encodeURIComponent(tool.name)}`}
+                className={`grid min-w-0 grid-cols-1 gap-2 px-3 py-2 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)_minmax(96px,140px)_24px] md:items-center ${
                   idx > 0 ? "border-t border-border" : ""
                 }`}
               >
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[12.5px] font-medium text-foreground">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span
+                      className="min-w-0 truncate text-[12.5px] font-medium text-foreground"
+                      title={tool.name}
+                    >
                       {tool.name}
                     </span>
                     {tool.is_editable ? (
-                      <span className="font-mono text-[10px] text-info">
+                      <span className="shrink-0 font-mono text-[10px] text-info">
                         editable
                       </span>
                     ) : null}
-                    <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                    <span className="shrink-0 font-mono text-[11px] text-muted-foreground tabular-nums">
                       v{tool.version}
                     </span>
                   </div>
-                  {tool.python_version ? (
-                    <p className="mt-0.5 font-mono text-[10.5px] text-muted-foreground/70">
-                      {tool.python_version}
-                    </p>
-                  ) : null}
-                  {tool.required_specifier ? (
-                    <p className="mt-0.5 break-all font-mono text-[10.5px] text-muted-foreground/70">
-                      {tool.required_specifier}
-                    </p>
-                  ) : null}
-                  <p className="mt-0.5 break-all font-mono text-[10.5px] text-muted-foreground/60">
+                  <p
+                    className="mt-0.5 truncate font-mono text-[10.5px] text-muted-foreground/60"
+                    title={tool.environment_path}
+                  >
                     {tool.environment_path}
                   </p>
                 </div>
 
-                <div className="min-w-0 space-y-0.5">
+                <div className="min-w-0">
                   {tool.executables.length === 0 ? (
                     <p className="text-[12px] text-muted-foreground">—</p>
                   ) : (
-                    tool.executables.map((executable) => (
-                      <div key={`${tool.name}:${executable.path}`}>
-                        <span className="font-mono text-[12px] font-medium text-foreground">
+                    <div className="flex min-w-0 flex-wrap gap-1">
+                      {tool.executables.slice(0, 3).map((executable) => (
+                        <span
+                          key={`${tool.name}:${executable.path}`}
+                          className="max-w-[11rem] truncate rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[11px] text-foreground"
+                          title={`${executable.name}: ${executable.path}`}
+                        >
                           {executable.name}
                         </span>
-                        <p className="break-all font-mono text-[10.5px] text-muted-foreground/60">
-                          {executable.path}
-                        </p>
-                      </div>
-                    ))
+                      ))}
+                      {tool.executables.length > 3 ? (
+                        <span className="rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                          +{tool.executables.length - 3}
+                        </span>
+                      ) : null}
+                    </div>
                   )}
                 </div>
 
-                <div className="min-w-0">
-                  {tool.editable_project_location ? (
-                    <p className="break-all font-mono text-[12px] text-foreground/80">
-                      {tool.editable_project_location}
-                    </p>
-                  ) : (
-                    <p className="text-[12px] text-muted-foreground">—</p>
-                  )}
-                  {tool.editable_packages.length > 1 ? (
-                    <div className="mt-1 space-y-1">
-                      {tool.editable_packages.map((pkg) => (
-                        <div
-                          key={`${tool.name}:${pkg.name}:${pkg.editable_project_location}`}
-                        >
-                          <span className="font-mono text-[10.5px] text-muted-foreground">
-                            {pkg.name} v{pkg.version}
-                          </span>
-                          <p className="break-all font-mono text-[10.5px] text-muted-foreground/60">
-                            {pkg.editable_project_location}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+                <div className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground md:justify-end">
+                  {tool.python_version ? (
+                    <span
+                      className="truncate font-mono"
+                      title={tool.python_version}
+                    >
+                      {tool.python_version}
+                    </span>
                   ) : null}
                   {tool.inspection_error ? (
-                    <p className="mt-1 break-all text-[10.5px] text-destructive">
-                      {tool.inspection_error}
-                    </p>
+                    <span className="shrink-0 text-destructive">error</span>
                   ) : null}
                 </div>
-              </div>
+
+                <ChevronRight className="hidden h-3.5 w-3.5 text-muted-foreground md:block" />
+              </Link>
             ))}
           </div>
         )}

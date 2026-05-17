@@ -3,12 +3,14 @@ import { RunDetail } from "@/components/RunDetail";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
-import { Send, Square, Wifi, WifiOff } from "lucide-react";
+import { ArrowLeft, FolderOpen, Send, Square, Wifi, WifiOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 const SessionDetail = () => {
   const { threadId } = useParams<{ threadId: string }>();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { thread, isConnected, startTurn, interruptTurn } =
     useThreadWebSocket(threadId);
   const [prompt, setPrompt] = useState("");
@@ -36,6 +38,15 @@ const SessionDetail = () => {
 
   const isRunning = thread?.status === "running";
   const projectName = (path: string) => path.split("/").pop() || path;
+  const fromProjectPath = searchParams.get("fromProject");
+  const openProject = () => {
+    if (!thread?.directory) return;
+    navigate(`/dashboard/project?path=${encodeURIComponent(thread.directory)}`);
+  };
+  const goBackToProject = () => {
+    if (!fromProjectPath) return;
+    navigate(`/dashboard/project?path=${encodeURIComponent(fromProjectPath)}`);
+  };
 
   return (
     <DashboardLayout>
@@ -43,13 +54,35 @@ const SessionDetail = () => {
         {thread ? (
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
+              {fromProjectPath ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={goBackToProject}
+                  className="h-6 px-2 text-[11px]"
+                >
+                  <ArrowLeft className="h-3 w-3" />
+                  Back
+                </Button>
+              ) : null}
               <h1 className="text-sm font-semibold text-foreground">
                 {projectName(thread.directory)}
               </h1>
               <StatusBadge status={thread.status} />
-              {thread.is_livekit_shared ? (
-                <span className="font-mono text-[10px] text-warning">livekit</span>
+              {thread.is_livekit_active_target ? (
+                <span className="font-mono text-[10px] text-warning">voice</span>
+              ) : thread.is_livekit_dispatcher || thread.is_livekit_shared ? (
+                <span className="font-mono text-[10px] text-warning">dispatch</span>
               ) : null}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={openProject}
+                className="h-6 px-2 text-[11px]"
+              >
+                <FolderOpen className="h-3 w-3" />
+                Project
+              </Button>
               <span className="ml-auto flex items-center gap-1 font-mono text-[10.5px]">
                 {isConnected ? (
                   <>

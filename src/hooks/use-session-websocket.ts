@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/auth";
+import { apiFetch } from "@/lib/api";
 import { getBackendWebSocketUrl } from "@/lib/runtime-config";
 import type { ThreadInfo } from "@/types/session";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -12,6 +13,14 @@ export function useThreadWebSocket(threadId: string | undefined) {
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const reconnectDelayRef = useRef(1000);
 
+  const refreshThread = useCallback(async () => {
+    if (!threadId) return;
+    const res = await apiFetch(`/api/threads/${threadId}/`);
+    if (res.ok) {
+      setThread(await res.json());
+    }
+  }, [threadId]);
+
   const connect = useCallback(() => {
     if (!threadId || !token) return;
 
@@ -24,6 +33,7 @@ export function useThreadWebSocket(threadId: string | undefined) {
     ws.onopen = () => {
       setIsConnected(true);
       reconnectDelayRef.current = 1000;
+      void refreshThread();
     };
 
     ws.onclose = () => {
@@ -87,11 +97,28 @@ export function useThreadWebSocket(threadId: string | undefined) {
         }
       }
     };
-  }, [threadId, token]);
+  }, [threadId, token, refreshThread]);
 
   useEffect(() => {
     connect();
+
+    const interval = window.setInterval(refreshThread, 5000);
+    const handleFocus = () => {
+      void refreshThread();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshThread();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
@@ -100,7 +127,7 @@ export function useThreadWebSocket(threadId: string | undefined) {
         wsRef.current = null;
       }
     };
-  }, [connect]);
+  }, [connect, refreshThread]);
 
   const startTurn = useCallback(
     (prompt: string) => {

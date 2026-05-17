@@ -1,5 +1,5 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
-import { StatusBadge } from "@/components/StatusBadge";
+import { ThreadListItem } from "@/components/ThreadListItem";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
 import type { Project, ThreadInfo } from "@/types/session";
-import { ChevronRight, FolderOpen, Plus, Terminal, Trash2 } from "lucide-react";
+import { FolderOpen, Plus, Terminal, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -67,6 +67,9 @@ const Sessions = () => {
 
   const projectName = (path: string) => path.split("/").pop() || path;
   const activeCount = threads.filter((t) => t.status === "running").length;
+  const sortedThreads = [...threads].sort(
+    (a, b) => +new Date(b.updated_at) - +new Date(a.updated_at),
+  );
 
   return (
     <DashboardLayout>
@@ -137,52 +140,28 @@ const Sessions = () => {
           </div>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
-            {threads.map((thread, idx) => (
-              <div
+            {sortedThreads.map((thread, idx) => (
+              <ThreadListItem
                 key={thread.thread_id}
+                thread={thread}
+                showTopBorder={idx > 0}
                 onClick={() =>
                   navigate(`/dashboard/threads/${thread.thread_id}`)
                 }
-                className={`group flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-surface-muted ${
-                  idx > 0 ? "border-t border-border" : ""
-                }`}
-              >
-                <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
-                <div className="flex min-w-0 flex-1 items-baseline gap-2">
-                  <span className="truncate text-[12.5px] font-medium text-foreground">
-                    {projectName(thread.directory)}
-                  </span>
-                  {thread.is_livekit_shared ? (
-                    <span className="font-mono text-[10px] text-warning">
-                      livekit
-                    </span>
-                  ) : null}
-                  <span className="truncate font-mono text-[11px] text-muted-foreground/70">
-                    {thread.directory}
-                  </span>
-                </div>
-                <StatusBadge status={thread.status} />
-                <span className="hidden font-mono text-[10.5px] text-muted-foreground tabular-nums sm:inline">
-                  {new Date(thread.created_at).toLocaleString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteThread(thread.thread_id);
-                  }}
-                >
-                  <Trash2 className="h-3 w-3 text-muted-foreground" />
-                </Button>
-                <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
-              </div>
+                action={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteThread(thread.thread_id);
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                }
+              />
             ))}
           </div>
         )}
