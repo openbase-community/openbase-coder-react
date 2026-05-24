@@ -208,7 +208,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
             LiveKit dispatcher thread
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Clear the saved dispatcher thread and restart the LiveKit agent.
+            Create a fresh dispatcher thread and restart the LiveKit agent.
           </p>
           {liveKitThreadMessage ? (
             <p className="mt-1 text-[12px] text-success">
