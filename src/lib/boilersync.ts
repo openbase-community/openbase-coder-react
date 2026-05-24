@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
 import type {
   TemplateDetails,
   TemplateInputField,
@@ -26,18 +27,6 @@ export type BoilerSyncTemplatesResponse = {
   } | null;
   details: BoilerSyncTemplateDetails | null;
   error: string | null;
-};
-
-const extractErrorMessage = async (
-  res: Response,
-  fallback: string,
-): Promise<string> => {
-  try {
-    const data = (await res.json()) as { error?: string; detail?: string };
-    return data.error ?? data.detail ?? fallback;
-  } catch {
-    return fallback;
-  }
 };
 
 export const fetchBoilerSyncTemplates = async (

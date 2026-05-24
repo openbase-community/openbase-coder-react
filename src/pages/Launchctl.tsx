@@ -1,5 +1,11 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
 import {
+  ResourceEmptyState,
+  ResourceError,
+  ResourceLoading,
+  ResourcePageHeader,
+} from "@/components/resource/ResourcePage";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -12,11 +18,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
 import {
   ArrowLeft,
   ChevronRight,
   EyeOff,
-  RefreshCw,
   Server,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -67,18 +73,6 @@ const runtimeLabel = (svc: LaunchctlService) =>
 
 const servicePath = (label: string) =>
   `/dashboard/launchctl/${encodeURIComponent(label)}`;
-
-const extractErrorMessage = async (
-  res: Response,
-  fallback: string,
-): Promise<string> => {
-  try {
-    const data = (await res.json()) as { error?: string; detail?: string };
-    return data.error ?? data.detail ?? fallback;
-  } catch {
-    return fallback;
-  }
-};
 
 const DetailField = ({
   label,
@@ -471,43 +465,25 @@ const Launchctl = () => {
   return (
     <DashboardLayout>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-base font-semibold tracking-tight text-foreground">
-              launchctl
-            </h1>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
+        <ResourcePageHeader
+          title="launchctl"
+          loading={loading}
+          refreshDisabled={actionKey !== null}
+          onRefresh={fetchServices}
+          subtitle={
+            <>
               {runningCount}/{services.length} running · {openbaseCount} openbase
               · <span className="font-mono">~/Library/LaunchAgents</span>
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2.5 text-[12px]"
-            onClick={fetchServices}
-            disabled={loading || actionKey !== null}
-          >
-            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+            </>
+          }
+        />
 
-        {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
-            {error}
-          </div>
-        ) : null}
+        <ResourceError message={error} />
 
         {loading && services.length === 0 ? (
-          <div className="text-[12px] text-muted-foreground">Loading…</div>
+          <ResourceLoading>Loading…</ResourceLoading>
         ) : services.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
-            <Server className="mx-auto h-4 w-4 text-muted-foreground/40" />
-            <p className="mt-2 text-[12px] text-muted-foreground">
-              No LaunchAgents.
-            </p>
-          </div>
+          <ResourceEmptyState icon={Server}>No LaunchAgents.</ResourceEmptyState>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
             {services.map((svc, idx) => (

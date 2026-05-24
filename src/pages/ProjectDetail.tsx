@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
+import { ReportFileRow, type ReportFilePayload } from "@/components/reports/ReportFileRow";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   AlertDialog,
@@ -13,84 +14,35 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { readJson } from "@/lib/api-errors";
+import { GIT_STATUS, projectName } from "@/lib/project-display";
 import { groupReportItems } from "@/lib/reportGroups";
+import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
+import { downloadReportFile } from "@/lib/reportFiles";
 import { shouldDeemphasizeThread, threadVoiceLabel } from "@/lib/thread-display";
+import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
 import { cn } from "@/lib/utils";
-import type {
-  ReportsFile,
-  GitStatus,
-  Project,
-  ThreadInfo,
-} from "@/types/session";
+import type { ReportsFile } from "@/types/session";
 import {
   ArrowLeft,
   ChevronDown,
   ChevronRight,
-  Download,
-  FileText,
   Folder,
   GitBranch,
-  ImageIcon,
   Plus,
   Terminal,
   Trash2,
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
-
-type GitStyle = { dot: string; label: string; text: string };
-
-type ReportsPayload = {
-  file: ReportsFile;
-  content?: string;
-  data_url?: string;
-  error?: string;
-};
-
-const GIT_STATUS: Record<GitStatus, GitStyle> = {
-  clean: { dot: "bg-success", label: "clean", text: "text-success" },
-  dirty: { dot: "bg-warning", label: "dirty", text: "text-warning" },
-  unpushed: { dot: "bg-info", label: "unpushed", text: "text-info" },
-  no_git: {
-    dot: "bg-muted-foreground/40",
-    label: "no git",
-    text: "text-muted-foreground",
-  },
-};
-
-const formatBytes = (size: number) => {
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-const formatDate = (timestamp: number) =>
-  new Date(timestamp * 1000).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-
-const readJson = async (res: Response) => {
-  const contentType = res.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) return null;
-  return res.json();
-};
-
-const projectName = (path: string) => path.split("/").pop() || path;
 
 const ProjectDetail = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const projectPath = searchParams.get("path") || "";
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [threads, setThreads] = useState<ThreadInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { projects, threads, loading } = useProjectsAndThreads();
   const [reportsFiles, setReportsFiles] = useState<ReportsFile[]>([]);
   const [expandedReportKey, setExpandedReportKey] = useState<string | null>(
     null,
@@ -99,7 +51,7 @@ const ProjectDetail = () => {
     () => new Set(),
   );
   const [reportsPayloads, setReportsPayloads] = useState<
-    Record<string, ReportsPayload>
+    Record<string, ReportFilePayload>
   >({});
   const [reportsLoading, setReportsLoading] = useState(false);
   const [reportsFileLoadingKey, setReportsFileLoadingKey] = useState<
@@ -220,41 +172,18 @@ const ProjectDetail = () => {
   const downloadReport = useCallback(
     async (file: ReportsFile) => {
       setDownloadingReportKey(file.path);
-      const params = new URLSearchParams({
-        path: projectPath,
-        file: file.path,
-      });
-      const res = await apiFetch(`/api/projects/reports/download/?${params}`);
-      setDownloadingReportKey(null);
-
-      if (!res.ok) {
-        const data = await readJson(res);
-        toast.error(data?.error || "Failed to download report");
-        return;
+      try {
+        await downloadReportFile(projectPath, file);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to download report",
+        );
+      } finally {
+        setDownloadingReportKey(null);
       }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = file.name;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
     },
     [projectPath],
   );
-
-  const fetchData = useCallback(async () => {
-    const [projRes, sessRes] = await Promise.all([
-      apiFetch("/api/projects/recent/"),
-      apiFetch("/api/threads/"),
-    ]);
-    if (projRes.ok) setProjects((await projRes.json()).projects);
-    if (sessRes.ok) setThreads((await sessRes.json()).threads);
-    setLoading(false);
-  }, []);
 
   const fetchReports = useCallback(async () => {
     if (!projectPath) return;
@@ -280,12 +209,6 @@ const ProjectDetail = () => {
       setExpandedReportKey(null);
     }
   }, [expandedReportKey, projectPath]);
-
-  useEffect(() => {
-    fetchData();
-    const interval = window.setInterval(fetchData, 5000);
-    return () => window.clearInterval(interval);
-  }, [fetchData]);
 
   useEffect(() => {
     fetchReports();
@@ -487,7 +410,8 @@ const ProjectDetail = () => {
                             </span>
                           </div>
                           <div className="truncate font-mono text-[10.5px] text-muted-foreground/75">
-                            {formatDate(node.updated_at)} · {formatBytes(node.size)} ·{" "}
+                            {formatReportDate(node.updated_at)} ·{" "}
+                            {formatReportBytes(node.size)} ·{" "}
                             {node.path}/
                           </div>
                         </div>
@@ -498,121 +422,28 @@ const ProjectDetail = () => {
                           {node.items.map((file) => {
                             const expanded = expandedReportKey === file.path;
                             const payload = reportsPayloads[file.path];
-                            const Icon =
-                              file.kind === "image" ? ImageIcon : FileText;
                             return (
-                              <div
+                              <ReportFileRow
                                 key={file.path}
+                                file={file}
+                                expanded={expanded}
+                                loading={reportsFileLoadingKey === file.path}
+                                payload={payload}
                                 className="border-t border-border first:border-t-0"
-                              >
-                                <div className="flex items-center gap-1 py-2 pl-8 pr-3 transition-colors hover:bg-surface-muted">
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleReport(file)}
-                                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                                  >
-                                    {expanded ? (
-                                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                    ) : (
-                                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                    )}
-                                    <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                    <div className="min-w-0 flex-1">
-                                      <div className="truncate text-[13px] font-medium text-foreground">
-                                        {file.name}
-                                      </div>
-                                      <div className="truncate font-mono text-[10.5px] text-muted-foreground/75">
-                                        {formatDate(file.updated_at)} ·{" "}
-                                        {formatBytes(file.size)} · {file.path}
-                                      </div>
-                                    </div>
-                                  </button>
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
-                                    disabled={downloadingReportKey === file.path}
-                                    aria-label={`Download ${file.name}`}
-                                    onClick={() => {
-                                      void downloadReport(file);
-                                    }}
-                                  >
-                                    <Download className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button
-                                        type="button"
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                                        disabled={deletingReportKey === file.path}
-                                        aria-label={`Delete ${file.name}`}
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete report?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          This will delete {file.name} from this project's reports folder.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction asChild>
-                                          <Button
-                                            type="button"
-                                            variant="destructive"
-                                            onClick={() => {
-                                              void deleteReport(file);
-                                            }}
-                                          >
-                                            Delete report
-                                          </Button>
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </div>
-
-                                {expanded ? (
-                                  <div className="border-t border-border bg-background px-4 py-4">
-                                    {reportsFileLoadingKey === file.path ? (
-                                      <div className="text-[12px] text-muted-foreground">
-                                        Loading file…
-                                      </div>
-                                    ) : payload?.error ? (
-                                      <div className="rounded border border-border bg-surface-muted px-3 py-2 text-[12px] text-muted-foreground">
-                                        {payload.error}
-                                      </div>
-                                    ) : payload?.file.kind === "image" &&
-                                      payload.data_url ? (
-                                      <img
-                                        src={payload.data_url}
-                                        alt={payload.file.name}
-                                        className="max-h-[70vh] max-w-full rounded border border-border object-contain"
-                                      />
-                                    ) : payload?.file.kind === "markdown" ? (
-                                      <article className="prose prose-sm max-w-none dark:prose-invert">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                          {payload.content ?? ""}
-                                        </ReactMarkdown>
-                                      </article>
-                                    ) : payload?.content ? (
-                                      <pre className="whitespace-pre-wrap rounded border border-border bg-surface-muted p-3 text-[12px] leading-relaxed text-foreground">
-                                        {payload.content}
-                                      </pre>
-                                    ) : (
-                                      <div className="text-[12px] text-muted-foreground">
-                                        Select a file to preview.
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : null}
-                              </div>
+                                rowClassName="pl-8 pr-3"
+                                metadata={
+                                  <>
+                                    {formatReportDate(file.updated_at)} ·{" "}
+                                    {formatReportBytes(file.size)} · {file.path}
+                                  </>
+                                }
+                                loadingLabel="Loading file..."
+                                onToggle={() => toggleReport(file)}
+                                onDownload={() => void downloadReport(file)}
+                                onDelete={() => void deleteReport(file)}
+                                downloading={downloadingReportKey === file.path}
+                                deleting={deletingReportKey === file.path}
+                              />
                             );
                           })}
                         </div>
@@ -624,120 +455,27 @@ const ProjectDetail = () => {
                 const file = node.item;
                 const expanded = expandedReportKey === file.path;
                 const payload = reportsPayloads[file.path];
-                const Icon = file.kind === "image" ? ImageIcon : FileText;
                 return (
-                  <div
+                  <ReportFileRow
                     key={file.path}
+                    file={file}
+                    expanded={expanded}
+                    loading={reportsFileLoadingKey === file.path}
+                    payload={payload}
                     className={index > 0 ? "border-t border-border" : ""}
-                  >
-                    <div className="flex items-center gap-1 px-3 py-2 transition-colors hover:bg-surface-muted">
-                      <button
-                        type="button"
-                        onClick={() => toggleReport(file)}
-                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                      >
-                        {expanded ? (
-                          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        )}
-                        <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-[13px] font-medium text-foreground">
-                            {file.name}
-                          </div>
-                          <div className="truncate font-mono text-[10.5px] text-muted-foreground/75">
-                            {formatDate(file.updated_at)} · {formatBytes(file.size)} ·{" "}
-                            {file.path}
-                          </div>
-                        </div>
-                      </button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
-                        disabled={downloadingReportKey === file.path}
-                        aria-label={`Download ${file.name}`}
-                        onClick={() => {
-                          void downloadReport(file);
-                        }}
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                            disabled={deletingReportKey === file.path}
-                            aria-label={`Delete ${file.name}`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete report?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will delete {file.name} from this project's reports folder.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction asChild>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={() => {
-                                  void deleteReport(file);
-                                }}
-                              >
-                                Delete report
-                              </Button>
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-
-                    {expanded ? (
-                      <div className="border-t border-border bg-background px-4 py-4">
-                        {reportsFileLoadingKey === file.path ? (
-                          <div className="text-[12px] text-muted-foreground">
-                            Loading file…
-                          </div>
-                        ) : payload?.error ? (
-                          <div className="rounded border border-border bg-surface-muted px-3 py-2 text-[12px] text-muted-foreground">
-                            {payload.error}
-                          </div>
-                        ) : payload?.file.kind === "image" &&
-                          payload.data_url ? (
-                          <img
-                            src={payload.data_url}
-                            alt={payload.file.name}
-                            className="max-h-[70vh] max-w-full rounded border border-border object-contain"
-                          />
-                        ) : payload?.file.kind === "markdown" ? (
-                          <article className="prose prose-sm max-w-none dark:prose-invert">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {payload.content ?? ""}
-                            </ReactMarkdown>
-                          </article>
-                        ) : payload?.content ? (
-                          <pre className="whitespace-pre-wrap rounded border border-border bg-surface-muted p-3 text-[12px] leading-relaxed text-foreground">
-                            {payload.content}
-                          </pre>
-                        ) : (
-                          <div className="text-[12px] text-muted-foreground">
-                            Select a file to preview.
-                          </div>
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
+                    metadata={
+                      <>
+                        {formatReportDate(file.updated_at)} ·{" "}
+                        {formatReportBytes(file.size)} · {file.path}
+                      </>
+                    }
+                    loadingLabel="Loading file..."
+                    onToggle={() => toggleReport(file)}
+                    onDownload={() => void downloadReport(file)}
+                    onDelete={() => void deleteReport(file)}
+                    downloading={downloadingReportKey === file.path}
+                    deleting={deletingReportKey === file.path}
+                  />
                 );
               })}
             </div>

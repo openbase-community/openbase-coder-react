@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
 
 export type UvToolExecutable = { name: string; path: string };
 
@@ -36,18 +37,6 @@ export type UvToolHelpResponse = {
   stdout: string;
   stderr: string;
   error: string | null;
-};
-
-const extractErrorMessage = async (
-  res: Response,
-  fallback: string,
-): Promise<string> => {
-  try {
-    const data = (await res.json()) as { error?: string; detail?: string };
-    return data.error ?? data.detail ?? fallback;
-  } catch {
-    return fallback;
-  }
 };
 
 export const fetchUvTools = async (): Promise<UvToolsResponse> => {

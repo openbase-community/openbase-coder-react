@@ -8,7 +8,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { apiFetch } from "@/lib/api";
-import type { GitStatus, Project, ThreadInfo } from "@/types/session";
+import { GIT_STATUS, projectName } from "@/lib/project-display";
+import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
+import type { Project } from "@/types/session";
 import {
   ChevronRight,
   FileText,
@@ -17,46 +19,15 @@ import {
   Plus,
   Zap,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-type GitStyle = { dot: string; label: string; text: string };
-
-const GIT_STATUS: Record<GitStatus, GitStyle> = {
-  clean: { dot: "bg-success", label: "clean", text: "text-success" },
-  dirty: { dot: "bg-warning", label: "dirty", text: "text-warning" },
-  unpushed: { dot: "bg-info", label: "unpushed", text: "text-info" },
-  no_git: {
-    dot: "bg-muted-foreground/40",
-    label: "no git",
-    text: "text-muted-foreground",
-  },
-};
-
 const Projects = () => {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [threads, setThreads] = useState<ThreadInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { projects, threads, loading, fetchData } = useProjectsAndThreads();
   const [newPath, setNewPath] = useState("");
   const [query, setQuery] = useState("");
-
-  const fetchData = useCallback(async () => {
-    const [projRes, sessRes] = await Promise.all([
-      apiFetch("/api/projects/recent/"),
-      apiFetch("/api/threads/"),
-    ]);
-    if (projRes.ok) setProjects((await projRes.json()).projects);
-    if (sessRes.ok) setThreads((await sessRes.json()).threads);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-    const interval = window.setInterval(fetchData, 5000);
-    return () => window.clearInterval(interval);
-  }, [fetchData]);
 
   const getActiveThreads = (path: string) =>
     threads.filter((t) => t.directory === path && t.status === "running");
@@ -78,7 +49,6 @@ const Projects = () => {
     }
   };
 
-  const projectName = (path: string) => path.split("/").pop() || path;
   const openProject = (project: Project) =>
     navigate(`/dashboard/project?path=${encodeURIComponent(project.path)}`);
 

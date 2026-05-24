@@ -21,42 +21,25 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
+import { projectName } from "@/lib/project-display";
 import { threadListDisplayNames } from "@/lib/thread-display";
-import type { Project, ThreadInfo } from "@/types/session";
+import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
 import { Archive, FolderOpen, Plus, Terminal } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const Sessions = () => {
   const navigate = useNavigate();
-  const [threads, setThreads] = useState<ThreadInfo[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { projects, threads, loading, fetchData } = useProjectsAndThreads();
   const [dialogOpen, setDialogOpen] = useState(false);
-
-  const fetchData = useCallback(async () => {
-    const [sessRes, projRes] = await Promise.all([
-      apiFetch("/api/threads/"),
-      apiFetch("/api/projects/recent/"),
-    ]);
-    if (sessRes.ok) setThreads((await sessRes.json()).threads);
-    if (projRes.ok) setProjects((await projRes.json()).projects);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-    const interval = window.setInterval(fetchData, 5000);
-    return () => window.clearInterval(interval);
-  }, [fetchData]);
 
   const deleteThread = async (threadId: string) => {
     const res = await apiFetch(`/api/threads/${threadId}/`, {
       method: "DELETE",
     });
     if (res.ok) {
-      setThreads((prev) => prev.filter((t) => t.thread_id !== threadId));
+      void fetchData();
       toast.success("Thread archived");
     } else {
       toast.error("Failed to archive thread");
@@ -77,7 +60,6 @@ const Sessions = () => {
     }
   };
 
-  const projectName = (path: string) => path.split("/").pop() || path;
   const activeCount = threads.filter((t) => t.status === "running").length;
   const sortedThreads = [...threads].sort(
     (a, b) => +new Date(b.updated_at) - +new Date(a.updated_at),

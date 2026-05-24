@@ -1,7 +1,12 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
-import { Button } from "@/components/ui/button";
+import {
+  ResourceEmptyState,
+  ResourceError,
+  ResourceLoading,
+  ResourcePageHeader,
+} from "@/components/resource/ResourcePage";
 import { apiFetch } from "@/lib/api";
-import { Monitor, RefreshCw } from "lucide-react";
+import { Monitor } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type TailnetDevice = {
@@ -60,45 +65,28 @@ const Devices = () => {
   return (
     <DashboardLayout>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-base font-semibold tracking-tight text-foreground">
-              Devices
-            </h1>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
+        <ResourcePageHeader
+          title="Devices"
+          loading={loading}
+          onRefresh={fetchDevices}
+          subtitle={
+            <>
               {openbaseDevices.length} Openbase host
               {openbaseDevices.length === 1 ? "" : "s"} · {allDevices.length} tailnet
               device{allDevices.length === 1 ? "" : "s"}
               {offlineCount > 0 ? ` · ${offlineCount} offline` : ""}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2.5 text-[12px]"
-            onClick={fetchDevices}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+            </>
+          }
+        />
 
-        {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
-            {error}
-          </div>
-        ) : null}
+        <ResourceError message={error} />
 
         {loading && !payload ? (
-          <div className="text-[12px] text-muted-foreground">Scanning tailnet…</div>
+          <ResourceLoading>Scanning tailnet…</ResourceLoading>
         ) : openbaseDevices.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
-            <Monitor className="mx-auto h-4 w-4 text-muted-foreground/40" />
-            <p className="mt-2 text-[12px] text-muted-foreground">
-              No Openbase Coder hosts found on the tailnet.
-            </p>
-          </div>
+          <ResourceEmptyState icon={Monitor}>
+            No Openbase Coder hosts found on the tailnet.
+          </ResourceEmptyState>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
             {openbaseDevices.map((device, idx) => (

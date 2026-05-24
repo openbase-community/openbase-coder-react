@@ -2,6 +2,7 @@ import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { ThreadListItem } from "@/components/ThreadListItem";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { projectName } from "@/lib/project-display";
 import type { Project, ServiceStatus, ThreadInfo } from "@/types/session";
 import { AlertTriangle, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -39,7 +40,6 @@ const Dashboard = () => {
   const stoppedServices = serviceEntries.filter(([, service]) => !service.running);
   const serviceWarning =
     serviceEntries.length > 0 && runningServices.length !== serviceEntries.length;
-  const projectName = (path: string) => path.split("/").pop() || path;
   const openProject = (project: Project) =>
     navigate(`/dashboard/project?path=${encodeURIComponent(project.path)}`);
 

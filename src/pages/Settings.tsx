@@ -41,20 +41,12 @@ type OpenbaseService = {
 type OpenbaseServicesResponse = {
   services: OpenbaseService[];
   scheduled?: boolean;
-  include_mcp?: boolean;
-};
-
-type LiveKitThreadRecreateResponse = {
-  previous_dispatcher_thread_id: string | null;
-  previous_active_target_thread_id: string | null;
-  removed_paths: string[];
-  livekit_agent: {
-    name: string;
-    description: string;
-    installed: boolean;
-    running: boolean;
-    pid: string | null;
-    last_exit_code: string | null;
+  restart?: {
+    services: string[];
+    processes: string[];
+    recreate_dispatcher: boolean;
+    interrupts_voice: boolean;
+    delay_seconds: number;
   };
 };
 
@@ -330,8 +322,7 @@ const Settings: React.FC = () => {
   const [liveKitThreadError, setLiveKitThreadError] = useState<string | null>(
     null,
   );
-  const [liveKitThreadResult, setLiveKitThreadResult] =
-    useState<LiveKitThreadRecreateResponse | null>(null);
+  const [liveKitThreadMessage, setLiveKitThreadMessage] = useState<string | null>(null);
   const [cartesiaVoices, setCartesiaVoices] = useState<CartesiaVoice[]>([]);
   const [dispatcherVoice, setDispatcherVoice] =
     useState<DispatcherVoice | null>(null);
@@ -376,7 +367,7 @@ const Settings: React.FC = () => {
       setOpenbaseServicesError("Unable to reach the local API.");
     }
     setLoadingOpenbaseServices(false);
-  }, []);
+  }, [fetchOpenbaseServices]);
 
   const fetchIgnoredLabels = useCallback(async () => {
     setLoadingIgnoredLabels(true);
@@ -452,13 +443,19 @@ const Settings: React.FC = () => {
       const key = `${serviceName}:${action}`;
       setServiceActionKey(key);
       try {
-        const res = await apiFetch(
-          `/api/settings/openbase-services/${encodeURIComponent(serviceName)}/`,
-          {
-            method: "POST",
-            body: JSON.stringify({ action }),
-          },
-        );
+        const res =
+          action === "restart"
+            ? await apiFetch("/api/settings/restart/", {
+                method: "POST",
+                body: JSON.stringify({ service: serviceName }),
+              })
+            : await apiFetch(
+                `/api/settings/openbase-services/${encodeURIComponent(serviceName)}/`,
+                {
+                  method: "POST",
+                  body: JSON.stringify({ action }),
+                },
+              );
         if (!res.ok) {
           setOpenbaseServicesError(
             await extractErrorMessage(
@@ -487,8 +484,9 @@ const Settings: React.FC = () => {
     const key = "__all__:restart";
     setServiceActionKey(key);
     try {
-      const res = await apiFetch("/api/settings/openbase-services/restart-all/", {
+      const res = await apiFetch("/api/settings/restart/", {
         method: "POST",
+        body: JSON.stringify({}),
       });
       if (!res.ok) {
         setOpenbaseServicesError(
@@ -516,12 +514,10 @@ const Settings: React.FC = () => {
     const key = "__super_agents_mcp__:restart";
     setServiceActionKey(key);
     try {
-      const res = await apiFetch(
-        "/api/settings/openbase-services/super-agents-mcp/restart/",
-        {
-          method: "POST",
-        },
-      );
+      const res = await apiFetch("/api/settings/restart/", {
+        method: "POST",
+        body: JSON.stringify({ service: "super-agents-mcp" }),
+      });
       if (!res.ok) {
         setOpenbaseServicesError(
           await extractErrorMessage(
@@ -577,9 +573,11 @@ const Settings: React.FC = () => {
   const handleRecreateLiveKitThread = useCallback(async () => {
     setRecreatingLiveKitThread(true);
     setLiveKitThreadError(null);
+    setLiveKitThreadMessage(null);
     try {
-      const res = await apiFetch("/api/settings/livekit-thread/recreate/", {
+      const res = await apiFetch("/api/settings/restart/", {
         method: "POST",
+        body: JSON.stringify({ recreate_dispatcher: true }),
       });
       if (!res.ok) {
         setLiveKitThreadError(
@@ -591,7 +589,12 @@ const Settings: React.FC = () => {
         setRecreatingLiveKitThread(false);
         return;
       }
-      setLiveKitThreadResult((await res.json()) as LiveKitThreadRecreateResponse);
+      const data = (await res.json()) as OpenbaseServicesResponse;
+      setOpenbaseServices(data.services);
+      setLiveKitThreadMessage("Dispatcher recreation restart scheduled.");
+      window.setTimeout(() => {
+        void fetchOpenbaseServices();
+      }, 4000);
     } catch {
       setLiveKitThreadError("Unable to reach the local API.");
     }
@@ -999,14 +1002,9 @@ const Settings: React.FC = () => {
               <p className="mt-0.5 text-[11px] text-muted-foreground">
                 Clear the saved dispatcher thread and restart the LiveKit agent.
               </p>
-              {liveKitThreadResult ? (
-                <p className="mt-1 truncate font-mono text-[10.5px] text-muted-foreground">
-                  Previous:{" "}
-                  {liveKitThreadResult.previous_dispatcher_thread_id ?? "none"}
-                  {" · agent "}
-                  {liveKitThreadResult.livekit_agent.running
-                    ? "running"
-                    : "stopped"}
+              {liveKitThreadMessage ? (
+                <p className="mt-1 text-[12px] text-success">
+                  {liveKitThreadMessage}
                 </p>
               ) : null}
               {liveKitThreadError ? (

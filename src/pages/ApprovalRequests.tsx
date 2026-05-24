@@ -1,7 +1,14 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
+import {
+  ResourceEmptyState,
+  ResourceError,
+  ResourceLoading,
+  ResourcePageHeader,
+} from "@/components/resource/ResourcePage";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
-import { Check, ExternalLink, RefreshCw, ShieldAlert, X } from "lucide-react";
+import { extractErrorMessage } from "@/lib/api-errors";
+import { Check, ExternalLink, ShieldAlert, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -63,8 +70,9 @@ const ApprovalRequests = () => {
     try {
       const res = await apiFetch("/api/approval-requests/");
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || body.detail || "Unable to load approval requests.");
+        throw new Error(
+          await extractErrorMessage(res, "Unable to load approval requests."),
+        );
       }
       const data = await res.json();
       setRequests(Array.isArray(data.requests) ? data.requests : []);
@@ -97,8 +105,9 @@ const ApprovalRequests = () => {
         },
       );
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || body.detail || `Unable to ${decision} request.`);
+        throw new Error(
+          await extractErrorMessage(res, `Unable to ${decision} request.`),
+        );
       }
       setRequests((prev) => prev.filter((item) => String(item.id) !== requestId));
       toast.success(decision === "accept" ? "Approved" : "Denied");
@@ -122,42 +131,21 @@ const ApprovalRequests = () => {
   return (
     <DashboardLayout>
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-base font-semibold tracking-tight text-foreground">
-              Approval requests
-            </h1>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
-              {pendingCount} pending · auto-refresh 5s
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2.5 text-[12px]"
-            onClick={() => void fetchRequests()}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+        <ResourcePageHeader
+          title="Approval requests"
+          loading={loading}
+          onRefresh={() => void fetchRequests()}
+          subtitle={`${pendingCount} pending · auto-refresh 5s`}
+        />
 
-        {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
-            {error}
-          </div>
-        ) : null}
+        <ResourceError message={error} />
 
         {loading && sortedRequests.length === 0 ? (
-          <div className="text-[12px] text-muted-foreground">Loading...</div>
+          <ResourceLoading>Loading...</ResourceLoading>
         ) : sortedRequests.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-surface px-4 py-8 text-center">
-            <ShieldAlert className="mx-auto h-4 w-4 text-muted-foreground/40" />
-            <p className="mt-2 text-[12px] text-muted-foreground">
-              No pending approvals.
-            </p>
-          </div>
+          <ResourceEmptyState icon={ShieldAlert} className="py-8">
+            No pending approvals.
+          </ResourceEmptyState>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
             {sortedRequests.map((request, idx) => {

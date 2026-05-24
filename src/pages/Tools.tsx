@@ -1,79 +1,42 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
-import { Button } from "@/components/ui/button";
-import { fetchUvTools, type UvTool } from "@/lib/uv-tools";
-import { ChevronRight, RefreshCw, Wrench } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import {
+  ResourceEmptyState,
+  ResourceError,
+  ResourceLoading,
+  ResourcePageHeader,
+} from "@/components/resource/ResourcePage";
+import { useUvTools } from "@/lib/useUvTools";
+import { ChevronRight, Wrench } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Tools = () => {
-  const [tools, setTools] = useState<UvTool[]>([]);
-  const [uvPath, setUvPath] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchTools = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchUvTools();
-      setTools(data.tools);
-      setUvPath(data.uv_path);
-      setError(data.error);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to reach the local API.",
-      );
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    void fetchTools();
-  }, [fetchTools]);
+  const { tools, uvPath, error, loading, fetchTools } = useUvTools();
 
   const editableCount = tools.filter((t) => t.is_editable).length;
 
   return (
     <DashboardLayout>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-base font-semibold tracking-tight text-foreground">
-              uv tools
-            </h1>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
+        <ResourcePageHeader
+          title="uv tools"
+          loading={loading}
+          onRefresh={fetchTools}
+          subtitle={
+            <>
               {tools.length} installed · {editableCount} editable
               {uvPath ? (
                 <span className="ml-2 font-mono text-[11px]">{uvPath}</span>
               ) : null}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2.5 text-[12px]"
-            onClick={fetchTools}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+            </>
+          }
+        />
 
-        {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
-            {error}
-          </div>
-        ) : null}
+        <ResourceError message={error} />
 
         {loading && tools.length === 0 ? (
-          <div className="text-[12px] text-muted-foreground">Loading…</div>
+          <ResourceLoading>Loading…</ResourceLoading>
         ) : tools.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
-            <Wrench className="mx-auto h-4 w-4 text-muted-foreground/40" />
-            <p className="mt-2 text-[12px] text-muted-foreground">
-              No uv tools.
-            </p>
-          </div>
+          <ResourceEmptyState icon={Wrench}>No uv tools.</ResourceEmptyState>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
             {tools.map((tool, idx) => (

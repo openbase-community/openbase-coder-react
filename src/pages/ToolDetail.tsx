@@ -2,14 +2,13 @@ import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { Button } from "@/components/ui/button";
 import {
   fetchUvToolHelp,
-  fetchUvTools,
   uninstallUvTool,
-  type UvTool,
   type UvToolExecutable,
   type UvToolHelpResponse,
 } from "@/lib/uv-tools";
+import { useUvTools } from "@/lib/useUvTools";
 import { ArrowLeft, CircleHelp, RefreshCw, Trash2, Wrench } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -41,33 +40,20 @@ const ToolDetail = () => {
   const navigate = useNavigate();
   const decodedToolName = toolName;
 
-  const [tools, setTools] = useState<UvTool[]>([]);
-  const [uvPath, setUvPath] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    tools,
+    uvPath,
+    error,
+    loading,
+    fetchTools,
+    setTools,
+    setUvPath,
+    setError,
+  } = useUvTools();
   const [uninstalling, setUninstalling] = useState(false);
   const [helpByExecutable, setHelpByExecutable] = useState<
     Record<string, HelpState>
   >({});
-
-  const fetchTools = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchUvTools();
-      setTools(data.tools);
-      setUvPath(data.uv_path);
-      setError(data.error);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to reach the local API.",
-      );
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    void fetchTools();
-  }, [fetchTools]);
 
   const tool = tools.find((candidate) => candidate.name === decodedToolName);
 

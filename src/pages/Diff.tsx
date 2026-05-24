@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/contexts/auth";
+import { projectName } from "@/lib/project-display";
 import {
   DiffViewer,
   type Repository,
@@ -35,13 +36,13 @@ const DiffContent = ({ mobile }: { mobile?: boolean }) => {
     return () => clearInterval(interval);
   }, [fetchDiff]);
 
-  const projectName = projectPath?.split("/").pop() || "";
+  const title = projectPath ? projectName(projectPath) : "Git Diff";
 
   return (
     <DiffViewer
       repositories={repositories}
       loading={loading}
-      title={projectPath ? projectName : "Git Diff"}
+      title={title}
       onRefresh={fetchDiff}
       onBack={projectPath ? () => navigate("/dashboard/projects") : undefined}
       mobile={mobile}

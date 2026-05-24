@@ -1,12 +1,18 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { Button } from "@/components/ui/button";
 import {
+  ResourceEmptyState,
+  ResourceError,
+  ResourceLoading,
+  ResourcePageHeader,
+} from "@/components/resource/ResourcePage";
+import {
   fetchBoilerSyncTemplates,
   type BoilerSyncTemplate,
   type BoilerSyncTemplateDetails,
 } from "@/lib/boilersync";
 import { TemplateFieldList } from "boilersync-react";
-import { ChevronRight, GitBranch, RefreshCw, ScrollText } from "lucide-react";
+import { ChevronRight, GitBranch, ScrollText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const BoilerSync = () => {
@@ -61,33 +67,19 @@ const BoilerSync = () => {
   return (
     <DashboardLayout>
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-base font-semibold tracking-tight text-foreground">
-              BoilerSync
-            </h1>
-            <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
+        <ResourcePageHeader
+          title="BoilerSync"
+          loading={loading}
+          onRefresh={() => fetchTemplates(selectedTemplate ?? undefined)}
+          subtitle={
+            <span className="block truncate">
               {templates.length} templates · {sourceCount} sources
               {rootDir ? <span className="ml-2 font-mono text-[11px]">{rootDir}</span> : null}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2.5 text-[12px]"
-            onClick={() => fetchTemplates(selectedTemplate ?? undefined)}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+            </span>
+          }
+        />
 
-        {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
-            {error}
-          </div>
-        ) : null}
+        <ResourceError message={error} />
 
         {boilersyncPath ? (
           <div className="rounded border border-border bg-muted/30 px-3 py-2 font-mono text-[11px] text-muted-foreground">
@@ -96,14 +88,11 @@ const BoilerSync = () => {
         ) : null}
 
         {loading && templates.length === 0 ? (
-          <div className="text-[12px] text-muted-foreground">Loading...</div>
+          <ResourceLoading>Loading...</ResourceLoading>
         ) : templates.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
-            <ScrollText className="mx-auto h-4 w-4 text-muted-foreground/40" />
-            <p className="mt-2 text-[12px] text-muted-foreground">
-              No BoilerSync templates found.
-            </p>
-          </div>
+          <ResourceEmptyState icon={ScrollText}>
+            No BoilerSync templates found.
+          </ResourceEmptyState>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)]">
             <div className="overflow-hidden rounded border border-border bg-surface">
