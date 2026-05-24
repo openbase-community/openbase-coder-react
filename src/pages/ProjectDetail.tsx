@@ -507,11 +507,11 @@ const ProjectDetail = () => {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <StatusBadge status={thread.status} />
-                            {thread.is_livekit_active_target ? (
+                            {thread.voice_route?.role === "active_target" ? (
                               <span className="font-mono text-[10px] text-warning">
                                 {threadVoiceLabel(thread)}
                               </span>
-                            ) : thread.is_livekit_dispatcher ? (
+                            ) : thread.voice_route?.role === "dispatcher" ? (
                               <span className="font-mono text-[10px] text-warning">
                                 dispatch
                               </span>

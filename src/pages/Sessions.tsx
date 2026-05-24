@@ -188,7 +188,7 @@ const Sessions = () => {
                   </div>
                   <div className="overflow-hidden rounded border border-border bg-surface">
                     {group.threads.map((thread, idx) => {
-                      const isDispatchThread = thread.is_livekit_dispatcher;
+                      const isDispatchThread = thread.voice_route?.role === "dispatcher";
 
                       return (
                         <ThreadListItem

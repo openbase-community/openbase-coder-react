@@ -51,11 +51,11 @@ export const ThreadListItem = ({
         <span className="truncate text-[12.5px] font-medium text-foreground">
           {displayName ?? threadDisplayName(thread)}
         </span>
-        {agentVoiceName && thread.is_livekit_active_target ? (
+        {agentVoiceName && thread.voice_route?.role === "active_target" ? (
           <span className="shrink-0 font-mono text-[10px] text-warning">
             {agentVoiceName}
           </span>
-        ) : agentVoiceName && thread.is_livekit_dispatcher ? (
+        ) : agentVoiceName && thread.voice_route?.role === "dispatcher" ? (
           <span className="shrink-0 font-mono text-[10px] text-warning">
             {agentVoiceName}
           </span>

@@ -69,7 +69,7 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
     if (!fromProjectPath) return;
     navigate(`/dashboard/project?path=${encodeURIComponent(fromProjectPath)}`);
   };
-  const isDispatchThread = Boolean(thread?.is_livekit_dispatcher);
+  const isDispatchThread = thread?.voice_route?.role === "dispatcher";
   const agentVoiceName = thread ? threadAgentVoiceName(thread) : undefined;
 
   const archiveThread = async () => {

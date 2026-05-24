@@ -16,6 +16,8 @@ export interface ThreadInfo {
   thread_id: string;
   directory: string;
   name?: string | null;
+  agent_name?: string | null;
+  display_name: string;
   title?: string | null;
   preview?: string | null;
   created_at: string;
@@ -23,14 +25,17 @@ export interface ThreadInfo {
   current_turn: TurnInfo | null;
   turn_history: TurnInfo[];
   status: ThreadStatus;
-  is_livekit_dispatcher?: boolean;
-  is_livekit_active_target?: boolean;
-  livekit_voice_id?: string | null;
-  livekit_voice_name?: string | null;
-  livekit_dispatcher_voice_id?: string | null;
-  livekit_dispatcher_voice_name?: string | null;
-  livekit_active_target_voice_id?: string | null;
-  livekit_active_target_voice_name?: string | null;
+  voice_route?: {
+    role: "none" | "dispatcher" | "active_target";
+    active: boolean;
+  };
+  voice_assignment?: {
+    thread_id: string;
+    agent_name?: string | null;
+    voice_id?: string | null;
+    voice_name?: string | null;
+    source: string;
+  } | null;
 }
 
 export interface ThreadListResponse {

@@ -19,7 +19,7 @@ const DispatchChat = () => {
     );
     const threads: ThreadInfo[] = data.threads;
     setDispatchThread(
-      threads.find((thread) => thread.is_livekit_dispatcher) ?? null,
+      threads.find((thread) => thread.voice_route?.role === "dispatcher") ?? null,
     );
     setLoading(false);
   }, []);

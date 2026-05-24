@@ -11,10 +11,10 @@ const firstPresent = (...values: Array<string | null | undefined>) =>
   values.find((value) => value && value.trim())?.trim();
 
 export const isDispatcherThread = (thread: ThreadInfo) =>
-  Boolean(thread.is_livekit_dispatcher);
+  thread.voice_route?.role === "dispatcher";
 
 export const threadDisplayName = (thread: ThreadInfo) =>
-  firstPresent(thread.name, thread.title, thread.preview) ||
+  firstPresent(thread.display_name, thread.name, thread.title, thread.preview) ||
   basename(thread.directory) ||
   thread.thread_id;
 
@@ -22,7 +22,7 @@ export const threadListDisplayNames = (threads: ThreadInfo[]) => {
   return new Map(
     threads.map((thread) => [
       thread.thread_id,
-      firstPresent(thread.name, thread.title, thread.preview) ??
+      firstPresent(thread.display_name, thread.name, thread.title, thread.preview) ??
         basename(thread.directory) ??
         thread.thread_id,
     ]),
@@ -34,9 +34,8 @@ export const threadProjectLabel = (thread: ThreadInfo) =>
 
 export const threadAgentVoiceName = (thread: ThreadInfo) =>
   firstPresent(
-    thread.livekit_active_target_voice_name,
-    thread.livekit_dispatcher_voice_name,
-    thread.livekit_voice_name,
+    thread.voice_assignment?.voice_name,
+    thread.voice_assignment?.agent_name,
   );
 
 export const threadVoiceLabel = (thread: ThreadInfo) =>
@@ -44,15 +43,13 @@ export const threadVoiceLabel = (thread: ThreadInfo) =>
 
 export const hasHistoricalVoice = (thread: ThreadInfo) =>
   Boolean(
-    !thread.is_livekit_active_target &&
-      !thread.is_livekit_dispatcher &&
-      (thread.livekit_voice_id || thread.livekit_voice_name),
+    thread.voice_route?.role === "none" && thread.voice_assignment,
   );
 
 export const isPriorityThread = (thread: ThreadInfo) =>
   Boolean(
-    thread.is_livekit_active_target ||
-      thread.is_livekit_dispatcher,
+    thread.voice_route?.role === "active_target" ||
+      thread.voice_route?.role === "dispatcher",
   );
 
 export const shouldDeemphasizeThread = (thread: ThreadInfo) =>
