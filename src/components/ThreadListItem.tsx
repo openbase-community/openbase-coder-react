@@ -2,9 +2,9 @@ import { StatusBadge } from "@/components/StatusBadge";
 import {
   hasHistoricalVoice,
   shouldDeemphasizeThread,
+  threadAgentVoiceName,
   threadDisplayName,
   threadProjectLabel,
-  threadVoiceLabel,
 } from "@/lib/thread-display";
 import { cn } from "@/lib/utils";
 import type { ThreadInfo } from "@/types/session";
@@ -35,6 +35,7 @@ export const ThreadListItem = ({
   action,
 }: ThreadListItemProps) => {
   const isDeemphasized = shouldDeemphasizeThread(thread);
+  const agentVoiceName = threadAgentVoiceName(thread);
 
   return (
     <div
@@ -50,17 +51,17 @@ export const ThreadListItem = ({
         <span className="truncate text-[12.5px] font-medium text-foreground">
           {displayName ?? threadDisplayName(thread)}
         </span>
-        {thread.is_livekit_active_target ? (
+        {agentVoiceName && thread.is_livekit_active_target ? (
           <span className="shrink-0 font-mono text-[10px] text-warning">
-            {threadVoiceLabel(thread)}
+            {agentVoiceName}
           </span>
-        ) : thread.is_livekit_dispatcher || thread.is_livekit_shared ? (
+        ) : agentVoiceName && thread.is_livekit_dispatcher ? (
           <span className="shrink-0 font-mono text-[10px] text-warning">
-            dispatch
+            {agentVoiceName}
           </span>
-        ) : hasHistoricalVoice(thread) ? (
+        ) : agentVoiceName && hasHistoricalVoice(thread) ? (
           <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-            {threadVoiceLabel(thread)}
+            {agentVoiceName}
           </span>
         ) : null}
         <span className="truncate font-mono text-[11px] text-muted-foreground/70">

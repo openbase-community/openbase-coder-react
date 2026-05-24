@@ -23,19 +23,14 @@ export interface ThreadInfo {
   current_turn: TurnInfo | null;
   turn_history: TurnInfo[];
   status: ThreadStatus;
-  is_livekit_shared?: boolean;
   is_livekit_dispatcher?: boolean;
   is_livekit_active_target?: boolean;
   livekit_voice_id?: string | null;
   livekit_voice_name?: string | null;
-  livekit_voice_kind?: string | null;
-  livekit_voice_source?: string | null;
-  livekit_voice_last_seen_at?: number | null;
   livekit_dispatcher_voice_id?: string | null;
   livekit_dispatcher_voice_name?: string | null;
   livekit_active_target_voice_id?: string | null;
   livekit_active_target_voice_name?: string | null;
-  livekit_voice_route_blocked_reason?: string;
 }
 
 export interface ThreadListResponse {

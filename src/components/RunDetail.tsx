@@ -10,7 +10,7 @@ import { useState } from "react";
 
 export function RunDetail({
   run,
-  defaultOpen = false,
+  defaultOpen = true,
 }: {
   run: TurnInfo;
   defaultOpen?: boolean;
@@ -43,6 +43,14 @@ export function RunDetail({
           {run.started_at && <span>Started: {new Date(run.started_at).toLocaleString()}</span>}
           {run.completed_at && <span>Completed: {new Date(run.completed_at).toLocaleString()}</span>}
           {run.reasoning_effort && <span>Reasoning: {run.reasoning_effort}</span>}
+        </div>
+        <div className="rounded border border-border bg-surface-muted px-2.5 py-1.5">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            prompt
+          </p>
+          <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-[12.5px] text-foreground">
+            {run.prompt}
+          </pre>
         </div>
         {run.accumulated_output && (
           <pre className="text-xs bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">

@@ -15,7 +15,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
 import { apiFetch } from "@/lib/api";
-import { threadDisplayName, threadVoiceLabel } from "@/lib/thread-display";
+import {
+  threadAgentVoiceName,
+  threadDisplayName,
+  threadProjectLabel,
+} from "@/lib/thread-display";
 import { Archive, ArrowLeft, FolderOpen, Send, Square, Wifi, WifiOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -65,8 +69,8 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
     if (!fromProjectPath) return;
     navigate(`/dashboard/project?path=${encodeURIComponent(fromProjectPath)}`);
   };
-  const isDispatchThread =
-    Boolean(thread?.is_livekit_dispatcher) || Boolean(thread?.is_livekit_shared);
+  const isDispatchThread = Boolean(thread?.is_livekit_dispatcher);
+  const agentVoiceName = thread ? threadAgentVoiceName(thread) : undefined;
 
   const archiveThread = async () => {
     if (!thread) return;
@@ -102,13 +106,14 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
                 {threadDisplayName(thread)}
               </h1>
               <StatusBadge status={thread.status} />
-              {thread.is_livekit_active_target ? (
+              {agentVoiceName ? (
                 <span className="font-mono text-[10px] text-warning">
-                  {threadVoiceLabel(thread)}
+                  {agentVoiceName}
                 </span>
-              ) : thread.is_livekit_dispatcher || thread.is_livekit_shared ? (
-                <span className="font-mono text-[10px] text-warning">dispatch</span>
               ) : null}
+              <span className="truncate font-mono text-[11px] text-muted-foreground">
+                {threadProjectLabel(thread)}
+              </span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -200,9 +205,9 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
                 <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                   prompt
                 </p>
-                <p className="mt-0.5 text-[12.5px] text-foreground">
+                <pre className="mt-0.5 whitespace-pre-wrap break-words font-sans text-[12.5px] text-foreground">
                   {thread.current_turn.prompt}
-                </p>
+                </pre>
               </div>
               {thread.current_turn.accumulated_output ? (
                 <pre

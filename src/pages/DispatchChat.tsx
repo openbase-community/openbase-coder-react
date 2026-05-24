@@ -19,9 +19,7 @@ const DispatchChat = () => {
     );
     const threads: ThreadInfo[] = data.threads;
     setDispatchThread(
-      threads.find(
-        (thread) => thread.is_livekit_dispatcher || thread.is_livekit_shared,
-      ) ?? null,
+      threads.find((thread) => thread.is_livekit_dispatcher) ?? null,
     );
     setLoading(false);
   }, []);

@@ -511,8 +511,7 @@ const ProjectDetail = () => {
                               <span className="font-mono text-[10px] text-warning">
                                 {threadVoiceLabel(thread)}
                               </span>
-                            ) : thread.is_livekit_dispatcher ||
-                              thread.is_livekit_shared ? (
+                            ) : thread.is_livekit_dispatcher ? (
                               <span className="font-mono text-[10px] text-warning">
                                 dispatch
                               </span>

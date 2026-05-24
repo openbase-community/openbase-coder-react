@@ -83,7 +83,7 @@ const fallbackPathForTarget = (
     return `${codexHome}/super-agent-instructions.md`;
   }
   if (target === "dispatcher") {
-    return `${codexHome}/dispatcher-instructions.md`;
+    return `${codexHome}/DISPATCHER_INSTRUCTIONS.md`;
   }
   return `${codexHome}/AGENTS.md`;
 };
