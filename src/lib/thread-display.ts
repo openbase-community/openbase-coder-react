@@ -46,7 +46,16 @@ export const threadVoiceLabel = (thread: ThreadInfo) =>
   firstPresent(
     thread.livekit_active_target_voice_name,
     thread.livekit_dispatcher_voice_name,
+    thread.livekit_voice_name,
   ) || "voice";
+
+export const hasHistoricalVoice = (thread: ThreadInfo) =>
+  Boolean(
+    !thread.is_livekit_active_target &&
+      !thread.is_livekit_dispatcher &&
+      !thread.is_livekit_shared &&
+      (thread.livekit_voice_id || thread.livekit_voice_name),
+  );
 
 export const isPriorityThread = (thread: ThreadInfo) =>
   Boolean(

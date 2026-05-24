@@ -1,5 +1,6 @@
 import { StatusBadge } from "@/components/StatusBadge";
 import {
+  hasHistoricalVoice,
   shouldDeemphasizeThread,
   threadDisplayName,
   threadProjectLabel,
@@ -56,6 +57,10 @@ export const ThreadListItem = ({
         ) : thread.is_livekit_dispatcher || thread.is_livekit_shared ? (
           <span className="shrink-0 font-mono text-[10px] text-warning">
             dispatch
+          </span>
+        ) : hasHistoricalVoice(thread) ? (
+          <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+            {threadVoiceLabel(thread)}
           </span>
         ) : null}
         <span className="truncate font-mono text-[11px] text-muted-foreground/70">
