@@ -5,14 +5,14 @@ import {
   ResourceLoading,
   ResourcePageHeader,
 } from "@/components/resource/ResourcePage";
-import { ReportFileRow, type ReportFilePayload } from "@/components/reports/ReportFileRow";
+import { ReportFileRow } from "@/components/reports/ReportFileRow";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { readJson } from "@/lib/api-errors";
 import { projectName } from "@/lib/project-display";
 import { groupReportItems } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
-import { downloadReportFile } from "@/lib/reportFiles";
+import { useReportFileActions } from "@/lib/useReportFileActions";
 import type { ReportsFile, Project } from "@/types/session";
 import {
   ChevronDown,
@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 type ReportsItem = {
   project: Project;
@@ -46,14 +45,28 @@ const Reports = () => {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set(),
   );
-  const [payloads, setPayloads] = useState<Record<string, ReportFilePayload>>({});
   const [loading, setLoading] = useState(true);
-  const [fileLoadingKey, setFileLoadingKey] = useState<string | null>(null);
-  const [deletingKey, setDeletingKey] = useState<string | null>(null);
-  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const expandedKeyRef = useRef<string | null>(null);
+  const {
+    payloads,
+    fileLoadingKey,
+    deletingKey,
+    downloadingKey,
+    loadReportFile,
+    deleteReport,
+    downloadReport,
+  } = useReportFileActions({
+    onDeleted: ({ key }) => {
+      setItems((current) =>
+        current.filter((currentItem) => itemKey(currentItem) !== key),
+      );
+      if (expandedKeyRef.current === key) {
+        setExpandedKey(null);
+      }
+    },
+  });
 
   useEffect(() => {
     expandedKeyRef.current = expandedKey;
@@ -62,27 +75,12 @@ const Reports = () => {
   const loadFile = useCallback(async (item: ReportsItem) => {
     const key = itemKey(item);
     setExpandedKey(key);
-    if (payloads[key]) return;
-
-    setFileLoadingKey(key);
-    const params = new URLSearchParams({
-      path: item.project.path,
-      file: item.file.path,
+    await loadReportFile({
+      key,
+      projectPath: item.project.path,
+      file: item.file,
     });
-    const res = await apiFetch(`/api/projects/reports/file/?${params}`);
-    setFileLoadingKey(null);
-    const data = await readJson(res);
-    setPayloads((current) => ({
-      ...current,
-      [key]:
-        res.ok && data
-          ? data
-          : {
-              file: item.file,
-              error: data?.error || "Unable to load this file.",
-            },
-    }));
-  }, [payloads]);
+  }, [loadReportFile]);
 
   const toggleItem = (item: ReportsItem) => {
     const key = itemKey(item);
@@ -94,53 +92,24 @@ const Reports = () => {
   };
 
   const deleteItem = useCallback(
-    async (item: ReportsItem) => {
-      const key = itemKey(item);
-      setDeletingKey(key);
-      const params = new URLSearchParams({
-        path: item.project.path,
-        file: item.file.path,
-      });
-      const res = await apiFetch(`/api/projects/reports/file/?${params}`, {
-        method: "DELETE",
-      });
-      const data = await readJson(res);
-      setDeletingKey(null);
-
-      if (!res.ok) {
-        toast.error(data?.error || "Failed to delete report");
-        return;
-      }
-
-      setItems((current) =>
-        current.filter((currentItem) => itemKey(currentItem) !== key),
-      );
-      setPayloads((current) => {
-        const next = { ...current };
-        delete next[key];
-        return next;
-      });
-      if (expandedKeyRef.current === key) {
-        setExpandedKey(null);
-      }
-      toast.success("Report deleted");
-    },
-    [],
+    (item: ReportsItem) =>
+      deleteReport({
+        key: itemKey(item),
+        projectPath: item.project.path,
+        file: item.file,
+      }),
+    [deleteReport],
   );
 
-  const downloadItem = useCallback(async (item: ReportsItem) => {
-    const key = itemKey(item);
-    setDownloadingKey(key);
-    try {
-      await downloadReportFile(item.project.path, item.file);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to download report",
-      );
-    } finally {
-      setDownloadingKey(null);
-    }
-  }, []);
+  const downloadItem = useCallback(
+    (item: ReportsItem) =>
+      downloadReport({
+        key: itemKey(item),
+        projectPath: item.project.path,
+        file: item.file,
+      }),
+    [downloadReport],
+  );
 
   const toggleGroup = (key: string) => {
     setExpandedGroups((current) => {

@@ -1,5 +1,5 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
-import { ReportFileRow, type ReportFilePayload } from "@/components/reports/ReportFileRow";
+import { ReportFileRow } from "@/components/reports/ReportFileRow";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   AlertDialog,
@@ -18,8 +18,8 @@ import { readJson } from "@/lib/api-errors";
 import { GIT_STATUS, projectName } from "@/lib/project-display";
 import { groupReportItems } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
-import { downloadReportFile } from "@/lib/reportFiles";
 import { shouldDeemphasizeThread, threadVoiceLabel } from "@/lib/thread-display";
+import { useReportFileActions } from "@/lib/useReportFileActions";
 import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
 import { cn } from "@/lib/utils";
 import type { ReportsFile } from "@/types/session";
@@ -50,21 +50,29 @@ const ProjectDetail = () => {
   const [expandedReportGroups, setExpandedReportGroups] = useState<Set<string>>(
     () => new Set(),
   );
-  const [reportsPayloads, setReportsPayloads] = useState<
-    Record<string, ReportFilePayload>
-  >({});
   const [reportsLoading, setReportsLoading] = useState(false);
-  const [reportsFileLoadingKey, setReportsFileLoadingKey] = useState<
-    string | null
-  >(null);
-  const [deletingReportKey, setDeletingReportKey] = useState<string | null>(
-    null,
-  );
-  const [downloadingReportKey, setDownloadingReportKey] = useState<string | null>(
-    null,
-  );
   const [removingProject, setRemovingProject] = useState(false);
   const threadsRef = useRef<HTMLDivElement | null>(null);
+  const {
+    payloads: reportsPayloads,
+    fileLoadingKey: reportsFileLoadingKey,
+    deletingKey: deletingReportKey,
+    downloadingKey: downloadingReportKey,
+    loadReportFile,
+    deleteReport: deleteReportAction,
+    downloadReport: downloadReportAction,
+    setPayloads: setReportsPayloads,
+  } = useReportFileActions({
+    loadErrorMessage: "Unable to load this file. The local API may need to restart.",
+    onDeleted: ({ key }) => {
+      setReportsFiles((current) =>
+        current.filter((currentFile) => currentFile.path !== key),
+      );
+      if (expandedReportKey === key) {
+        setExpandedReportKey(null);
+      }
+    },
+  });
 
   const project = useMemo(
     () => projects.find((item) => item.path === projectPath) ?? null,
@@ -89,30 +97,9 @@ const ProjectDetail = () => {
   const loadReportsFile = useCallback(
     async (file: ReportsFile) => {
       setExpandedReportKey(file.path);
-      if (reportsPayloads[file.path]) return;
-
-      setReportsFileLoadingKey(file.path);
-      const params = new URLSearchParams({
-        path: projectPath,
-        file: file.path,
-      });
-      const res = await apiFetch(`/api/projects/reports/file/?${params}`);
-      setReportsFileLoadingKey(null);
-      const data = await readJson(res);
-      setReportsPayloads((current) => ({
-        ...current,
-        [file.path]:
-          res.ok && data
-            ? data
-            : {
-                file,
-                error:
-                  data?.error ||
-                  "Unable to load this file. The local API may need to restart.",
-              },
-      }));
+      await loadReportFile({ key: file.path, projectPath, file });
     },
-    [projectPath, reportsPayloads],
+    [loadReportFile, projectPath],
   );
 
   const toggleReport = (file: ReportsFile) => {
@@ -135,54 +122,18 @@ const ProjectDetail = () => {
     });
   };
 
-  const deleteReport = useCallback(
+  const deleteReportFile = useCallback(
     async (file: ReportsFile) => {
-      setDeletingReportKey(file.path);
-      const params = new URLSearchParams({
-        path: projectPath,
-        file: file.path,
-      });
-      const res = await apiFetch(`/api/projects/reports/file/?${params}`, {
-        method: "DELETE",
-      });
-      const data = await readJson(res);
-      setDeletingReportKey(null);
-
-      if (!res.ok) {
-        toast.error(data?.error || "Failed to delete report");
-        return;
-      }
-
-      setReportsFiles((current) =>
-        current.filter((currentFile) => currentFile.path !== file.path),
-      );
-      setReportsPayloads((current) => {
-        const next = { ...current };
-        delete next[file.path];
-        return next;
-      });
-      if (expandedReportKey === file.path) {
-        setExpandedReportKey(null);
-      }
-      toast.success("Report deleted");
+      await deleteReportAction({ key: file.path, projectPath, file });
     },
-    [expandedReportKey, projectPath],
+    [deleteReportAction, projectPath],
   );
 
   const downloadReport = useCallback(
     async (file: ReportsFile) => {
-      setDownloadingReportKey(file.path);
-      try {
-        await downloadReportFile(projectPath, file);
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to download report",
-        );
-      } finally {
-        setDownloadingReportKey(null);
-      }
+      await downloadReportAction({ key: file.path, projectPath, file });
     },
-    [projectPath],
+    [downloadReportAction, projectPath],
   );
 
   const fetchReports = useCallback(async () => {
@@ -440,7 +391,7 @@ const ProjectDetail = () => {
                                 loadingLabel="Loading file..."
                                 onToggle={() => toggleReport(file)}
                                 onDownload={() => void downloadReport(file)}
-                                onDelete={() => void deleteReport(file)}
+                                onDelete={() => void deleteReportFile(file)}
                                 downloading={downloadingReportKey === file.path}
                                 deleting={deletingReportKey === file.path}
                               />
@@ -472,7 +423,7 @@ const ProjectDetail = () => {
                     loadingLabel="Loading file..."
                     onToggle={() => toggleReport(file)}
                     onDownload={() => void downloadReport(file)}
-                    onDelete={() => void deleteReport(file)}
+                    onDelete={() => void deleteReportFile(file)}
                     downloading={downloadingReportKey === file.path}
                     deleting={deletingReportKey === file.path}
                   />
