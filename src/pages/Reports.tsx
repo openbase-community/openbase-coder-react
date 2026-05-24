@@ -9,7 +9,7 @@ import { ReportFileRow } from "@/components/reports/ReportFileRow";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { readJson } from "@/lib/api-errors";
-import { projectName } from "@/lib/project-display";
+import { fetchAllProjectPages, projectName } from "@/lib/project-display";
 import { groupReportItems } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
 import { useReportFileActions } from "@/lib/useReportFileActions";
@@ -126,23 +126,14 @@ const Reports = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [projectsRes, globalProjectsRes] = await Promise.all([
-      apiFetch("/api/projects/recent/"),
+    const [recentProjects, globalProjectsRes] = await Promise.all([
+      fetchAllProjectPages(apiFetch),
       apiFetch("/api/projects/reports/global/"),
     ]);
-    const [projectsData, globalProjectsData] = await Promise.all([
-      readJson(projectsRes),
-      readJson(globalProjectsRes),
-    ]);
-    if (!projectsRes.ok || !projectsData) {
-      setItems([]);
-      setLoading(false);
-      setError("Unable to load recent projects.");
-      return;
-    }
+    const globalProjectsData = await readJson(globalProjectsRes);
 
     const projects = mergeProjects(
-      projectsData.projects ?? [],
+      recentProjects,
       globalProjectsRes.ok ? (globalProjectsData?.projects ?? []) : [],
     );
     const candidates = projects.filter(

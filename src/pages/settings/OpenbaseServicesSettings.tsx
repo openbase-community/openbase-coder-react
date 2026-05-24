@@ -16,7 +16,6 @@ export const OpenbaseServicesSettings: React.FC<Props> = ({ controller }) => {
     refresh,
     runServiceAction,
     restartAll,
-    restartSuperAgentsMcp,
   } = controller;
 
   return (
@@ -36,29 +35,10 @@ export const OpenbaseServicesSettings: React.FC<Props> = ({ controller }) => {
             size="sm"
             className="h-7 px-2.5 text-[12px]"
             onClick={() => {
-              void restartSuperAgentsMcp();
-            }}
-            disabled={loading || actionKey !== null}
-            title="Restart only the Super Agents MCP process"
-          >
-            <RefreshCw
-              className={`h-3 w-3 ${
-                actionKey === "__super_agents_mcp__:restart" ? "animate-spin" : ""
-              }`}
-            />
-            {actionKey === "__super_agents_mcp__:restart"
-              ? "Restarting…"
-              : "Restart Super Agents MCP"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2.5 text-[12px]"
-            onClick={() => {
               void restartAll();
             }}
             disabled={loading || actionKey !== null}
-            title="Restart all Openbase services and known MCP processes"
+            title="Restart all Openbase-managed services"
           >
             <RefreshCw
               className={`h-3 w-3 ${actionKey === "__all__:restart" ? "animate-spin" : ""}`}

@@ -24,15 +24,16 @@ const Settings: React.FC = () => {
           </p>
         </div>
 
+        <OpenbaseServicesSettings controller={openbaseServices} />
+
         {getRuntimeShell() === "electron" ? <LiveKitCompanionSettings /> : null}
 
-        <SidebarItemsSettings />
-        <OpenbaseServicesSettings controller={openbaseServices} />
         <DispatcherVoiceSettings
           onRestartScheduled={openbaseServices.applyRestartResponse}
         />
         <IgnoredLaunchctlSettings />
         <AuthenticationSettings />
+        <SidebarItemsSettings />
       </div>
     </DashboardLayout>
   );

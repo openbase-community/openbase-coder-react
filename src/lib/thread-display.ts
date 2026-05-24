@@ -1,5 +1,7 @@
 import type { ThreadInfo } from "@/types/session";
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 const basename = (path: string) => {
   const trimmed = path.replace(/\/+$/, "");
   return trimmed.split("/").pop() || trimmed || path;
@@ -66,3 +68,55 @@ export const isPriorityThread = (thread: ThreadInfo) =>
 
 export const shouldDeemphasizeThread = (thread: ThreadInfo) =>
   thread.status !== "running" && !isPriorityThread(thread);
+
+const startOfLocalDay = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const localDayKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+export const relativeThreadDayLabel = (value: string, now = new Date()) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown date";
+
+  const dayDiff = Math.round(
+    (startOfLocalDay(date).getTime() - startOfLocalDay(now).getTime()) /
+      MS_PER_DAY,
+  );
+  if (dayDiff === 0) return "Today";
+  if (dayDiff === -1) return "Yesterday";
+
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
+  });
+};
+
+export const groupThreadsByDay = (threads: ThreadInfo[], now = new Date()) => {
+  const groups: Array<{ key: string; label: string; threads: ThreadInfo[] }> = [];
+  const byKey = new Map<string, (typeof groups)[number]>();
+
+  threads.forEach((thread) => {
+    const date = new Date(thread.updated_at);
+    const key = Number.isNaN(date.getTime()) ? "unknown" : localDayKey(date);
+    let group = byKey.get(key);
+    if (!group) {
+      group = {
+        key,
+        label: relativeThreadDayLabel(thread.updated_at, now),
+        threads: [],
+      };
+      byKey.set(key, group);
+      groups.push(group);
+    }
+    group.threads.push(thread);
+  });
+
+  return groups;
+};

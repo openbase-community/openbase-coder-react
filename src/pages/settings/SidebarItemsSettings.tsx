@@ -8,11 +8,12 @@ import {
   type SidebarItem,
 } from "@/lib/sidebar-preferences";
 import { usePluginRegistry } from "@/plugin-registry";
-import { Square } from "lucide-react";
+import { ChevronDown, ChevronRight, Square } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 export const SidebarItemsSettings: React.FC = () => {
   const { pluginConsolePages } = usePluginRegistry();
+  const [expanded, setExpanded] = useState(false);
   const [hiddenSidebarItems, setHiddenSidebarItems] = useState<string[]>(() =>
     readHiddenSidebarItems(),
   );
@@ -102,14 +103,29 @@ export const SidebarItemsSettings: React.FC = () => {
 
   return (
     <div className="overflow-hidden rounded border border-border bg-surface">
-      <div className="border-b border-border px-3 py-2.5">
-        <p className="text-[12.5px] font-medium text-foreground">
-          Sidebar items
-        </p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Settings stays visible.
-        </p>
-      </div>
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        className={`flex w-full items-start gap-2 px-3 py-2.5 text-left transition-colors hover:bg-surface-muted ${
+          expanded ? "border-b border-border" : ""
+        }`}
+        aria-expanded={expanded}
+      >
+        {expanded ? (
+          <ChevronDown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[12.5px] font-medium text-foreground">
+            Sidebar items
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            Settings stays visible.
+          </p>
+        </div>
+      </button>
+      {expanded ? (
       <div className="divide-y divide-border">
         <div>
           <div className="bg-background/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -138,6 +154,7 @@ export const SidebarItemsSettings: React.FC = () => {
           </div>
         ) : null}
       </div>
+      ) : null}
     </div>
   );
 };

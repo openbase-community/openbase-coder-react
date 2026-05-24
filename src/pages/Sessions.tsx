@@ -22,17 +22,46 @@ import {
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
 import { projectName } from "@/lib/project-display";
-import { threadListDisplayNames } from "@/lib/thread-display";
+import { groupThreadsByDay, threadListDisplayNames } from "@/lib/thread-display";
 import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
 import { Archive, FolderOpen, Plus, Terminal } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const Sessions = () => {
   const navigate = useNavigate();
-  const { projects, threads, loading, fetchData } = useProjectsAndThreads();
+  const {
+    projects,
+    threads,
+    nextThreadsUrl,
+    nextProjectsUrl,
+    loading,
+    loadingMoreProjects,
+    loadingMoreThreads,
+    fetchData,
+    loadMoreProjects,
+    loadMoreThreads,
+  } = useProjectsAndThreads();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel || !nextThreadsUrl) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          void loadMoreThreads();
+        }
+      },
+      { rootMargin: "240px 0px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMoreThreads, nextThreadsUrl]);
 
   const deleteThread = async (threadId: string) => {
     const res = await apiFetch(`/api/threads/${threadId}/`, {
@@ -65,6 +94,10 @@ const Sessions = () => {
     (a, b) => +new Date(b.updated_at) - +new Date(a.updated_at),
   );
   const displayNames = threadListDisplayNames(sortedThreads);
+  const threadGroups = useMemo(
+    () => groupThreadsByDay(sortedThreads),
+    [sortedThreads],
+  );
 
   return (
     <DashboardLayout>
@@ -75,7 +108,8 @@ const Sessions = () => {
               Threads
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              {activeCount} active · {threads.length} total
+              {activeCount} active · {threads.length}
+              {nextThreadsUrl ? "+" : ""} loaded
             </p>
           </div>
 
@@ -119,6 +153,17 @@ const Sessions = () => {
                     </button>
                   ))
                 )}
+                {nextProjectsUrl ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1 h-7 w-full text-[12px]"
+                    disabled={loadingMoreProjects}
+                    onClick={() => void loadMoreProjects()}
+                  >
+                    {loadingMoreProjects ? "Loading..." : "Load more projects"}
+                  </Button>
+                ) : null}
               </div>
             </DialogContent>
           </Dialog>
@@ -134,72 +179,97 @@ const Sessions = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded border border-border bg-surface">
-            {sortedThreads.map((thread, idx) => {
-              const isDispatchThread =
-                thread.is_livekit_dispatcher || thread.is_livekit_shared;
+          <>
+            <div className="space-y-3">
+              {threadGroups.map((group) => (
+                <section key={group.key}>
+                  <div className="mb-1.5 px-1 text-[11px] font-semibold uppercase text-muted-foreground">
+                    {group.label}
+                  </div>
+                  <div className="overflow-hidden rounded border border-border bg-surface">
+                    {group.threads.map((thread, idx) => {
+                      const isDispatchThread =
+                        thread.is_livekit_dispatcher || thread.is_livekit_shared;
 
-              return (
-                <ThreadListItem
-                  key={thread.thread_id}
-                  thread={thread}
-                  displayName={displayNames.get(thread.thread_id)}
-                  showTopBorder={idx > 0}
-                  onClick={() =>
-                    navigate(`/dashboard/threads/${thread.thread_id}`)
-                  }
-                  action={
-                    isDispatchThread ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-not-allowed"
-                        disabled
-                        title="Dispatch threads cannot be archived"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Archive className="h-3 w-3 text-muted-foreground" />
-                      </Button>
-                    ) : (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                            title="Archive thread"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Archive className="h-3 w-3 text-muted-foreground" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Archive thread?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This hides the thread from active thread lists. If
-                              it is running, the current turn will be
-                              interrupted first.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteThread(thread.thread_id)}
-                            >
-                              Archive
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )
-                  }
-                />
-              );
-            })}
-          </div>
+                      return (
+                        <ThreadListItem
+                          key={thread.thread_id}
+                          thread={thread}
+                          displayName={displayNames.get(thread.thread_id)}
+                          showTopBorder={idx > 0}
+                          onClick={() =>
+                            navigate(`/dashboard/threads/${thread.thread_id}`)
+                          }
+                          action={
+                            isDispatchThread ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-not-allowed"
+                                disabled
+                                title="Dispatch threads cannot be archived"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Archive className="h-3 w-3 text-muted-foreground" />
+                              </Button>
+                            ) : (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                                    title="Archive thread"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Archive className="h-3 w-3 text-muted-foreground" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Archive thread?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This hides the thread from active thread
+                                      lists. If it is running, the current turn
+                                      will be interrupted first.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() =>
+                                        deleteThread(thread.thread_id)
+                                      }
+                                    >
+                                      Archive
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+            {nextThreadsUrl ? (
+              <div
+                ref={loadMoreSentinelRef}
+                className="flex min-h-8 items-center justify-center text-[12px] text-muted-foreground"
+              >
+                {loadingMoreThreads ? "Loading..." : null}
+              </div>
+            ) : null}
+          </>
         )}
       </div>
     </DashboardLayout>

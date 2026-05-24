@@ -114,32 +114,6 @@ export function useOpenbaseServices() {
     setActionKey(null);
   }, [applyRestartResponse]);
 
-  const restartSuperAgentsMcp = useCallback(async () => {
-    const key = "__super_agents_mcp__:restart";
-    setActionKey(key);
-    try {
-      const res = await apiFetch("/api/settings/restart/", {
-        method: "POST",
-        body: JSON.stringify({ service: "super-agents-mcp" }),
-      });
-      if (!res.ok) {
-        setError(
-          await extractErrorMessage(
-            res,
-            `Unable to restart Super Agents MCP: ${res.status}`,
-          ),
-        );
-        setActionKey(null);
-        return;
-      }
-      const data = (await res.json()) as OpenbaseServicesResponse;
-      applyRestartResponse(data, 3000);
-    } catch {
-      setError("Unable to reach the local API.");
-    }
-    setActionKey(null);
-  }, [applyRestartResponse]);
-
   return {
     services,
     loading,
@@ -148,7 +122,6 @@ export function useOpenbaseServices() {
     refresh,
     runServiceAction,
     restartAll,
-    restartSuperAgentsMcp,
     applyRestartResponse,
   };
 }

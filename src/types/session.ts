@@ -38,7 +38,16 @@ export interface ThreadInfo {
   livekit_voice_route_blocked_reason?: string;
 }
 
-export type GitStatus = "clean" | "dirty" | "unpushed" | "no_git";
+export interface ThreadListResponse {
+  threads: ThreadInfo[];
+  count: number;
+  page: number;
+  page_size: number;
+  next: string | null;
+  previous: string | null;
+}
+
+export type GitStatus = "clean" | "dirty" | "unpushed" | "no_git" | "unknown";
 
 export interface Project {
   path: string;
@@ -47,6 +56,15 @@ export interface Project {
   reports_count?: number;
   reports_updated_at?: number | null;
   global_reports?: boolean;
+}
+
+export interface ProjectListResponse {
+  projects: Project[];
+  count: number;
+  page: number;
+  page_size: number;
+  next: string | null;
+  previous: string | null;
 }
 
 export type ReportsKind = "markdown" | "text" | "image" | "other";

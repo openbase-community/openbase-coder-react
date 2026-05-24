@@ -18,7 +18,6 @@ export type OpenbaseServicesResponse = {
   scheduled?: boolean;
   restart?: {
     services: string[];
-    processes: string[];
     recreate_dispatcher: boolean;
     interrupts_voice: boolean;
     delay_seconds: number;

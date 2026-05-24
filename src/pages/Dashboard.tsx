@@ -2,7 +2,12 @@ import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { ThreadListItem } from "@/components/ThreadListItem";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
-import { projectName } from "@/lib/project-display";
+import { THREAD_LIST_REFRESH_INTERVAL_MS } from "@/lib/polling";
+import {
+  fetchProjectPage,
+  fetchThreadPage,
+  projectName,
+} from "@/lib/project-display";
 import type { Project, ServiceStatus, ThreadInfo } from "@/types/session";
 import { AlertTriangle, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -15,19 +20,22 @@ const Dashboard = () => {
   const [services, setServices] = useState<Record<string, ServiceStatus>>({});
 
   const fetchData = useCallback(async () => {
-    const [sessRes, projRes, statusRes] = await Promise.all([
-      apiFetch("/api/threads/"),
-      apiFetch("/api/projects/recent/"),
+    const [threadsPage, projectsPage, statusRes] = await Promise.all([
+      fetchThreadPage(apiFetch),
+      fetchProjectPage(apiFetch),
       apiFetch("/api/status/"),
     ]);
-    if (sessRes.ok) setThreads((await sessRes.json()).threads);
-    if (projRes.ok) setProjects((await projRes.json()).projects);
+    setThreads(threadsPage.threads);
+    setProjects(projectsPage.projects);
     if (statusRes.ok) setServices((await statusRes.json()).services);
   }, []);
 
   useEffect(() => {
     fetchData();
-    const interval = window.setInterval(fetchData, 5000);
+    const interval = window.setInterval(
+      fetchData,
+      THREAD_LIST_REFRESH_INTERVAL_MS,
+    );
     return () => window.clearInterval(interval);
   }, [fetchData]);
 

@@ -1,0 +1,1 @@
+export const THREAD_LIST_REFRESH_INTERVAL_MS = 15_000;

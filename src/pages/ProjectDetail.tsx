@@ -18,7 +18,11 @@ import { readJson } from "@/lib/api-errors";
 import { GIT_STATUS, projectName } from "@/lib/project-display";
 import { groupReportItems } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
-import { shouldDeemphasizeThread, threadVoiceLabel } from "@/lib/thread-display";
+import {
+  groupThreadsByDay,
+  shouldDeemphasizeThread,
+  threadVoiceLabel,
+} from "@/lib/thread-display";
 import { useReportFileActions } from "@/lib/useReportFileActions";
 import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
 import { cn } from "@/lib/utils";
@@ -42,7 +46,14 @@ const ProjectDetail = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const projectPath = searchParams.get("path") || "";
-  const { projects, threads, loading } = useProjectsAndThreads();
+  const {
+    projects,
+    threads,
+    nextThreadsUrl,
+    loading,
+    loadingMoreThreads,
+    loadMoreThreads,
+  } = useProjectsAndThreads();
   const [reportsFiles, setReportsFiles] = useState<ReportsFile[]>([]);
   const [expandedReportKey, setExpandedReportKey] = useState<string | null>(
     null,
@@ -85,10 +96,14 @@ const ProjectDetail = () => {
         .sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at)),
     [projectPath, threads],
   );
+  const projectThreadGroups = useMemo(
+    () => groupThreadsByDay(projectThreads),
+    [projectThreads],
+  );
   const activeThreads = projectThreads.filter(
     (thread) => thread.status === "running",
   );
-  const gitStatus = GIT_STATUS[project?.git_status ?? "clean"];
+  const gitStatus = GIT_STATUS[project?.git_status ?? "unknown"];
   const groupedReportsFiles = useMemo(
     () => groupReportItems(reportsFiles, (file) => file),
     [reportsFiles],
@@ -445,52 +460,87 @@ const ProjectDetail = () => {
               Loading threads…
             </div>
           ) : projectThreads.length === 0 ? (
-            <div className="px-3 py-6 text-[12px] text-muted-foreground">
-              No threads for this project.
+            <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">
+              <div>No threads for this project in the loaded results.</div>
+              {nextThreadsUrl ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 h-7 px-2.5 text-[12px]"
+                  disabled={loadingMoreThreads}
+                  onClick={() => void loadMoreThreads()}
+                >
+                  {loadingMoreThreads ? "Loading..." : "Load more threads"}
+                </Button>
+              ) : null}
             </div>
           ) : (
             <div>
-              {projectThreads.map((thread, idx) => {
-                const isDeemphasized = shouldDeemphasizeThread(thread);
+              {projectThreadGroups.map((group, groupIndex) => (
+                <section
+                  key={group.key}
+                  className={groupIndex > 0 ? "border-t border-border" : ""}
+                >
+                  <div className="bg-surface-muted/50 px-3 py-1.5 text-[11px] font-semibold uppercase text-muted-foreground">
+                    {group.label}
+                  </div>
+                  {group.threads.map((thread, idx) => {
+                    const isDeemphasized = shouldDeemphasizeThread(thread);
 
-                return (
-                  <button
-                    key={thread.thread_id}
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        `/dashboard/threads/${thread.thread_id}?fromProject=${encodeURIComponent(projectPath)}`,
-                      )
-                    }
-                    className={cn(
-                      "group flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-muted",
-                      isDeemphasized && "opacity-60 saturate-0 hover:opacity-80",
-                      idx > 0 && "border-t border-border",
-                    )}
+                    return (
+                      <button
+                        key={thread.thread_id}
+                        type="button"
+                        onClick={() =>
+                          navigate(
+                            `/dashboard/threads/${thread.thread_id}?fromProject=${encodeURIComponent(projectPath)}`,
+                          )
+                        }
+                        className={cn(
+                          "group flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-muted",
+                          isDeemphasized &&
+                            "opacity-60 saturate-0 hover:opacity-80",
+                          idx > 0 && "border-t border-border",
+                        )}
+                      >
+                        <Terminal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <StatusBadge status={thread.status} />
+                            {thread.is_livekit_active_target ? (
+                              <span className="font-mono text-[10px] text-warning">
+                                {threadVoiceLabel(thread)}
+                              </span>
+                            ) : thread.is_livekit_dispatcher ||
+                              thread.is_livekit_shared ? (
+                              <span className="font-mono text-[10px] text-warning">
+                                dispatch
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="mt-1 truncate font-mono text-[10.5px] text-muted-foreground">
+                            {new Date(thread.updated_at).toLocaleString()}
+                          </div>
+                        </div>
+                        <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
+                      </button>
+                    );
+                  })}
+                </section>
+              ))}
+              {nextThreadsUrl ? (
+                <div className="border-t border-border px-3 py-2 text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2.5 text-[12px]"
+                    disabled={loadingMoreThreads}
+                    onClick={() => void loadMoreThreads()}
                   >
-                    <Terminal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={thread.status} />
-                        {thread.is_livekit_active_target ? (
-                          <span className="font-mono text-[10px] text-warning">
-                            {threadVoiceLabel(thread)}
-                          </span>
-                        ) : thread.is_livekit_dispatcher ||
-                          thread.is_livekit_shared ? (
-                          <span className="font-mono text-[10px] text-warning">
-                            dispatch
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="mt-1 truncate font-mono text-[10.5px] text-muted-foreground">
-                        {new Date(thread.updated_at).toLocaleString()}
-                      </div>
-                    </div>
-                    <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
-                  </button>
-                );
-              })}
+                    {loadingMoreThreads ? "Loading..." : "Load more threads"}
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
         </div>

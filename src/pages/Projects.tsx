@@ -25,7 +25,16 @@ import { toast } from "sonner";
 
 const Projects = () => {
   const navigate = useNavigate();
-  const { projects, threads, loading, fetchData } = useProjectsAndThreads();
+  const {
+    projects,
+    threads,
+    totalProjectCount,
+    nextProjectsUrl,
+    projectsLoading,
+    loadingMoreProjects,
+    fetchData,
+    loadMoreProjects,
+  } = useProjectsAndThreads();
   const [newPath, setNewPath] = useState("");
   const [query, setQuery] = useState("");
 
@@ -87,7 +96,9 @@ const Projects = () => {
               Projects
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              {projects.length} total · {activeCount} active
+              {projects.length}
+              {nextProjectsUrl ? `/${totalProjectCount}` : ""} projects ·{" "}
+              {activeCount} active
             </p>
           </div>
         </div>
@@ -126,7 +137,7 @@ const Projects = () => {
         </div>
 
         {/* List */}
-        {loading ? (
+        {projectsLoading ? (
           <div className="text-[12px] text-muted-foreground">Loading…</div>
         ) : filtered.length === 0 ? (
           <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center text-[12px] text-muted-foreground">
@@ -138,7 +149,7 @@ const Projects = () => {
           <div className="overflow-hidden rounded border border-border bg-surface">
             {filtered.map((project, idx) => {
               const active = getActiveThreads(project.path);
-              const gs = GIT_STATUS[project.git_status ?? "clean"];
+              const gs = GIT_STATUS[project.git_status ?? "unknown"];
               return (
                 <div
                   role="button"
@@ -244,7 +255,21 @@ const Projects = () => {
           </div>
         )}
 
-        {!loading && projects.length === 0 ? (
+        {!projectsLoading && nextProjectsUrl ? (
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2.5 text-[12px]"
+              disabled={loadingMoreProjects}
+              onClick={() => void loadMoreProjects()}
+            >
+              {loadingMoreProjects ? "Loading..." : "Load more"}
+            </Button>
+          </div>
+        ) : null}
+
+        {!projectsLoading && projects.length === 0 ? (
           <div className="text-center">
             <FolderOpen className="mx-auto h-5 w-5 text-muted-foreground/40" />
           </div>

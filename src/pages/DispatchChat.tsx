@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { fetchThreadPage, LARGE_THREAD_PAGE_SIZE } from "@/lib/project-display";
 import type { ThreadInfo } from "@/types/session";
 import { MessageSquare, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -12,16 +13,16 @@ const DispatchChat = () => {
 
   const fetchDispatchThread = useCallback(async () => {
     setLoading(true);
-    const res = await apiFetch("/api/threads/");
-    if (res.ok) {
-      const data = await res.json();
-      const threads: ThreadInfo[] = data.threads ?? [];
-      setDispatchThread(
-        threads.find(
-          (thread) => thread.is_livekit_dispatcher || thread.is_livekit_shared,
-        ) ?? null,
-      );
-    }
+    const data = await fetchThreadPage(
+      apiFetch,
+      `/api/threads/?page_size=${LARGE_THREAD_PAGE_SIZE}`,
+    );
+    const threads: ThreadInfo[] = data.threads;
+    setDispatchThread(
+      threads.find(
+        (thread) => thread.is_livekit_dispatcher || thread.is_livekit_shared,
+      ) ?? null,
+    );
     setLoading(false);
   }, []);
 
