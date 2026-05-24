@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/auth";
 import {
   DiffViewer,
   type Repository,
-} from "@/vendor/visual-renderer";
+} from "multi-react";
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -59,7 +59,7 @@ const Diff = () => {
 
   if (mobile) {
     return (
-      <div className="h-screen flex flex-col">
+      <div className="h-screen min-h-0 flex flex-col overflow-hidden">
         <DiffContent mobile />
       </div>
     );

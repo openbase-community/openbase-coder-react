@@ -27,6 +27,11 @@ export function RunDetail({
           {run.prompt}
         </span>
         <StatusBadge status={run.status} />
+        {run.reasoning_effort ? (
+          <span className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+            reasoning {run.reasoning_effort}
+          </span>
+        ) : null}
         {run.return_code !== null && (
           <span className="text-xs text-gray-500">
             exit {run.return_code}
@@ -37,6 +42,7 @@ export function RunDetail({
         <div className="text-xs text-gray-500 space-x-4">
           {run.started_at && <span>Started: {new Date(run.started_at).toLocaleString()}</span>}
           {run.completed_at && <span>Completed: {new Date(run.completed_at).toLocaleString()}</span>}
+          {run.reasoning_effort && <span>Reasoning: {run.reasoning_effort}</span>}
         </div>
         {run.accumulated_output && (
           <pre className="text-xs bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">

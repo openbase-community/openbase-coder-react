@@ -5,6 +5,7 @@ import {
   type BoilerSyncTemplate,
   type BoilerSyncTemplateDetails,
 } from "@/lib/boilersync";
+import { TemplateFieldList } from "boilersync-react";
 import { ChevronRight, GitBranch, RefreshCw, ScrollText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -154,8 +155,16 @@ const BoilerSync = () => {
                     {fieldCount} inputs ·{" "}
                     <span className="font-mono">{details.template_dir}</span>
                   </div>
-                  <FieldList title="Variables" fields={details.variables ?? []} />
-                  <FieldList title="Options" fields={details.options ?? []} />
+                  <TemplateFieldList
+                    title="Variables"
+                    fields={details.variables ?? []}
+                    compact
+                  />
+                  <TemplateFieldList
+                    title="Options"
+                    fields={details.options ?? []}
+                    compact
+                  />
                 </div>
               ) : (
                 <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">
@@ -169,47 +178,5 @@ const BoilerSync = () => {
     </DashboardLayout>
   );
 };
-
-const FieldList = ({
-  title,
-  fields,
-}: {
-  title: string;
-  fields: NonNullable<BoilerSyncTemplateDetails["variables"]>;
-}) => (
-  <div>
-    <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-      {title}
-    </div>
-    {fields.length === 0 ? (
-      <div className="rounded border border-dashed border-border px-2 py-2 text-[12px] text-muted-foreground">
-        None
-      </div>
-    ) : (
-      <div className="overflow-hidden rounded border border-border">
-        {fields.map((field, idx) => (
-          <div
-            key={field.name}
-            className={`px-2 py-1.5 ${idx > 0 ? "border-t border-border" : ""}`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="min-w-0 truncate font-mono text-[11.5px] text-foreground">
-                {field.name}
-              </span>
-              <span className="ml-auto shrink-0 text-[10.5px] text-muted-foreground">
-                {field.required ? "required" : "optional"}
-              </span>
-            </div>
-            {field.description ? (
-              <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
-                {field.description}
-              </p>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-);
 
 export default BoilerSync;

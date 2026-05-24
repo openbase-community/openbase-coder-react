@@ -7,5 +7,9 @@
     "./App": "./src/App.tsx",
     "./plugin-registry": "./src/plugin-registry.tsx",
     "./index.css": "./src/index.css"
+  },
+  "dependencies": {
+    "boilersync-react": "workspace:*",
+    "multi-react": "workspace:*"
   }
 }

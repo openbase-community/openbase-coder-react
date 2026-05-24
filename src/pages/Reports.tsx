@@ -13,11 +13,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { groupReportItems } from "@/lib/reportGroups";
 import type { ReportsFile, Project } from "@/types/session";
 import {
   ChevronDown,
   ChevronRight,
+  Download,
   FileText,
+  Folder,
   ImageIcon,
   RefreshCw,
   Trash2,
@@ -64,14 +67,27 @@ const formatDate = (timestamp: number) =>
     minute: "2-digit",
   });
 
+const mergeProjects = (projects: Project[], globalProjects: Project[]) => {
+  const byPath = new Map<string, Project>();
+  [...projects, ...globalProjects].forEach((project) => {
+    const existing = byPath.get(project.path);
+    byPath.set(project.path, existing ? { ...project, ...existing } : project);
+  });
+  return Array.from(byPath.values());
+};
+
 const Reports = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState<ReportsItem[]>([]);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [payloads, setPayloads] = useState<Record<string, ReportsPayload>>({});
   const [loading, setLoading] = useState(true);
   const [fileLoadingKey, setFileLoadingKey] = useState<string | null>(null);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const expandedKeyRef = useRef<string | null>(null);
@@ -149,11 +165,56 @@ const Reports = () => {
     [],
   );
 
+  const downloadItem = useCallback(async (item: ReportsItem) => {
+    const key = itemKey(item);
+    setDownloadingKey(key);
+    const params = new URLSearchParams({
+      path: item.project.path,
+      file: item.file.path,
+    });
+    const res = await apiFetch(`/api/projects/reports/download/?${params}`);
+    setDownloadingKey(null);
+
+    if (!res.ok) {
+      const data = await readJson(res);
+      toast.error(data?.error || "Failed to download report");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = item.file.name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const projectsRes = await apiFetch("/api/projects/recent/");
-    const projectsData = await readJson(projectsRes);
+    const [projectsRes, globalProjectsRes] = await Promise.all([
+      apiFetch("/api/projects/recent/"),
+      apiFetch("/api/projects/reports/global/"),
+    ]);
+    const [projectsData, globalProjectsData] = await Promise.all([
+      readJson(projectsRes),
+      readJson(globalProjectsRes),
+    ]);
     if (!projectsRes.ok || !projectsData) {
       setItems([]);
       setLoading(false);
@@ -161,7 +222,10 @@ const Reports = () => {
       return;
     }
 
-    const projects: Project[] = projectsData.projects ?? [];
+    const projects = mergeProjects(
+      projectsData.projects ?? [],
+      globalProjectsRes.ok ? (globalProjectsData?.projects ?? []) : [],
+    );
     const candidates = projects.filter(
       (project) =>
         typeof project.reports_count !== "number" ||
@@ -211,6 +275,16 @@ const Reports = () => {
     );
   }, [items, query]);
 
+  const groupedItems = useMemo(
+    () =>
+      groupReportItems(
+        filteredItems,
+        (item) => item.file,
+        (item) => item.project.path,
+      ),
+    [filteredItems],
+  );
+
   return (
     <DashboardLayout>
       <div className="space-y-4">
@@ -220,7 +294,7 @@ const Reports = () => {
               Reports
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              {items.length} files across recent projects
+              {items.length} files across recent and global report sources
             </p>
           </div>
           <Button
@@ -254,7 +328,7 @@ const Reports = () => {
           </div>
         ) : items.length === 0 ? (
           <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center text-[12px] text-muted-foreground">
-            No reports files found across recent projects.
+            No reports files found across recent projects or global report sources.
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center text-[12px] text-muted-foreground">
@@ -262,7 +336,193 @@ const Reports = () => {
           </div>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
-            {filteredItems.map((item, index) => {
+            {groupedItems.map((node, index) => {
+              if (node.type === "group") {
+                const key = `group:${node.key}`;
+                const expanded = expandedGroups.has(key);
+                return (
+                  <div
+                    key={key}
+                    className={index > 0 ? "border-t border-border" : ""}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(key)}
+                      className="flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-muted"
+                    >
+                      {expanded ? (
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      )}
+                      <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                          <span className="truncate text-[13px] font-medium text-foreground">
+                            {node.name}
+                          </span>
+                          <span className="truncate text-[11px] text-muted-foreground">
+                            {projectName(node.items[0]?.project.path ?? "")} ·{" "}
+                            {node.items.length} files
+                          </span>
+                        </div>
+                        <div className="truncate font-mono text-[10.5px] text-muted-foreground/75">
+                          {formatDate(node.updated_at)} · {formatBytes(node.size)} ·{" "}
+                          {node.path}/
+                        </div>
+                      </div>
+                    </button>
+
+                    {expanded ? (
+                      <div className="border-t border-border bg-background/70">
+                        {node.items.map((item) => {
+                          const childKey = itemKey(item);
+                          const childExpanded = expandedKey === childKey;
+                          const childPayload = payloads[childKey];
+                          const Icon =
+                            item.file.kind === "image" ? ImageIcon : FileText;
+                          return (
+                            <div key={childKey} className="border-t border-border first:border-t-0">
+                              <div className="flex items-center gap-1 py-2 pl-8 pr-3 transition-colors hover:bg-surface-muted">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleItem(item)}
+                                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                >
+                                  {childExpanded ? (
+                                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                  )}
+                                  <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                                      <span className="truncate text-[13px] font-medium text-foreground">
+                                        {item.file.name}
+                                      </span>
+                                      <span className="truncate text-[11px] text-muted-foreground">
+                                        {projectName(item.project.path)}
+                                      </span>
+                                    </div>
+                                    <div className="truncate font-mono text-[10.5px] text-muted-foreground/75">
+                                      {formatDate(item.file.updated_at)} ·{" "}
+                                      {formatBytes(item.file.size)} · {item.file.path}
+                                    </div>
+                                  </div>
+                                </button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                                  disabled={downloadingKey === childKey}
+                                  aria-label={`Download ${item.file.name}`}
+                                  onClick={() => {
+                                    void downloadItem(item);
+                                  }}
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                                      disabled={deletingKey === childKey}
+                                      aria-label={`Delete ${item.file.name}`}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete report?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This will delete {item.file.name} from this project's reports folder.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction asChild>
+                                        <Button
+                                          type="button"
+                                          variant="destructive"
+                                          onClick={() => {
+                                            void deleteItem(item);
+                                          }}
+                                        >
+                                          Delete report
+                                        </Button>
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+
+                              {childExpanded ? (
+                                <div className="border-t border-border bg-background px-4 py-4">
+                                  <div className="mb-3 flex items-center justify-between gap-3">
+                                    <div className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
+                                      {item.project.path}
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 shrink-0 px-2.5 text-[12px]"
+                                      onClick={() =>
+                                        navigate(
+                                          `/dashboard/project?path=${encodeURIComponent(item.project.path)}`,
+                                        )
+                                      }
+                                    >
+                                      Open project
+                                    </Button>
+                                  </div>
+
+                                  {fileLoadingKey === childKey ? (
+                                    <div className="text-[12px] text-muted-foreground">
+                                      Loading file...
+                                    </div>
+                                  ) : childPayload?.error ? (
+                                    <div className="rounded border border-border bg-surface-muted px-3 py-2 text-[12px] text-muted-foreground">
+                                      {childPayload.error}
+                                    </div>
+                                  ) : childPayload?.file.kind === "image" &&
+                                    childPayload.data_url ? (
+                                    <img
+                                      src={childPayload.data_url}
+                                      alt={childPayload.file.name}
+                                      className="max-h-[70vh] max-w-full rounded border border-border object-contain"
+                                    />
+                                  ) : childPayload?.file.kind === "markdown" ? (
+                                    <article className="prose prose-sm max-w-none dark:prose-invert">
+                                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                        {childPayload.content ?? ""}
+                                      </ReactMarkdown>
+                                    </article>
+                                  ) : childPayload?.content ? (
+                                    <pre className="whitespace-pre-wrap rounded border border-border bg-surface-muted p-3 text-[12px] leading-relaxed text-foreground">
+                                      {childPayload.content}
+                                    </pre>
+                                  ) : (
+                                    <div className="text-[12px] text-muted-foreground">
+                                      Select a file to preview.
+                                    </div>
+                                  )}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
+
+              const item = node.item;
               const key = itemKey(item);
               const expanded = expandedKey === key;
               const payload = payloads[key];
@@ -299,6 +559,19 @@ const Reports = () => {
                         </div>
                       </div>
                     </button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                      disabled={downloadingKey === key}
+                      aria-label={`Download ${item.file.name}`}
+                      onClick={() => {
+                        void downloadItem(item);
+                      }}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button

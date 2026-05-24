@@ -13,6 +13,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { groupReportItems } from "@/lib/reportGroups";
+import { shouldDeemphasizeThread, threadVoiceLabel } from "@/lib/thread-display";
+import { cn } from "@/lib/utils";
 import type {
   ReportsFile,
   GitStatus,
@@ -23,7 +26,9 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronRight,
+  Download,
   FileText,
+  Folder,
   GitBranch,
   ImageIcon,
   Plus,
@@ -90,6 +95,9 @@ const ProjectDetail = () => {
   const [expandedReportKey, setExpandedReportKey] = useState<string | null>(
     null,
   );
+  const [expandedReportGroups, setExpandedReportGroups] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [reportsPayloads, setReportsPayloads] = useState<
     Record<string, ReportsPayload>
   >({});
@@ -100,6 +108,10 @@ const ProjectDetail = () => {
   const [deletingReportKey, setDeletingReportKey] = useState<string | null>(
     null,
   );
+  const [downloadingReportKey, setDownloadingReportKey] = useState<string | null>(
+    null,
+  );
+  const [removingProject, setRemovingProject] = useState(false);
   const threadsRef = useRef<HTMLDivElement | null>(null);
 
   const project = useMemo(
@@ -117,6 +129,10 @@ const ProjectDetail = () => {
     (thread) => thread.status === "running",
   );
   const gitStatus = GIT_STATUS[project?.git_status ?? "clean"];
+  const groupedReportsFiles = useMemo(
+    () => groupReportItems(reportsFiles, (file) => file),
+    [reportsFiles],
+  );
 
   const loadReportsFile = useCallback(
     async (file: ReportsFile) => {
@@ -155,6 +171,18 @@ const ProjectDetail = () => {
     loadReportsFile(file);
   };
 
+  const toggleReportGroup = (key: string) => {
+    setExpandedReportGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
   const deleteReport = useCallback(
     async (file: ReportsFile) => {
       setDeletingReportKey(file.path);
@@ -187,6 +215,35 @@ const ProjectDetail = () => {
       toast.success("Report deleted");
     },
     [expandedReportKey, projectPath],
+  );
+
+  const downloadReport = useCallback(
+    async (file: ReportsFile) => {
+      setDownloadingReportKey(file.path);
+      const params = new URLSearchParams({
+        path: projectPath,
+        file: file.path,
+      });
+      const res = await apiFetch(`/api/projects/reports/download/?${params}`);
+      setDownloadingReportKey(null);
+
+      if (!res.ok) {
+        const data = await readJson(res);
+        toast.error(data?.error || "Failed to download report");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    },
+    [projectPath],
   );
 
   const fetchData = useCallback(async () => {
@@ -245,6 +302,24 @@ const ProjectDetail = () => {
     } else {
       toast.error("Failed to create thread");
     }
+  };
+
+  const removeProject = async () => {
+    setRemovingProject(true);
+    const res = await apiFetch("/api/projects/recent/", {
+      method: "DELETE",
+      body: JSON.stringify({ path: projectPath }),
+    });
+    const data = await readJson(res);
+    setRemovingProject(false);
+
+    if (!res.ok) {
+      toast.error(data?.error || "Failed to stop tracking project");
+      return;
+    }
+
+    toast.success("Project removed from recent projects");
+    navigate("/dashboard/projects");
   };
 
   const goToDiff = () =>
@@ -328,6 +403,42 @@ const ProjectDetail = () => {
             <Plus className="h-3 w-3" />
             New thread
           </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-[12px] text-destructive hover:text-destructive"
+                disabled={removingProject}
+              >
+                <Trash2 className="h-3 w-3" />
+                Stop tracking
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Stop tracking this project?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This only removes the project from the recent projects list. It will not delete the folder, repository, files, threads, reports, or user data.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction asChild>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={removingProject}
+                    onClick={() => {
+                      void removeProject();
+                    }}
+                  >
+                    Stop tracking
+                  </Button>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         <div
@@ -346,7 +457,171 @@ const ProjectDetail = () => {
             </div>
           ) : (
             <div>
-              {reportsFiles.map((file, index) => {
+              {groupedReportsFiles.map((node, index) => {
+                if (node.type === "group") {
+                  const groupKey = `group:${node.key}`;
+                  const groupExpanded = expandedReportGroups.has(groupKey);
+                  return (
+                    <div
+                      key={groupKey}
+                      className={index > 0 ? "border-t border-border" : ""}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleReportGroup(groupKey)}
+                        className="flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-muted"
+                      >
+                        {groupExpanded ? (
+                          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        )}
+                        <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-baseline gap-2">
+                            <span className="truncate text-[13px] font-medium text-foreground">
+                              {node.name}
+                            </span>
+                            <span className="shrink-0 text-[11px] text-muted-foreground">
+                              {node.items.length} files
+                            </span>
+                          </div>
+                          <div className="truncate font-mono text-[10.5px] text-muted-foreground/75">
+                            {formatDate(node.updated_at)} · {formatBytes(node.size)} ·{" "}
+                            {node.path}/
+                          </div>
+                        </div>
+                      </button>
+
+                      {groupExpanded ? (
+                        <div className="border-t border-border bg-background/70">
+                          {node.items.map((file) => {
+                            const expanded = expandedReportKey === file.path;
+                            const payload = reportsPayloads[file.path];
+                            const Icon =
+                              file.kind === "image" ? ImageIcon : FileText;
+                            return (
+                              <div
+                                key={file.path}
+                                className="border-t border-border first:border-t-0"
+                              >
+                                <div className="flex items-center gap-1 py-2 pl-8 pr-3 transition-colors hover:bg-surface-muted">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleReport(file)}
+                                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                  >
+                                    {expanded ? (
+                                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                    )}
+                                    <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="truncate text-[13px] font-medium text-foreground">
+                                        {file.name}
+                                      </div>
+                                      <div className="truncate font-mono text-[10.5px] text-muted-foreground/75">
+                                        {formatDate(file.updated_at)} ·{" "}
+                                        {formatBytes(file.size)} · {file.path}
+                                      </div>
+                                    </div>
+                                  </button>
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                                    disabled={downloadingReportKey === file.path}
+                                    aria-label={`Download ${file.name}`}
+                                    onClick={() => {
+                                      void downloadReport(file);
+                                    }}
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                                        disabled={deletingReportKey === file.path}
+                                        aria-label={`Delete ${file.name}`}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete report?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          This will delete {file.name} from this project's reports folder.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction asChild>
+                                          <Button
+                                            type="button"
+                                            variant="destructive"
+                                            onClick={() => {
+                                              void deleteReport(file);
+                                            }}
+                                          >
+                                            Delete report
+                                          </Button>
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+
+                                {expanded ? (
+                                  <div className="border-t border-border bg-background px-4 py-4">
+                                    {reportsFileLoadingKey === file.path ? (
+                                      <div className="text-[12px] text-muted-foreground">
+                                        Loading file…
+                                      </div>
+                                    ) : payload?.error ? (
+                                      <div className="rounded border border-border bg-surface-muted px-3 py-2 text-[12px] text-muted-foreground">
+                                        {payload.error}
+                                      </div>
+                                    ) : payload?.file.kind === "image" &&
+                                      payload.data_url ? (
+                                      <img
+                                        src={payload.data_url}
+                                        alt={payload.file.name}
+                                        className="max-h-[70vh] max-w-full rounded border border-border object-contain"
+                                      />
+                                    ) : payload?.file.kind === "markdown" ? (
+                                      <article className="prose prose-sm max-w-none dark:prose-invert">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                          {payload.content ?? ""}
+                                        </ReactMarkdown>
+                                      </article>
+                                    ) : payload?.content ? (
+                                      <pre className="whitespace-pre-wrap rounded border border-border bg-surface-muted p-3 text-[12px] leading-relaxed text-foreground">
+                                        {payload.content}
+                                      </pre>
+                                    ) : (
+                                      <div className="text-[12px] text-muted-foreground">
+                                        Select a file to preview.
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                }
+
+                const file = node.item;
                 const expanded = expandedReportKey === file.path;
                 const payload = reportsPayloads[file.path];
                 const Icon = file.kind === "image" ? ImageIcon : FileText;
@@ -377,6 +652,19 @@ const ProjectDetail = () => {
                           </div>
                         </div>
                       </button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                        disabled={downloadingReportKey === file.path}
+                        aria-label={`Download ${file.name}`}
+                        onClick={() => {
+                          void downloadReport(file);
+                        }}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
@@ -473,40 +761,47 @@ const ProjectDetail = () => {
             </div>
           ) : (
             <div>
-              {projectThreads.map((thread, idx) => (
-                <button
-                  key={thread.thread_id}
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      `/dashboard/threads/${thread.thread_id}?fromProject=${encodeURIComponent(projectPath)}`,
-                    )
-                  }
-                  className={`group flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-muted ${
-                    idx > 0 ? "border-t border-border" : ""
-                  }`}
-                >
-                  <Terminal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={thread.status} />
-                      {thread.is_livekit_active_target ? (
-                        <span className="font-mono text-[10px] text-warning">
-                          voice
-                        </span>
-                      ) : thread.is_livekit_dispatcher || thread.is_livekit_shared ? (
-                        <span className="font-mono text-[10px] text-warning">
-                          dispatch
-                        </span>
-                      ) : null}
+              {projectThreads.map((thread, idx) => {
+                const isDeemphasized = shouldDeemphasizeThread(thread);
+
+                return (
+                  <button
+                    key={thread.thread_id}
+                    type="button"
+                    onClick={() =>
+                      navigate(
+                        `/dashboard/threads/${thread.thread_id}?fromProject=${encodeURIComponent(projectPath)}`,
+                      )
+                    }
+                    className={cn(
+                      "group flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-muted",
+                      isDeemphasized && "opacity-60 saturate-0 hover:opacity-80",
+                      idx > 0 && "border-t border-border",
+                    )}
+                  >
+                    <Terminal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={thread.status} />
+                        {thread.is_livekit_active_target ? (
+                          <span className="font-mono text-[10px] text-warning">
+                            {threadVoiceLabel(thread)}
+                          </span>
+                        ) : thread.is_livekit_dispatcher ||
+                          thread.is_livekit_shared ? (
+                          <span className="font-mono text-[10px] text-warning">
+                            dispatch
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-1 truncate font-mono text-[10.5px] text-muted-foreground">
+                        {new Date(thread.updated_at).toLocaleString()}
+                      </div>
                     </div>
-                    <div className="mt-1 truncate font-mono text-[10.5px] text-muted-foreground">
-                      {new Date(thread.updated_at).toLocaleString()}
-                    </div>
-                  </div>
-                  <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
-                </button>
-              ))}
+                    <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

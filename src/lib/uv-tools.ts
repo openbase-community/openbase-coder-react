@@ -28,6 +28,16 @@ export type UvToolsResponse = {
   error: string | null;
 };
 
+export type UvToolHelpResponse = {
+  tool_name: string;
+  executable_name: string;
+  command: string[];
+  return_code: number | null;
+  stdout: string;
+  stderr: string;
+  error: string | null;
+};
+
 const extractErrorMessage = async (
   res: Response,
   fallback: string,
@@ -65,4 +75,24 @@ export const uninstallUvTool = async (
     );
   }
   return (await res.json()) as UvToolsResponse;
+};
+
+export const fetchUvToolHelp = async (
+  toolName: string,
+  executableName: string,
+): Promise<UvToolHelpResponse> => {
+  const res = await apiFetch(
+    `/api/tools/uv/${encodeURIComponent(toolName)}/executables/${encodeURIComponent(
+      executableName,
+    )}/help/`,
+  );
+  if (!res.ok) {
+    throw new Error(
+      await extractErrorMessage(
+        res,
+        `Unable to load tool help: ${res.status}`,
+      ),
+    );
+  }
+  return (await res.json()) as UvToolHelpResponse;
 };

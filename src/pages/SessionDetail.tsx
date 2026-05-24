@@ -1,14 +1,33 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { RunDetail } from "@/components/RunDetail";
 import { StatusBadge } from "@/components/StatusBadge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
-import { ArrowLeft, FolderOpen, Send, Square, Wifi, WifiOff } from "lucide-react";
+import { apiFetch } from "@/lib/api";
+import { threadDisplayName, threadVoiceLabel } from "@/lib/thread-display";
+import { Archive, ArrowLeft, FolderOpen, Send, Square, Wifi, WifiOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 
-const SessionDetail = () => {
-  const { threadId } = useParams<{ threadId: string }>();
+interface SessionDetailProps {
+  threadIdOverride?: string;
+}
+
+const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
+  const { threadId: routeThreadId } = useParams<{ threadId: string }>();
+  const threadId = threadIdOverride ?? routeThreadId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { thread, isConnected, startTurn, interruptTurn } =
@@ -37,7 +56,6 @@ const SessionDetail = () => {
   };
 
   const isRunning = thread?.status === "running";
-  const projectName = (path: string) => path.split("/").pop() || path;
   const fromProjectPath = searchParams.get("fromProject");
   const openProject = () => {
     if (!thread?.directory) return;
@@ -46,6 +64,21 @@ const SessionDetail = () => {
   const goBackToProject = () => {
     if (!fromProjectPath) return;
     navigate(`/dashboard/project?path=${encodeURIComponent(fromProjectPath)}`);
+  };
+  const isDispatchThread =
+    Boolean(thread?.is_livekit_dispatcher) || Boolean(thread?.is_livekit_shared);
+
+  const archiveThread = async () => {
+    if (!thread) return;
+    const res = await apiFetch(`/api/threads/${thread.thread_id}/`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      toast.success("Thread archived");
+      navigate("/dashboard/threads");
+    } else {
+      toast.error("Failed to archive thread");
+    }
   };
 
   return (
@@ -66,11 +99,13 @@ const SessionDetail = () => {
                 </Button>
               ) : null}
               <h1 className="text-sm font-semibold text-foreground">
-                {projectName(thread.directory)}
+                {threadDisplayName(thread)}
               </h1>
               <StatusBadge status={thread.status} />
               {thread.is_livekit_active_target ? (
-                <span className="font-mono text-[10px] text-warning">voice</span>
+                <span className="font-mono text-[10px] text-warning">
+                  {threadVoiceLabel(thread)}
+                </span>
               ) : thread.is_livekit_dispatcher || thread.is_livekit_shared ? (
                 <span className="font-mono text-[10px] text-warning">dispatch</span>
               ) : null}
@@ -83,6 +118,35 @@ const SessionDetail = () => {
                 <FolderOpen className="h-3 w-3" />
                 Project
               </Button>
+              {!isDispatchThread ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      <Archive className="h-3 w-3" />
+                      Archive
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Archive thread?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This hides the thread from active thread lists. If it is
+                        running, the current turn will be interrupted first.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={archiveThread}>
+                        Archive
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : null}
               <span className="ml-auto flex items-center gap-1 font-mono text-[10.5px]">
                 {isConnected ? (
                   <>
@@ -109,9 +173,16 @@ const SessionDetail = () => {
         {thread?.current_turn ? (
           <section className="overflow-hidden rounded border border-border bg-surface">
             <div className="flex items-center justify-between border-b border-border bg-surface-muted px-3 py-1.5">
-              <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
-                current turn
-              </p>
+              <div className="flex min-w-0 items-center gap-2">
+                <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
+                  current turn
+                </p>
+                {thread.current_turn.reasoning_effort ? (
+                  <span className="rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                    reasoning {thread.current_turn.reasoning_effort}
+                  </span>
+                ) : null}
+              </div>
               {isRunning ? (
                 <Button
                   variant="outline"

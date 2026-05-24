@@ -14,19 +14,17 @@ import {
 import UserProfile from "@/components/UserProfile";
 import { usePluginRegistry } from "@/plugin-registry";
 import {
-  Activity,
-  FilePenLine,
-  FileText,
-  FolderOpen,
-  Home,
-  PackageOpen,
-  Server,
-  Settings as SettingsIcon,
   Terminal,
-  Wrench,
   Zap,
 } from "lucide-react";
-import React from "react";
+import {
+  BUILT_IN_SIDEBAR_ITEMS,
+  readHiddenSidebarItems,
+  sidebarItemVisible,
+  SIDEBAR_PREFERENCES_EVENT,
+  type SidebarItem,
+} from "@/lib/sidebar-preferences";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface ExampleDashboardLayoutProps {
@@ -41,36 +39,50 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
   const { pluginConsolePages } = usePluginRegistry();
   const navigate = useNavigate();
   const location = useLocation();
+  const [hiddenSidebarItems, setHiddenSidebarItems] = useState<string[]>(() =>
+    readHiddenSidebarItems(),
+  );
 
-  const primaryNav = [
-    { path: "/dashboard", icon: Home, title: "Overview", exact: true },
-    { path: "/dashboard/projects", icon: FolderOpen, title: "Projects" },
-    { path: "/dashboard/reports", icon: FileText, title: "Reports" },
-    { path: "/dashboard/threads", icon: Terminal, title: "Threads" },
-    { path: "/dashboard/skills", icon: Zap, title: "Skills" },
-    { path: "/dashboard/boilersync", icon: PackageOpen, title: "BoilerSync" },
-  ];
+  useEffect(() => {
+    const refresh = () => setHiddenSidebarItems(readHiddenSidebarItems());
+    window.addEventListener(SIDEBAR_PREFERENCES_EVENT, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(SIDEBAR_PREFERENCES_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
-  const systemNav = [
-    { path: "/dashboard/status", icon: Activity, title: "Status" },
-    { path: "/dashboard/agents-md", icon: FilePenLine, title: "AGENTS.md" },
-    { path: "/dashboard/tools", icon: Wrench, title: "Tools" },
-    { path: "/dashboard/launchctl", icon: Server, title: "Launchctl" },
-    { path: "/dashboard/settings", icon: SettingsIcon, title: "Settings" },
-  ];
+  const primaryNav = BUILT_IN_SIDEBAR_ITEMS.filter(
+    (item) =>
+      item.section === "workspace" &&
+      sidebarItemVisible(item, hiddenSidebarItems),
+  );
+
+  const systemNav = BUILT_IN_SIDEBAR_ITEMS.filter(
+    (item) =>
+      item.section === "system" && sidebarItemVisible(item, hiddenSidebarItems),
+  );
 
   const pluginNav = pluginConsolePages
     .filter((page) => page.sidebar)
-    .map((page) => ({ path: page.route, icon: Zap, title: page.title }));
+    .map((page) => ({
+      key: `plugin:${page.pluginId}:${page.key}`,
+      path: page.route,
+      icon: Zap,
+      title: page.title,
+      section: "plugins" as const,
+    }))
+    .filter((item) => sidebarItemVisible(item, hiddenSidebarItems));
 
   const isActive = (path: string, exact?: boolean) =>
     exact ? location.pathname === path : location.pathname.startsWith(path);
 
-  const renderNavItems = (items: typeof primaryNav) =>
+  const renderNavItems = (items: SidebarItem[]) =>
     items.map((item) => (
       <SidebarMenuItem key={item.path}>
         <SidebarMenuButton
-          isActive={isActive(item.path, "exact" in item ? item.exact : false)}
+          isActive={isActive(item.path, item.exact ?? false)}
           onClick={() => navigate(item.path)}
           tooltip={item.title}
           className="h-7 gap-2 rounded px-2 text-[12.5px] font-normal text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
@@ -85,15 +97,15 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
     <SidebarProvider
       style={{ "--sidebar-width": "13rem" } as React.CSSProperties}
     >
-      <div className={`flex w-full bg-background ${noPadding ? "h-screen" : "min-h-screen"}`}>
+      <div className={`flex w-full bg-background ${noPadding ? "h-screen min-h-0 overflow-hidden" : "min-h-screen"}`}>
         <Sidebar className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
           <SidebarHeader className="border-b border-sidebar-border px-3 py-2.5">
             <div className="flex items-center gap-2">
               <div className="flex h-5 w-5 items-center justify-center rounded bg-sidebar-accent text-sidebar-primary">
                 <Terminal className="h-3 w-3" strokeWidth={2.25} />
               </div>
-              <span className="font-mono text-[12px] font-medium tracking-tight text-sidebar-primary">
-                openbase-coder
+              <span className="text-[12px] font-medium text-white">
+                Openbase Coder
               </span>
             </div>
           </SidebarHeader>
@@ -131,7 +143,7 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
         </Sidebar>
 
         <div
-          className={`flex flex-1 flex-col ${noPadding ? "overflow-hidden" : "overflow-auto"}`}
+          className={`flex min-h-0 flex-1 flex-col ${noPadding ? "overflow-hidden" : "overflow-auto"}`}
         >
           <header className="sticky top-0 z-10 flex h-9 shrink-0 items-center justify-between border-b border-border bg-background/90 px-3 backdrop-blur md:px-4">
             <div className="flex min-w-0 items-center gap-2">

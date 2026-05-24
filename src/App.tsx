@@ -12,15 +12,19 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import AgentsMd from "./pages/AgentsMd";
+import ApprovalRequests from "./pages/ApprovalRequests";
 import BoilerSync from "./pages/BoilerSync";
 import Dashboard from "./pages/Dashboard";
+import DispatchChat from "./pages/DispatchChat";
 import Reports from "./pages/Reports";
 import Diff from "./pages/Diff";
+import Devices from "./pages/Devices";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import ProjectDetail from "./pages/ProjectDetail";
 import ProjectView from "./pages/ProjectView";
 import Projects from "./pages/Projects";
+import Routines from "./pages/Routines";
 import SessionDetail from "./pages/SessionDetail";
 import Sessions from "./pages/Sessions";
 import Settings from "./pages/Settings";
@@ -117,6 +121,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/dashboard/dispatch"
+        element={
+          <ProtectedRoute>
+            <DispatchChat />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/dashboard/threads"
         element={
           <ProtectedRoute>
@@ -129,6 +141,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <SessionDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/approvals"
+        element={
+          <ProtectedRoute>
+            <ApprovalRequests />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/routines"
+        element={
+          <ProtectedRoute>
+            <Routines />
           </ProtectedRoute>
         }
       />
@@ -165,12 +193,24 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/dashboard/agents-md"
+        path="/dashboard/devices"
+        element={
+          <ProtectedRoute>
+            <Devices />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/instructions"
         element={
           <ProtectedRoute>
             <AgentsMd />
           </ProtectedRoute>
         }
+      />
+      <Route
+        path="/dashboard/agents-md"
+        element={<Navigate to="/dashboard/instructions" replace />}
       />
       <Route
         path="/dashboard/tools"

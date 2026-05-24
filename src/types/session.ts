@@ -1,4 +1,4 @@
-export type ThreadStatus = "idle" | "running" | "completed" | "error";
+export type ThreadStatus = "idle" | "waiting" | "running" | "completed" | "error";
 
 export interface TurnInfo {
   turn_id: string;
@@ -9,11 +9,15 @@ export interface TurnInfo {
   accumulated_stderr: string;
   return_code: number | null;
   prompt: string;
+  reasoning_effort?: string | null;
 }
 
 export interface ThreadInfo {
   thread_id: string;
   directory: string;
+  name?: string | null;
+  title?: string | null;
+  preview?: string | null;
   created_at: string;
   updated_at: string;
   current_turn: TurnInfo | null;
@@ -22,6 +26,10 @@ export interface ThreadInfo {
   is_livekit_shared?: boolean;
   is_livekit_dispatcher?: boolean;
   is_livekit_active_target?: boolean;
+  livekit_dispatcher_voice_id?: string | null;
+  livekit_dispatcher_voice_name?: string | null;
+  livekit_active_target_voice_id?: string | null;
+  livekit_active_target_voice_name?: string | null;
   livekit_voice_route_blocked_reason?: string;
 }
 
@@ -33,6 +41,7 @@ export interface Project {
   stack?: string | null;
   reports_count?: number;
   reports_updated_at?: number | null;
+  global_reports?: boolean;
 }
 
 export type ReportsKind = "markdown" | "text" | "image" | "other";

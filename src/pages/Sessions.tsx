@@ -1,5 +1,16 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { ThreadListItem } from "@/components/ThreadListItem";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,8 +21,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
+import { threadListDisplayNames } from "@/lib/thread-display";
 import type { Project, ThreadInfo } from "@/types/session";
-import { FolderOpen, Plus, Terminal, Trash2 } from "lucide-react";
+import { Archive, FolderOpen, Plus, Terminal } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -70,6 +82,7 @@ const Sessions = () => {
   const sortedThreads = [...threads].sort(
     (a, b) => +new Date(b.updated_at) - +new Date(a.updated_at),
   );
+  const displayNames = threadListDisplayNames(sortedThreads);
 
   return (
     <DashboardLayout>
@@ -140,29 +153,70 @@ const Sessions = () => {
           </div>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
-            {sortedThreads.map((thread, idx) => (
-              <ThreadListItem
-                key={thread.thread_id}
-                thread={thread}
-                showTopBorder={idx > 0}
-                onClick={() =>
-                  navigate(`/dashboard/threads/${thread.thread_id}`)
-                }
-                action={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteThread(thread.thread_id);
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                }
-              />
-            ))}
+            {sortedThreads.map((thread, idx) => {
+              const isDispatchThread =
+                thread.is_livekit_dispatcher || thread.is_livekit_shared;
+
+              return (
+                <ThreadListItem
+                  key={thread.thread_id}
+                  thread={thread}
+                  displayName={displayNames.get(thread.thread_id)}
+                  showTopBorder={idx > 0}
+                  onClick={() =>
+                    navigate(`/dashboard/threads/${thread.thread_id}`)
+                  }
+                  action={
+                    isDispatchThread ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-not-allowed"
+                        disabled
+                        title="Dispatch threads cannot be archived"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Archive className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    ) : (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                            title="Archive thread"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Archive className="h-3 w-3 text-muted-foreground" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Archive thread?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This hides the thread from active thread lists. If
+                              it is running, the current turn will be
+                              interrupted first.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteThread(thread.thread_id)}
+                            >
+                              Archive
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </div>

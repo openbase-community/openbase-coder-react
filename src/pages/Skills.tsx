@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronRight,
+  Link2,
   Plus,
   Save,
   Trash2,
@@ -18,7 +19,9 @@ import { toast } from "sonner";
 interface SkillEntry {
   name: string;
   path: string;
+  dir_path?: string;
   source_path?: string;
+  source_dir_path?: string;
 }
 
 interface SkillSection {
@@ -42,6 +45,7 @@ const Skills = () => {
   const [collapsedSections, setCollapsedSections] = useState<
     Record<string, boolean>
   >({});
+  const [syncingSkill, setSyncingSkill] = useState("");
 
   const [content, setContent] = useState("");
   const [filePath, setFilePath] = useState("");
@@ -157,6 +161,36 @@ const Skills = () => {
     }
   };
 
+  const linkSkill = async (
+    skill: SkillEntry,
+    sourceScope: string,
+    targetScope: string,
+  ) => {
+    const operationId = `${sourceScope}:${targetScope}:${skill.name}`;
+    setSyncingSkill(operationId);
+    const res = await apiFetch("/api/skills/symlink/", {
+      method: "POST",
+      body: JSON.stringify({
+        name: skill.name,
+        source_scope: sourceScope,
+        target_scope: targetScope,
+      }),
+    });
+    setSyncingSkill("");
+    if (res.ok) {
+      const data = await res.json();
+      await fetchSkills();
+      toast.success(
+        data.created
+          ? `Linked /${skill.name}`
+          : `/${skill.name} was already linked`,
+      );
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error || "Failed to link skill");
+    }
+  };
+
   const scopeLabel = projectPath ? projectPath.split("/").pop() : "global";
   const visibleSections =
     !projectPath && sections.length > 0
@@ -173,6 +207,15 @@ const Skills = () => {
     (count, section) => count + section.skills.length,
     0,
   );
+  const sectionsByKey = Object.fromEntries(
+    visibleSections.map((section) => [section.key, section]),
+  );
+  const targetScopeFor = (scope: string) =>
+    scope === "home" ? "voice_coder" : scope === "voice_coder" ? "home" : "";
+  const scopeName = (scope: string) =>
+    scope === "home" ? "Normal Codex" : scope === "voice_coder" ? "Openbase Codex" : scope;
+  const skillDirForComparison = (skill: SkillEntry) =>
+    skill.source_dir_path || skill.dir_path || skill.path.replace(/\/SKILL\.md$/, "");
 
   if (editingSkill) {
     return (
@@ -349,28 +392,86 @@ const Skills = () => {
                     ) : (
                       section.skills.map((skill, idx) => {
                         const skillPath = skill.source_path || skill.path;
+                        const targetScope = targetScopeFor(section.key);
+                        const targetSection = targetScope
+                          ? sectionsByKey[targetScope]
+                          : undefined;
+                        const targetSkill = targetSection?.skills.find(
+                          (item) => item.name === skill.name,
+                        );
+                        const sourceDir = skillDirForComparison(skill);
+                        const targetSourceDir = targetSkill
+                          ? skillDirForComparison(targetSkill)
+                          : "";
+                        const alreadyLinked =
+                          !!targetSkill &&
+                          !!targetSkill.source_dir_path &&
+                          targetSourceDir === sourceDir;
+                        const hasTargetConflict = !!targetSkill && !alreadyLinked;
+                        const operationId = `${section.key}:${targetScope}:${skill.name}`;
                         return (
-                          <button
+                          <div
                             key={`${section.key}:${skill.name}`}
-                            onClick={() => openSkill(skill.name, section.key)}
                             className={`group grid w-full grid-cols-[minmax(6.5rem,11rem)_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-surface-muted sm:grid-cols-[minmax(8rem,14rem)_minmax(0,1fr)_auto] ${
                               idx > 0 ? "border-t border-border" : ""
                             }`}
                           >
-                            <span className="flex min-w-0 items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openSkill(skill.name, section.key)}
+                              className="flex min-w-0 items-center gap-2 text-left"
+                            >
                               <Zap className="h-3 w-3 shrink-0 text-muted-foreground" />
                               <span className="truncate font-mono text-[12.5px] font-medium text-foreground">
                                 /{skill.name}
                               </span>
-                            </span>
-                            <span
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openSkill(skill.name, section.key)}
                               className="min-w-0 truncate text-left font-mono text-[11px] text-muted-foreground/70 [direction:rtl] [unicode-bidi:plaintext]"
                               title={skillPath}
                             >
                               {skillPath}
-                            </span>
-                            <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
-                          </button>
+                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {targetScope && targetSection ? (
+                                alreadyLinked ? (
+                                  <span className="rounded bg-success/10 px-1.5 py-0.5 text-[10px] font-medium text-success">
+                                    linked
+                                  </span>
+                                ) : hasTargetConflict ? (
+                                  <span
+                                    className="max-w-[8rem] truncate rounded bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"
+                                    title={`A separate /${skill.name} exists in ${scopeName(targetScope)}`}
+                                  >
+                                    exists
+                                  </span>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 gap-1 px-2 text-[11px]"
+                                    disabled={syncingSkill === operationId}
+                                    onClick={() => linkSkill(skill, section.key, targetScope)}
+                                    title={`Symlink into ${scopeName(targetScope)}`}
+                                  >
+                                    <Link2 className="h-3 w-3" />
+                                    {targetScope === "voice_coder" ? "Openbase" : "Normal"}
+                                  </Button>
+                                )
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => openSkill(skill.name, section.key)}
+                                className="flex h-6 w-5 items-center justify-center rounded text-muted-foreground/40 hover:bg-surface hover:text-foreground"
+                                aria-label={`Open ${skill.name}`}
+                              >
+                                <ChevronRight className="h-3 w-3 shrink-0" />
+                              </button>
+                            </div>
+                          </div>
                         );
                       })
                     )

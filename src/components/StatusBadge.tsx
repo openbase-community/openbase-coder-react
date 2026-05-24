@@ -5,6 +5,7 @@ const statusConfig: Record<
   { label: string; dot: string; text: string }
 > = {
   running: { label: "running", dot: "bg-info", text: "text-info" },
+  waiting: { label: "waiting", dot: "bg-warning", text: "text-warning" },
   completed: { label: "done", dot: "bg-success", text: "text-success" },
   error: { label: "error", dot: "bg-destructive", text: "text-destructive" },
   idle: {

@@ -1,7 +1,14 @@
 import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { Button } from "@/components/ui/button";
-import { fetchUvTools, uninstallUvTool, type UvTool } from "@/lib/uv-tools";
-import { ArrowLeft, RefreshCw, Trash2, Wrench } from "lucide-react";
+import {
+  fetchUvToolHelp,
+  fetchUvTools,
+  uninstallUvTool,
+  type UvTool,
+  type UvToolExecutable,
+  type UvToolHelpResponse,
+} from "@/lib/uv-tools";
+import { ArrowLeft, CircleHelp, RefreshCw, Trash2, Wrench } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -23,6 +30,12 @@ const DetailField = ({
   </div>
 );
 
+type HelpState = {
+  loading: boolean;
+  response: UvToolHelpResponse | null;
+  error: string | null;
+};
+
 const ToolDetail = () => {
   const { toolName = "" } = useParams();
   const navigate = useNavigate();
@@ -33,6 +46,9 @@ const ToolDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uninstalling, setUninstalling] = useState(false);
+  const [helpByExecutable, setHelpByExecutable] = useState<
+    Record<string, HelpState>
+  >({});
 
   const fetchTools = useCallback(async () => {
     setLoading(true);
@@ -54,6 +70,40 @@ const ToolDetail = () => {
   }, [fetchTools]);
 
   const tool = tools.find((candidate) => candidate.name === decodedToolName);
+
+  const executableKey = (executable: UvToolExecutable) =>
+    `${executable.name}:${executable.path}`;
+
+  const handleLoadHelp = async (executable: UvToolExecutable) => {
+    if (!tool) return;
+    const key = executableKey(executable);
+    setHelpByExecutable((current) => ({
+      ...current,
+      [key]: {
+        loading: true,
+        response: current[key]?.response ?? null,
+        error: null,
+      },
+    }));
+
+    try {
+      const response = await fetchUvToolHelp(tool.name, executable.name);
+      setHelpByExecutable((current) => ({
+        ...current,
+        [key]: { loading: false, response, error: null },
+      }));
+    } catch (err) {
+      setHelpByExecutable((current) => ({
+        ...current,
+        [key]: {
+          loading: false,
+          response: null,
+          error:
+            err instanceof Error ? err.message : "Unable to load help output.",
+        },
+      }));
+    }
+  };
 
   const handleUninstall = async () => {
     if (!tool || uninstalling) return;
@@ -186,19 +236,64 @@ const ToolDetail = () => {
                     No executables reported.
                   </p>
                 ) : (
-                  tool.executables.map((executable) => (
-                    <div
-                      key={`${tool.name}:${executable.path}`}
-                      className="grid min-w-0 grid-cols-1 gap-1 px-3 py-2 md:grid-cols-[minmax(0,180px)_minmax(0,1fr)]"
-                    >
-                      <span className="min-w-0 truncate font-mono text-[12px] font-medium text-foreground">
-                        {executable.name}
-                      </span>
-                      <span className="break-all font-mono text-[11px] text-muted-foreground">
-                        {executable.path}
-                      </span>
-                    </div>
-                  ))
+                  tool.executables.map((executable) => {
+                    const helpState =
+                      helpByExecutable[executableKey(executable)];
+                    const output = [
+                      helpState?.response?.stdout,
+                      helpState?.response?.stderr,
+                    ]
+                      .filter(Boolean)
+                      .join("\n");
+
+                    return (
+                      <div
+                        key={`${tool.name}:${executable.path}`}
+                        className="grid min-w-0 grid-cols-1 gap-1 px-3 py-2 md:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto] md:items-center"
+                      >
+                        <span className="min-w-0 truncate font-mono text-[12px] font-medium text-foreground">
+                          {executable.name}
+                        </span>
+                        <span className="break-all font-mono text-[11px] text-muted-foreground">
+                          {executable.path}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 w-fit px-2 text-[12px]"
+                          disabled={Boolean(helpState?.loading)}
+                          onClick={() => void handleLoadHelp(executable)}
+                        >
+                          <CircleHelp className="h-3 w-3" />
+                          {helpState?.loading ? "Loading" : "Help"}
+                        </Button>
+                        {helpState?.error ? (
+                          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive md:col-span-3">
+                            {helpState.error}
+                          </div>
+                        ) : helpState?.response ? (
+                          <div className="min-w-0 rounded border border-border bg-background md:col-span-3">
+                            <div className="border-b border-border px-3 py-1.5 font-mono text-[10.5px] text-muted-foreground">
+                              {executable.name} --help
+                              {helpState.response.return_code !== 0 ? (
+                                <span className="ml-2 text-warning">
+                                  exit {helpState.response.return_code}
+                                </span>
+                              ) : null}
+                              {helpState.response.error ? (
+                                <span className="ml-2 text-warning">
+                                  {helpState.response.error}
+                                </span>
+                              ) : null}
+                            </div>
+                            <pre className="max-h-[28rem] overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground">
+                              {output || "No help output."}
+                            </pre>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </section>

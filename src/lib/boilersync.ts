@@ -1,38 +1,15 @@
 import { apiFetch } from "@/lib/api";
+import type {
+  TemplateDetails,
+  TemplateInputField,
+  TemplateListEntry,
+  TemplateSource,
+} from "boilersync-react";
 
-export type BoilerSyncSource = {
-  org: string;
-  repo: string;
-  path: string;
-  remote_url: string | null;
-  branch: string | null;
-  commit: string | null;
-  template_count: number;
-};
-
-export type BoilerSyncTemplate = {
-  template_ref: string;
-  org: string;
-  repo: string;
-  subdir: string;
-  template_dir: string;
-  display_name: string;
-};
-
-export type BoilerSyncTemplateField = {
-  name: string;
-  required?: boolean;
-  description?: string;
-  default?: unknown;
-};
-
-export type BoilerSyncTemplateDetails = {
-  template_ref: string;
-  template_dir: string;
-  variables?: BoilerSyncTemplateField[];
-  options?: BoilerSyncTemplateField[];
-  [key: string]: unknown;
-};
+export type BoilerSyncSource = TemplateSource;
+export type BoilerSyncTemplate = TemplateListEntry;
+export type BoilerSyncTemplateField = TemplateInputField;
+export type BoilerSyncTemplateDetails = TemplateDetails;
 
 export type BoilerSyncTemplatesResponse = {
   boilersync_available: boolean;
