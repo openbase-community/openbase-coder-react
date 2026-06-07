@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { readJson } from "@/lib/api-errors";
+import { setReportTags } from "@/lib/item-tags";
 import { GIT_STATUS, projectName } from "@/lib/project-display";
 import { groupReportItems } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
@@ -25,6 +26,7 @@ import {
   threadVoiceLabel,
 } from "@/lib/thread-display";
 import { useReportFileActions } from "@/lib/useReportFileActions";
+import { useTagOptions } from "@/lib/useTagOptions";
 import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
 import { cn } from "@/lib/utils";
 import type { ReportsFile, ThreadInfo } from "@/types/session";
@@ -67,6 +69,7 @@ const ProjectDetail = () => {
   const [reportsLoading, setReportsLoading] = useState(false);
   const [removingProject, setRemovingProject] = useState(false);
   const threadsRef = useRef<HTMLDivElement | null>(null);
+  const { tagOptions, refreshTagOptions } = useTagOptions();
   const {
     payloads: reportsPayloads,
     fileLoadingKey: reportsFileLoadingKey,
@@ -152,6 +155,36 @@ const ProjectDetail = () => {
       await downloadReportAction({ key: file.path, projectPath, file });
     },
     [downloadReportAction, projectPath],
+  );
+
+  const updateReportTags = useCallback(
+    async (file: ReportsFile, tags: string[]) => {
+      try {
+        const payload = await setReportTags(projectPath, file.path, tags);
+        setReportsFiles((current) =>
+          current.map((currentFile) =>
+            currentFile.path === file.path
+              ? { ...currentFile, tags: payload.tags }
+              : currentFile,
+          ),
+        );
+        setReportsPayloads((current) => {
+          const existing = current[file.path];
+          if (!existing) return current;
+          return {
+            ...current,
+            [file.path]: {
+              ...existing,
+              file: { ...existing.file, tags: payload.tags },
+            },
+          };
+        });
+        void refreshTagOptions();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to update tags");
+      }
+    },
+    [projectPath, refreshTagOptions, setReportsPayloads],
   );
 
   const fetchReports = useCallback(async () => {
@@ -419,6 +452,10 @@ const ProjectDetail = () => {
                                 onToggle={() => toggleReport(file)}
                                 onDownload={() => void downloadReport(file)}
                                 onDelete={() => void deleteReportFile(file)}
+                                onTagsChange={(tags) =>
+                                  updateReportTags(file, tags)
+                                }
+                                tagOptions={tagOptions}
                                 downloading={downloadingReportKey === file.path}
                                 deleting={deletingReportKey === file.path}
                               />
@@ -451,6 +488,8 @@ const ProjectDetail = () => {
                     onToggle={() => toggleReport(file)}
                     onDownload={() => void downloadReport(file)}
                     onDelete={() => void deleteReportFile(file)}
+                    onTagsChange={(tags) => updateReportTags(file, tags)}
+                    tagOptions={tagOptions}
                     downloading={downloadingReportKey === file.path}
                     deleting={deletingReportKey === file.path}
                   />

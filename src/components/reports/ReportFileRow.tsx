@@ -9,7 +9,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { TagPicker } from "@/components/tags/TagPicker";
 import { Button } from "@/components/ui/button";
+import type { TagOption } from "@/lib/item-tags";
 import type { ReportsFile } from "@/types/session";
 import { ChevronDown, ChevronRight, Download, FileText, ImageIcon, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -37,8 +39,11 @@ type ReportFileRowProps = {
   onToggle: () => void;
   onDownload: () => void;
   onDelete: () => void;
+  onTagsChange?: (tags: string[]) => Promise<void> | void;
   downloading?: boolean;
   deleting?: boolean;
+  tagOptions?: TagOption[];
+  tagsDisabled?: boolean;
 };
 
 export const ReportFileRow = ({
@@ -55,8 +60,11 @@ export const ReportFileRow = ({
   onToggle,
   onDownload,
   onDelete,
+  onTagsChange,
   downloading = false,
   deleting = false,
+  tagOptions = [],
+  tagsDisabled = false,
 }: ReportFileRowProps) => {
   const Icon = file.kind === "image" ? ImageIcon : FileText;
 
@@ -103,6 +111,14 @@ export const ReportFileRow = ({
         >
           <Download className="h-3.5 w-3.5" />
         </Button>
+        {onTagsChange ? (
+          <TagPicker
+            tags={file.tags ?? []}
+            options={tagOptions}
+            disabled={tagsDisabled}
+            onChange={onTagsChange}
+          />
+        ) : null}
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button

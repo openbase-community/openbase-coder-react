@@ -22,6 +22,7 @@ export interface ThreadInfo {
   preview?: string | null;
   is_favorite?: boolean;
   favorited_at?: string | null;
+  tags?: string[];
   created_at: string;
   updated_at: string;
   current_turn: TurnInfo | null;
@@ -77,6 +78,7 @@ export interface ReportsFile {
   kind: ReportsKind;
   size: number;
   updated_at: number;
+  tags?: string[];
 }
 
 export interface ServiceStatus {

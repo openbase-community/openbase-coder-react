@@ -9,10 +9,12 @@ import { ReportFileRow } from "@/components/reports/ReportFileRow";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { readJson } from "@/lib/api-errors";
+import { setReportTags } from "@/lib/item-tags";
 import { fetchAllProjectPages, projectName } from "@/lib/project-display";
 import { groupReportItems } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
 import { useReportFileActions } from "@/lib/useReportFileActions";
+import { useTagOptions } from "@/lib/useTagOptions";
 import type { ReportsFile, Project } from "@/types/session";
 import {
   ChevronDown,
@@ -21,6 +23,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 type ReportsItem = {
   project: Project;
@@ -49,6 +52,7 @@ const Reports = () => {
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const expandedKeyRef = useRef<string | null>(null);
+  const { tagOptions, refreshTagOptions } = useTagOptions();
   const {
     payloads,
     fileLoadingKey,
@@ -57,6 +61,7 @@ const Reports = () => {
     loadReportFile,
     deleteReport,
     downloadReport,
+    setPayloads,
   } = useReportFileActions({
     onDeleted: ({ key }) => {
       setItems((current) =>
@@ -109,6 +114,44 @@ const Reports = () => {
         file: item.file,
       }),
     [downloadReport],
+  );
+
+  const updateItemTags = useCallback(
+    async (item: ReportsItem, tags: string[]) => {
+      const key = itemKey(item);
+      try {
+        const payload = await setReportTags(
+          item.project.path,
+          item.file.path,
+          tags,
+        );
+        setItems((current) =>
+          current.map((currentItem) =>
+            itemKey(currentItem) === key
+              ? {
+                  ...currentItem,
+                  file: { ...currentItem.file, tags: payload.tags },
+                }
+              : currentItem,
+          ),
+        );
+        setPayloads((current) => {
+          const existing = current[key];
+          if (!existing) return current;
+          return {
+            ...current,
+            [key]: {
+              ...existing,
+              file: { ...existing.file, tags: payload.tags },
+            },
+          };
+        });
+        void refreshTagOptions();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to update tags");
+      }
+    },
+    [refreshTagOptions, setPayloads],
   );
 
   const toggleGroup = (key: string) => {
@@ -304,6 +347,8 @@ const Reports = () => {
                               onToggle={() => toggleItem(item)}
                               onDownload={() => void downloadItem(item)}
                               onDelete={() => void deleteItem(item)}
+                              onTagsChange={(tags) => updateItemTags(item, tags)}
+                              tagOptions={tagOptions}
                               downloading={downloadingKey === childKey}
                               deleting={deletingKey === childKey}
                             />
@@ -355,6 +400,8 @@ const Reports = () => {
                   onToggle={() => toggleItem(item)}
                   onDownload={() => void downloadItem(item)}
                   onDelete={() => void deleteItem(item)}
+                  onTagsChange={(tags) => updateItemTags(item, tags)}
+                  tagOptions={tagOptions}
                   downloading={downloadingKey === key}
                   deleting={deletingKey === key}
                 />
