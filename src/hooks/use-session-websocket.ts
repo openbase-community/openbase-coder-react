@@ -142,5 +142,5 @@ export function useThreadWebSocket(threadId: string | undefined) {
     wsRef.current?.send(JSON.stringify({ action: "interrupt_turn" }));
   }, []);
 
-  return { thread, isConnected, startTurn, interruptTurn };
+  return { thread, isConnected, startTurn, interruptTurn, refreshThread };
 }

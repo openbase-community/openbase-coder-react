@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
 import { projectName } from "@/lib/project-display";
+import { setThreadFavorite } from "@/lib/thread-favorites";
 import { groupThreadsByDay, threadListDisplayNames } from "@/lib/thread-display";
 import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
 import { Archive, FolderOpen, Plus, Terminal } from "lucide-react";
@@ -86,6 +87,15 @@ const Sessions = () => {
       navigate(`/dashboard/threads/${data.thread_id}`);
     } else {
       toast.error("Failed to create thread");
+    }
+  };
+
+  const toggleThreadFavorite = async (threadId: string, isFavorite: boolean) => {
+    try {
+      await setThreadFavorite(threadId, isFavorite);
+      void fetchData();
+    } catch {
+      toast.error("Failed to update favorite");
     }
   };
 
@@ -198,6 +208,12 @@ const Sessions = () => {
                           showTopBorder={idx > 0}
                           onClick={() =>
                             navigate(`/dashboard/threads/${thread.thread_id}`)
+                          }
+                          onToggleFavorite={(item) =>
+                            void toggleThreadFavorite(
+                              item.thread_id,
+                              !item.is_favorite,
+                            )
                           }
                           action={
                             isDispatchThread ? (

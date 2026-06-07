@@ -8,10 +8,12 @@ import {
   fetchThreadPage,
   projectName,
 } from "@/lib/project-display";
+import { setThreadFavorite } from "@/lib/thread-favorites";
 import type { Project, ServiceStatus, ThreadInfo } from "@/types/session";
 import { AlertTriangle, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -50,6 +52,27 @@ const Dashboard = () => {
     serviceEntries.length > 0 && runningServices.length !== serviceEntries.length;
   const openProject = (project: Project) =>
     navigate(`/dashboard/project?path=${encodeURIComponent(project.path)}`);
+  const toggleThreadFavorite = async (thread: ThreadInfo) => {
+    try {
+      const favorite = await setThreadFavorite(
+        thread.thread_id,
+        !thread.is_favorite,
+      );
+      setThreads((current) =>
+        current.map((item) =>
+          item.thread_id === favorite.thread_id
+            ? {
+                ...item,
+                is_favorite: favorite.is_favorite,
+                favorited_at: favorite.favorited_at,
+              }
+            : item,
+        ),
+      );
+    } catch {
+      toast.error("Failed to update favorite");
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -170,6 +193,7 @@ const Dashboard = () => {
                   onClick={() =>
                     navigate(`/dashboard/threads/${thread.thread_id}`)
                   }
+                  onToggleFavorite={(item) => void toggleThreadFavorite(item)}
                 />
               ))}
             </div>

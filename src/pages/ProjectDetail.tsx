@@ -18,6 +18,7 @@ import { readJson } from "@/lib/api-errors";
 import { GIT_STATUS, projectName } from "@/lib/project-display";
 import { groupReportItems } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
+import { setThreadFavorite } from "@/lib/thread-favorites";
 import {
   groupThreadsByDay,
   shouldDeemphasizeThread,
@@ -26,7 +27,7 @@ import {
 import { useReportFileActions } from "@/lib/useReportFileActions";
 import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
 import { cn } from "@/lib/utils";
-import type { ReportsFile } from "@/types/session";
+import type { ReportsFile, ThreadInfo } from "@/types/session";
 import {
   ArrowLeft,
   ChevronDown,
@@ -34,6 +35,7 @@ import {
   Folder,
   GitBranch,
   Plus,
+  Star,
   Terminal,
   Trash2,
   Zap,
@@ -52,6 +54,7 @@ const ProjectDetail = () => {
     nextThreadsUrl,
     loading,
     loadingMoreThreads,
+    fetchThreads,
     loadMoreThreads,
   } = useProjectsAndThreads();
   const [reportsFiles, setReportsFiles] = useState<ReportsFile[]>([]);
@@ -190,6 +193,15 @@ const ProjectDetail = () => {
       navigate(`/dashboard/threads/${data.thread_id}`);
     } else {
       toast.error("Failed to create thread");
+    }
+  };
+
+  const toggleThreadFavorite = async (thread: ThreadInfo) => {
+    try {
+      await setThreadFavorite(thread.thread_id, !thread.is_favorite);
+      await fetchThreads();
+    } catch {
+      toast.error("Failed to update favorite");
     }
   };
 
@@ -488,14 +500,24 @@ const ProjectDetail = () => {
                     const isDeemphasized = shouldDeemphasizeThread(thread);
 
                     return (
-                      <button
+                      <div
                         key={thread.thread_id}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         onClick={() =>
                           navigate(
                             `/dashboard/threads/${thread.thread_id}?fromProject=${encodeURIComponent(projectPath)}`,
                           )
                         }
+                        onKeyDown={(event) => {
+                          if (event.key !== "Enter" && event.key !== " ") {
+                            return;
+                          }
+                          event.preventDefault();
+                          navigate(
+                            `/dashboard/threads/${thread.thread_id}?fromProject=${encodeURIComponent(projectPath)}`,
+                          );
+                        }}
                         className={cn(
                           "group flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-muted",
                           isDeemphasized &&
@@ -504,6 +526,34 @@ const ProjectDetail = () => {
                         )}
                       >
                         <Terminal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <button
+                          type="button"
+                          className={cn(
+                            "flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface hover:text-foreground",
+                            thread.is_favorite && "text-warning hover:text-warning",
+                          )}
+                          title={
+                            thread.is_favorite
+                              ? "Remove favorite"
+                              : "Favorite thread"
+                          }
+                          aria-label={
+                            thread.is_favorite
+                              ? "Remove favorite"
+                              : "Favorite thread"
+                          }
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void toggleThreadFavorite(thread);
+                          }}
+                        >
+                          <Star
+                            className={cn(
+                              "h-3 w-3",
+                              thread.is_favorite && "fill-current",
+                            )}
+                          />
+                        </button>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <StatusBadge status={thread.status} />
@@ -522,7 +572,7 @@ const ProjectDetail = () => {
                           </div>
                         </div>
                         <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
-                      </button>
+                      </div>
                     );
                   })}
                 </section>

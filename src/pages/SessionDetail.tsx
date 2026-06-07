@@ -15,12 +15,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
 import { apiFetch } from "@/lib/api";
+import { setThreadFavorite } from "@/lib/thread-favorites";
 import {
   threadAgentVoiceName,
   threadDisplayName,
   threadProjectLabel,
 } from "@/lib/thread-display";
-import { Archive, ArrowLeft, FolderOpen, Send, Square, Wifi, WifiOff } from "lucide-react";
+import {
+  Archive,
+  ArrowLeft,
+  FolderOpen,
+  Send,
+  Square,
+  Star,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -34,7 +44,7 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
   const threadId = threadIdOverride ?? routeThreadId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { thread, isConnected, startTurn, interruptTurn } =
+  const { thread, isConnected, startTurn, interruptTurn, refreshThread } =
     useThreadWebSocket(threadId);
   const [prompt, setPrompt] = useState("");
   const outputRef = useRef<HTMLPreElement>(null);
@@ -85,6 +95,16 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
     }
   };
 
+  const toggleFavorite = async () => {
+    if (!thread) return;
+    try {
+      await setThreadFavorite(thread.thread_id, !thread.is_favorite);
+      await refreshThread();
+    } catch {
+      toast.error("Failed to update favorite");
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-3 pb-24">
@@ -105,6 +125,24 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
               <h1 className="text-sm font-semibold text-foreground">
                 {threadDisplayName(thread)}
               </h1>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleFavorite}
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                title={
+                  thread.is_favorite ? "Remove favorite" : "Favorite thread"
+                }
+                aria-label={
+                  thread.is_favorite ? "Remove favorite" : "Favorite thread"
+                }
+              >
+                <Star
+                  className={`h-3 w-3 ${
+                    thread.is_favorite ? "fill-current text-warning" : ""
+                  }`}
+                />
+              </Button>
               <StatusBadge status={thread.status} />
               {agentVoiceName ? (
                 <span className="font-mono text-[10px] text-warning">

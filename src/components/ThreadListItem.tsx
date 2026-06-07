@@ -8,7 +8,7 @@ import {
 } from "@/lib/thread-display";
 import { cn } from "@/lib/utils";
 import type { ThreadInfo } from "@/types/session";
-import { ChevronRight, Terminal } from "lucide-react";
+import { ChevronRight, Star, Terminal } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface ThreadListItemProps {
@@ -16,6 +16,7 @@ interface ThreadListItemProps {
   displayName?: string;
   showTopBorder?: boolean;
   onClick: () => void;
+  onToggleFavorite?: (thread: ThreadInfo) => void;
   action?: ReactNode;
 }
 
@@ -32,6 +33,7 @@ export const ThreadListItem = ({
   displayName,
   showTopBorder = false,
   onClick,
+  onToggleFavorite,
   action,
 }: ThreadListItemProps) => {
   const isDeemphasized = shouldDeemphasizeThread(thread);
@@ -47,6 +49,30 @@ export const ThreadListItem = ({
       )}
     >
       <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
+      {onToggleFavorite ? (
+        <button
+          type="button"
+          className={cn(
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface hover:text-foreground",
+            thread.is_favorite && "text-warning hover:text-warning",
+          )}
+          title={thread.is_favorite ? "Remove favorite" : "Favorite thread"}
+          aria-label={
+            thread.is_favorite ? "Remove favorite" : "Favorite thread"
+          }
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleFavorite(thread);
+          }}
+        >
+          <Star
+            className={cn(
+              "h-3 w-3",
+              thread.is_favorite && "fill-current",
+            )}
+          />
+        </button>
+      ) : null}
       <div className="flex min-w-0 flex-1 items-baseline gap-2">
         <span className="truncate text-[12.5px] font-medium text-foreground">
           {displayName ?? threadDisplayName(thread)}

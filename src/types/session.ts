@@ -20,6 +20,8 @@ export interface ThreadInfo {
   display_name: string;
   title?: string | null;
   preview?: string | null;
+  is_favorite?: boolean;
+  favorited_at?: string | null;
   created_at: string;
   updated_at: string;
   current_turn: TurnInfo | null;
