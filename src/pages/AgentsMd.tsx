@@ -50,10 +50,16 @@ const EXPECTED_TARGETS: Array<
       "Affects regular non-voice Codex sessions that use the standard Codex home directory.",
   },
   {
+    id: "claude",
+    label: "Openbase Claude config instructions",
+    description:
+      "Affects Claude Code sessions that use Openbase's managed CLAUDE_CONFIG_DIR.",
+  },
+  {
     id: "direct_livekit",
     label: "Direct voice session instructions",
     description:
-      "Affects Codex threads that are directly connected to a LiveKit voice session after a voice transfer.",
+      "Affects agent threads that are directly connected to a LiveKit voice session after a voice transfer.",
   },
   {
     id: "super_agent",
@@ -75,6 +81,9 @@ const fallbackPathForTarget = (
 ): string => {
   if (target === "normal") {
     return "~/.codex/AGENTS.md";
+  }
+  if (target === "claude") {
+    return "~/.openbase/claude_config/CLAUDE.md";
   }
   if (target === "direct_livekit") {
     return `${codexHome}/direct-livekit-target-instructions.md`;
@@ -103,7 +112,12 @@ const mergeExpectedDocuments = (
     ...target,
     content: "",
     path: fallbackPathForTarget(target.id, codexHome),
-    codex_home: target.id === "normal" ? "~/.codex" : codexHome,
+    codex_home:
+      target.id === "normal"
+        ? "~/.codex"
+        : target.id === "claude"
+          ? "~/.openbase/claude_config"
+          : codexHome,
     exists: false,
     existenceKnown: false,
     ...apiByTarget.get(target.id),

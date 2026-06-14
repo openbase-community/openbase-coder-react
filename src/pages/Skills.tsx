@@ -210,10 +210,27 @@ const Skills = () => {
   const sectionsByKey = Object.fromEntries(
     visibleSections.map((section) => [section.key, section]),
   );
-  const targetScopeFor = (scope: string) =>
-    scope === "home" ? "voice_coder" : scope === "voice_coder" ? "home" : "";
+  const targetScopesFor = (scope: string) =>
+    projectPath
+      ? []
+      : visibleSections
+          .map((section) => section.key)
+          .filter((sectionKey) => sectionKey !== scope);
   const scopeName = (scope: string) =>
-    scope === "home" ? "Normal Codex" : scope === "voice_coder" ? "Openbase Codex" : scope;
+    sectionsByKey[scope]?.label ??
+    (scope === "home"
+      ? "Normal Codex"
+      : scope === "voice_coder"
+        ? "Openbase Codex"
+        : scope);
+  const scopeButtonLabel = (scope: string) =>
+    scope === "home"
+      ? "Normal"
+      : scope === "voice_coder"
+        ? "Codex"
+        : scope === "claude"
+          ? "Claude"
+          : scopeName(scope);
   const skillDirForComparison = (skill: SkillEntry) =>
     skill.source_dir_path || skill.dir_path || skill.path.replace(/\/SKILL\.md$/, "");
 
@@ -392,23 +409,8 @@ const Skills = () => {
                     ) : (
                       section.skills.map((skill, idx) => {
                         const skillPath = skill.source_path || skill.path;
-                        const targetScope = targetScopeFor(section.key);
-                        const targetSection = targetScope
-                          ? sectionsByKey[targetScope]
-                          : undefined;
-                        const targetSkill = targetSection?.skills.find(
-                          (item) => item.name === skill.name,
-                        );
                         const sourceDir = skillDirForComparison(skill);
-                        const targetSourceDir = targetSkill
-                          ? skillDirForComparison(targetSkill)
-                          : "";
-                        const alreadyLinked =
-                          !!targetSkill &&
-                          !!targetSkill.source_dir_path &&
-                          targetSourceDir === sourceDir;
-                        const hasTargetConflict = !!targetSkill && !alreadyLinked;
-                        const operationId = `${section.key}:${targetScope}:${skill.name}`;
+                        const targetScopes = targetScopesFor(section.key);
                         return (
                           <div
                             key={`${section.key}:${skill.name}`}
@@ -435,33 +437,60 @@ const Skills = () => {
                               {skillPath}
                             </button>
                             <div className="flex items-center justify-end gap-1.5">
-                              {targetScope && targetSection ? (
-                                alreadyLinked ? (
-                                  <span className="rounded bg-success/10 px-1.5 py-0.5 text-[10px] font-medium text-success">
-                                    linked
-                                  </span>
-                                ) : hasTargetConflict ? (
-                                  <span
-                                    className="max-w-[8rem] truncate rounded bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"
-                                    title={`A separate /${skill.name} exists in ${scopeName(targetScope)}`}
-                                  >
-                                    exists
-                                  </span>
-                                ) : (
+                              {targetScopes.map((targetScope) => {
+                                const targetSection = sectionsByKey[targetScope];
+                                const targetSkill = targetSection?.skills.find(
+                                  (item) => item.name === skill.name,
+                                );
+                                const targetSourceDir = targetSkill
+                                  ? skillDirForComparison(targetSkill)
+                                  : "";
+                                const alreadyLinked =
+                                  !!targetSkill &&
+                                  !!targetSkill.source_dir_path &&
+                                  targetSourceDir === sourceDir;
+                                const hasTargetConflict =
+                                  !!targetSkill && !alreadyLinked;
+                                const operationId = `${section.key}:${targetScope}:${skill.name}`;
+                                if (alreadyLinked) {
+                                  return (
+                                    <span
+                                      key={targetScope}
+                                      className="rounded bg-success/10 px-1.5 py-0.5 text-[10px] font-medium text-success"
+                                    >
+                                      {scopeButtonLabel(targetScope)} linked
+                                    </span>
+                                  );
+                                }
+                                if (hasTargetConflict) {
+                                  return (
+                                    <span
+                                      key={targetScope}
+                                      className="max-w-[8rem] truncate rounded bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"
+                                      title={`A separate /${skill.name} exists in ${scopeName(targetScope)}`}
+                                    >
+                                      {scopeButtonLabel(targetScope)} exists
+                                    </span>
+                                  );
+                                }
+                                return (
                                   <Button
+                                    key={targetScope}
                                     type="button"
                                     variant="outline"
                                     size="sm"
                                     className="h-6 gap-1 px-2 text-[11px]"
                                     disabled={syncingSkill === operationId}
-                                    onClick={() => linkSkill(skill, section.key, targetScope)}
+                                    onClick={() =>
+                                      linkSkill(skill, section.key, targetScope)
+                                    }
                                     title={`Symlink into ${scopeName(targetScope)}`}
                                   >
                                     <Link2 className="h-3 w-3" />
-                                    {targetScope === "voice_coder" ? "Openbase" : "Normal"}
+                                    {scopeButtonLabel(targetScope)}
                                   </Button>
-                                )
-                              ) : null}
+                                );
+                              })}
                               <button
                                 type="button"
                                 onClick={() => openSkill(skill.name, section.key)}
