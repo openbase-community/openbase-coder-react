@@ -32,7 +32,6 @@ const Settings: React.FC = () => {
         <CodingBackendSettings />
         <ServiceTierSettings />
         <ReasoningSettings />
-        <EnvSettings />
 
         {getRuntimeShell() === "electron" ? <LiveKitCompanionSettings /> : null}
 
@@ -42,6 +41,7 @@ const Settings: React.FC = () => {
         <IgnoredLaunchctlSettings />
         <AuthenticationSettings />
         <SidebarItemsSettings />
+        <EnvSettings />
       </div>
     </DashboardLayout>
   );

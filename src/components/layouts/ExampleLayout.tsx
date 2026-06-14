@@ -1,6 +1,7 @@
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -24,6 +25,7 @@ import {
   SIDEBAR_PREFERENCES_EVENT,
   type SidebarItem,
 } from "@/lib/sidebar-preferences";
+import { openExternalUrl } from "@/lib/external-links";
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -61,7 +63,14 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
 
   const systemNav = BUILT_IN_SIDEBAR_ITEMS.filter(
     (item) =>
-      item.section === "system" && sidebarItemVisible(item, hiddenSidebarItems),
+      item.section === "system" &&
+      item.key !== "settings" &&
+      sidebarItemVisible(item, hiddenSidebarItems),
+  );
+
+  const settingsNav = BUILT_IN_SIDEBAR_ITEMS.filter(
+    (item) =>
+      item.key === "settings" && sidebarItemVisible(item, hiddenSidebarItems),
   );
 
   const pluginNav = pluginConsolePages
@@ -87,7 +96,7 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
           }
           onClick={() => {
             if (item.externalUrl) {
-              window.open(item.externalUrl, "_blank", "noopener,noreferrer");
+              void openExternalUrl(item.externalUrl);
               return;
             }
             navigate(item.path);
@@ -148,6 +157,10 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
               </SidebarGroup>
             ) : null}
           </SidebarContent>
+
+          <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
+            <SidebarMenu className="gap-px">{renderNavItems(settingsNav)}</SidebarMenu>
+          </SidebarFooter>
         </Sidebar>
 
         <div
