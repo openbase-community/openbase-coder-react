@@ -6,7 +6,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { apiFetch } from "@/lib/api";
 import { Download, RefreshCw } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
@@ -179,10 +178,9 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
     setDownloadingLocalStt(false);
   }, []);
 
-  const handleLocalSttToggle = useCallback(
-    async (checked: boolean) => {
-      const provider = checked ? "local_mlx_whisper" : "assemblyai";
-      if (checked && !sttSettings?.local_download.ready) {
+  const handleSttProviderChange = useCallback(
+    async (provider: string) => {
+      if (provider === "local_mlx_whisper" && !sttSettings?.local_download.ready) {
         setSttError("Download Local MLX Whisper before enabling local STT.");
         return;
       }
@@ -265,7 +263,12 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
   const kokoroReady = Boolean(ttsSettings?.local_download.ready);
   const selectedProviderNeedsDownload = selectedProvider === "kokoro" && !kokoroReady;
   const localSttReady = Boolean(sttSettings?.local_download.ready);
-  const localSttEnabled = sttSettings?.provider === "local_mlx_whisper";
+  const selectedSttProvider = sttSettings?.provider ?? "";
+  const selectedSttNeedsDownload =
+    selectedSttProvider === "local_mlx_whisper" && !localSttReady;
+  const currentSttProviderEntry = sttSettings?.providers.find(
+    (provider) => provider.id === sttSettings.provider,
+  );
 
   const handleProviderChange = useCallback(
     (providerId: string) => {
@@ -398,14 +401,19 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
           </Button>
         </div>
       </div>
-      <div className="flex items-center gap-3 px-3 py-2.5">
+      <div className="flex flex-col gap-3 px-3 py-2.5 lg:flex-row lg:items-center">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
-            Local speech-to-text
+            Speech-to-text provider
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Use MLX Whisper small.en locally on this Mac instead of cloud STT.
+            Select cloud transcription, Openbase Cloud, or the local MLX Whisper model.
           </p>
+          {sttSettings ? (
+            <p className="mt-1 truncate text-[11px] text-muted-foreground">
+              Current: {currentSttProviderEntry?.name ?? sttSettings.provider}
+            </p>
+          ) : null}
           {sttSettings ? (
             <p className="mt-1 truncate font-mono text-[10.5px] text-muted-foreground">
               {sttSettings.local_download.model}
@@ -418,8 +426,26 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
             <p className="mt-1 text-[12px] text-destructive">{sttError}</p>
           ) : null}
         </div>
-        <div className="flex items-center gap-2">
-          {!localSttReady ? (
+        <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+          <Select
+            value={selectedSttProvider}
+            onValueChange={(provider) => {
+              void handleSttProviderChange(provider);
+            }}
+            disabled={savingSttProvider || !sttSettings}
+          >
+            <SelectTrigger className="h-8 min-w-0 text-[12px] sm:w-52">
+              <SelectValue placeholder="Select provider" />
+            </SelectTrigger>
+            <SelectContent>
+              {sttSettings?.providers.map((provider) => (
+                <SelectItem key={provider.id} value={provider.id}>
+                  {provider.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedSttNeedsDownload ? (
             <Button
               variant="outline"
               size="sm"
@@ -433,13 +459,6 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
               {downloadingLocalStt ? "Downloading…" : "Download"}
             </Button>
           ) : null}
-          <Switch
-            checked={localSttEnabled}
-            onCheckedChange={(checked) => {
-              void handleLocalSttToggle(checked);
-            }}
-            disabled={savingSttProvider || !sttSettings || (!localSttReady && !localSttEnabled)}
-          />
         </div>
       </div>
       <div className="flex items-center gap-3 border-t border-border px-3 py-2.5">

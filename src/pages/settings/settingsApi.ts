@@ -24,6 +24,23 @@ export type OpenbaseServicesResponse = {
   };
 };
 
+export type CodingBackendOption = {
+  id: string;
+  label: string;
+  summary: string;
+  description: string;
+};
+
+export type CodingBackendSettingsResponse = {
+  backend: string;
+  default_backend: string;
+  supported_backends: CodingBackendOption[];
+  env_file_exists: boolean;
+  changed: boolean;
+  restart_required: boolean;
+  restart_hint: string;
+};
+
 export type TTSProvider = {
   id: string;
   name: string;
@@ -84,6 +101,21 @@ export type STTSettingsResponse = {
 
 export type DispatcherVoiceUpdateResponse = {
   dispatcher_voice: DispatcherVoice;
+};
+
+export type EnvSettingsEntry = {
+  key: string;
+  value: string;
+  secret: boolean;
+};
+
+export type EnvSettingsResponse = {
+  env_file_exists: boolean;
+  entries: EnvSettingsEntry[];
+  common_keys: string[];
+  changed: boolean;
+  restart_required: boolean;
+  restart_hint: string;
 };
 
 export const extractErrorMessage = async (

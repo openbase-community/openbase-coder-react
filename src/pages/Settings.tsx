@@ -2,7 +2,9 @@ import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { getRuntimeShell } from "@/lib/runtime-config";
 import React from "react";
 import { AuthenticationSettings } from "./settings/AuthenticationSettings";
+import { CodingBackendSettings } from "./settings/CodingBackendSettings";
 import { DispatcherVoiceSettings } from "./settings/DispatcherVoiceSettings";
+import { EnvSettings } from "./settings/EnvSettings";
 import { IgnoredLaunchctlSettings } from "./settings/IgnoredLaunchctlSettings";
 import { LiveKitCompanionSettings } from "./settings/LiveKitCompanionSettings";
 import { OpenbaseServicesSettings } from "./settings/OpenbaseServicesSettings";
@@ -25,6 +27,8 @@ const Settings: React.FC = () => {
         </div>
 
         <OpenbaseServicesSettings controller={openbaseServices} />
+        <CodingBackendSettings />
+        <EnvSettings />
 
         {getRuntimeShell() === "electron" ? <LiveKitCompanionSettings /> : null}
 
