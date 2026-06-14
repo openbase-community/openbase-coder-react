@@ -48,18 +48,33 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
     useThreadWebSocket(threadId);
   const [prompt, setPrompt] = useState("");
   const outputRef = useRef<HTMLPreElement>(null);
+  const threadEndRef = useRef<HTMLDivElement>(null);
+  const currentTurnOutput = thread?.current_turn?.accumulated_output;
+  const currentTurnStderr = thread?.current_turn?.accumulated_stderr;
 
   useEffect(() => {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
-  }, [thread?.current_turn?.accumulated_output]);
+  }, [currentTurnOutput]);
+
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ block: "end" });
+  }, [
+    thread?.thread_id,
+    thread?.turn_history.length,
+    thread?.current_turn?.turn_id,
+    currentTurnOutput,
+    currentTurnStderr,
+    thread?.status,
+  ]);
 
   const handleStartTurn = () => {
     const trimmed = prompt.trim();
     if (!trimmed) return;
-    startTurn(trimmed);
-    setPrompt("");
+    if (startTurn(trimmed)) {
+      setPrompt("");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -213,6 +228,21 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
           </div>
         ) : null}
 
+        {thread && thread.turn_history.length > 0 ? (
+          <section className="overflow-hidden rounded border border-border bg-surface">
+            <div className="border-b border-border bg-surface-muted px-3 py-1.5">
+              <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
+                turn history
+              </p>
+            </div>
+            <div className="space-y-px p-2">
+              {thread.turn_history.map((turn) => (
+                <RunDetail key={turn.turn_id} run={turn} />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {thread?.current_turn ? (
           <section className="overflow-hidden rounded border border-border bg-surface">
             <div className="flex items-center justify-between border-b border-border bg-surface-muted px-3 py-1.5">
@@ -231,6 +261,7 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
                   variant="outline"
                   size="sm"
                   onClick={interruptTurn}
+                  aria-label="Interrupt current turn"
                   className="h-6 px-2 text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Square className="h-2.5 w-2.5" />
@@ -264,20 +295,7 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
           </section>
         ) : null}
 
-        {thread && thread.turn_history.length > 0 ? (
-          <section className="overflow-hidden rounded border border-border bg-surface">
-            <div className="border-b border-border bg-surface-muted px-3 py-1.5">
-              <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
-                turn history
-              </p>
-            </div>
-            <div className="space-y-px p-2">
-              {[...thread.turn_history].reverse().map((turn) => (
-                <RunDetail key={turn.turn_id} run={turn} />
-              ))}
-            </div>
-          </section>
-        ) : null}
+        <div ref={threadEndRef} aria-hidden="true" />
 
         {thread && !isRunning ? (
           <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-2.5 backdrop-blur md:left-[13rem]">
@@ -286,14 +304,17 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
+                aria-label="Codex turn prompt"
                 placeholder="Start a Codex turn…"
                 className="flex-1 resize-none rounded border border-border bg-surface p-2 text-[12.5px] text-foreground focus:border-ring focus:outline-none"
                 rows={1}
               />
               <Button
                 onClick={handleStartTurn}
-                disabled={!prompt.trim()}
+                disabled={!isConnected || !prompt.trim()}
                 size="sm"
+                aria-label="Start Codex turn"
+                title={isConnected ? "Start Codex turn" : "Thread disconnected"}
               >
                 <Send className="h-3 w-3" />
               </Button>

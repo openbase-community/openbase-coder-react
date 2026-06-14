@@ -129,14 +129,15 @@ export function useThreadWebSocket(threadId: string | undefined) {
     };
   }, [connect, refreshThread]);
 
-  const startTurn = useCallback(
-    (prompt: string) => {
-      wsRef.current?.send(
-        JSON.stringify({ action: "start_turn", prompt })
-      );
-    },
-    []
-  );
+  const startTurn = useCallback((prompt: string) => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) {
+      toast.error("Thread is not connected yet");
+      return false;
+    }
+
+    wsRef.current.send(JSON.stringify({ action: "start_turn", prompt }));
+    return true;
+  }, []);
 
   const interruptTurn = useCallback(() => {
     wsRef.current?.send(JSON.stringify({ action: "interrupt_turn" }));

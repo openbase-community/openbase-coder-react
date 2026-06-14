@@ -24,9 +24,16 @@ export type OpenbaseServicesResponse = {
   };
 };
 
-export type CartesiaVoice = {
+export type TTSProvider = {
   id: string;
   name: string;
+  local: boolean;
+};
+
+export type TTSVoice = {
+  id: string;
+  name: string;
+  provider: string;
   language: string;
   country: string | null;
   gender: string | null;
@@ -35,11 +42,44 @@ export type CartesiaVoice = {
 export type DispatcherVoice = {
   id: string;
   name: string;
+  provider?: string;
 };
 
-export type CartesiaVoiceSettingsResponse = {
-  voices: CartesiaVoice[];
+export type LocalTTSDownload = {
+  provider: string;
+  ready: boolean;
+  required_files: number;
+  cached_files: number;
+  detail: string | null;
+};
+
+export type STTProvider = {
+  id: string;
+  name: string;
+  local: boolean;
+  model: string | null;
+};
+
+export type LocalSTTDownload = {
+  provider: string;
+  ready: boolean;
+  model: string;
+  detail: string | null;
+};
+
+export type TTSSettingsResponse = {
+  provider: string;
+  providers: TTSProvider[];
+  voices: TTSVoice[];
+  voices_by_provider: Record<string, TTSVoice[]>;
   dispatcher_voice: DispatcherVoice;
+  local_download: LocalTTSDownload;
+};
+
+export type STTSettingsResponse = {
+  provider: string;
+  providers: STTProvider[];
+  local_download: LocalSTTDownload;
 };
 
 export type DispatcherVoiceUpdateResponse = {

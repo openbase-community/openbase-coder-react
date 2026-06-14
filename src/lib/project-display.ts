@@ -11,11 +11,20 @@ export type GitStyle = { dot: string; label: string; text: string };
 export const GIT_STATUS: Record<GitStatus, GitStyle> = {
   clean: { dot: "bg-success", label: "clean", text: "text-success" },
   dirty: { dot: "bg-warning", label: "dirty", text: "text-warning" },
-  unpushed: { dot: "bg-info", label: "unpushed", text: "text-info" },
+  "out-of-sync": {
+    dot: "bg-info",
+    label: "out of sync",
+    text: "text-info",
+  },
   no_git: {
     dot: "bg-muted-foreground/40",
     label: "no git",
     text: "text-muted-foreground",
+  },
+  missing: {
+    dot: "bg-destructive",
+    label: "missing",
+    text: "text-destructive",
   },
   unknown: {
     dot: "bg-muted-foreground/30",

@@ -136,7 +136,12 @@ async function refreshAccessToken() {
     const payload = await parseJson(response);
 
     if (!response.ok) {
-      clearStoredAuth();
+      // Only a 401 means the CLI's refresh token is gone for good. Network
+      // blips and 5xx responses are transient: keep the current token so a
+      // hiccup does not bounce the user to the login screen.
+      if (response.status === 401) {
+        clearStoredAuth();
+      }
       throw new Error(payload?.detail || "Unable to refresh local JWT.");
     }
 
@@ -163,7 +168,9 @@ export async function getValidAccessToken() {
   try {
     return await refreshAccessToken();
   } catch {
-    return null;
+    // On transient failures the stored token survives and may still be
+    // valid for a few minutes; only a definitive 401 cleared it.
+    return accessToken;
   }
 }
 

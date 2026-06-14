@@ -58,9 +58,11 @@ const Reports = () => {
     fileLoadingKey,
     deletingKey,
     downloadingKey,
+    savingKey,
     loadReportFile,
     deleteReport,
     downloadReport,
+    saveReportFile,
     setPayloads,
   } = useReportFileActions({
     onDeleted: ({ key }) => {
@@ -114,6 +116,31 @@ const Reports = () => {
         file: item.file,
       }),
     [downloadReport],
+  );
+
+  const saveItemContent = useCallback(
+    async (item: ReportsItem, content: string) => {
+      const key = itemKey(item);
+      const payload = await saveReportFile(
+        {
+          key,
+          projectPath: item.project.path,
+          file: item.file,
+        },
+        content,
+      );
+      if (payload?.file) {
+        setItems((current) =>
+          current.map((currentItem) =>
+            itemKey(currentItem) === key
+              ? { ...currentItem, file: payload.file }
+              : currentItem,
+          ),
+        );
+      }
+      return payload;
+    },
+    [saveReportFile],
   );
 
   const updateItemTags = useCallback(
@@ -347,10 +374,14 @@ const Reports = () => {
                               onToggle={() => toggleItem(item)}
                               onDownload={() => void downloadItem(item)}
                               onDelete={() => void deleteItem(item)}
+                              onSaveContent={(content) =>
+                                saveItemContent(item, content)
+                              }
                               onTagsChange={(tags) => updateItemTags(item, tags)}
                               tagOptions={tagOptions}
                               downloading={downloadingKey === childKey}
                               deleting={deletingKey === childKey}
+                              saving={savingKey === childKey}
                             />
                           );
                         })}
@@ -400,10 +431,12 @@ const Reports = () => {
                   onToggle={() => toggleItem(item)}
                   onDownload={() => void downloadItem(item)}
                   onDelete={() => void deleteItem(item)}
+                  onSaveContent={(content) => saveItemContent(item, content)}
                   onTagsChange={(tags) => updateItemTags(item, tags)}
                   tagOptions={tagOptions}
                   downloading={downloadingKey === key}
                   deleting={deletingKey === key}
+                  saving={savingKey === key}
                 />
               );
             })}

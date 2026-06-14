@@ -6,15 +6,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { apiFetch } from "@/lib/api";
-import { RefreshCw } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   extractErrorMessage,
-  type CartesiaVoice,
-  type CartesiaVoiceSettingsResponse,
   type DispatcherVoice,
-  type DispatcherVoiceUpdateResponse,
+  type STTSettingsResponse,
+  type TTSSettingsResponse,
+  type TTSVoice,
   type OpenbaseServicesResponse,
 } from "./settingsApi";
 
@@ -23,13 +24,21 @@ type Props = {
 };
 
 export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled }) => {
-  const [cartesiaVoices, setCartesiaVoices] = useState<CartesiaVoice[]>([]);
+  const [ttsSettings, setTtsSettings] = useState<TTSSettingsResponse | null>(null);
+  const [sttSettings, setSttSettings] = useState<STTSettingsResponse | null>(null);
+  const [voices, setVoices] = useState<TTSVoice[]>([]);
   const [dispatcherVoice, setDispatcherVoice] = useState<DispatcherVoice | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState("");
   const [selectedDispatcherVoiceId, setSelectedDispatcherVoiceId] = useState("");
   const [loadingDispatcherVoices, setLoadingDispatcherVoices] = useState(true);
   const [savingDispatcherVoice, setSavingDispatcherVoice] = useState(false);
+  const [savingSttProvider, setSavingSttProvider] = useState(false);
+  const [downloadingKokoro, setDownloadingKokoro] = useState(false);
+  const [downloadingLocalStt, setDownloadingLocalStt] = useState(false);
   const [dispatcherVoiceError, setDispatcherVoiceError] = useState<string | null>(null);
   const [dispatcherVoiceMessage, setDispatcherVoiceMessage] = useState<string | null>(null);
+  const [sttError, setSttError] = useState<string | null>(null);
+  const [sttMessage, setSttMessage] = useState<string | null>(null);
   const [recreatingLiveKitThread, setRecreatingLiveKitThread] = useState(false);
   const [liveKitThreadError, setLiveKitThreadError] = useState<string | null>(null);
   const [liveKitThreadMessage, setLiveKitThreadMessage] = useState<string | null>(null);
@@ -37,20 +46,22 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
   const fetchDispatcherVoices = useCallback(async () => {
     setLoadingDispatcherVoices(true);
     try {
-      const res = await apiFetch("/api/settings/cartesia-voices/");
+      const res = await apiFetch("/api/settings/tts/");
       if (!res.ok) {
         setDispatcherVoiceError(
           await extractErrorMessage(
             res,
-            `Unable to load Cartesia voices: ${res.status}`,
+            `Unable to load TTS settings: ${res.status}`,
           ),
         );
         setLoadingDispatcherVoices(false);
         return;
       }
-      const data = (await res.json()) as CartesiaVoiceSettingsResponse;
-      setCartesiaVoices(data.voices);
+      const data = (await res.json()) as TTSSettingsResponse;
+      setTtsSettings(data);
+      setVoices(data.voices);
       setDispatcherVoice(data.dispatcher_voice);
+      setSelectedProvider(data.provider);
       setSelectedDispatcherVoiceId(data.dispatcher_voice.id);
       setDispatcherVoiceError(null);
       setDispatcherVoiceMessage(null);
@@ -63,6 +74,27 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
   useEffect(() => {
     void fetchDispatcherVoices();
   }, [fetchDispatcherVoices]);
+
+  const fetchSttSettings = useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/settings/stt/");
+      if (!res.ok) {
+        setSttError(
+          await extractErrorMessage(res, `Unable to load STT settings: ${res.status}`),
+        );
+        return;
+      }
+      const data = (await res.json()) as STTSettingsResponse;
+      setSttSettings(data);
+      setSttError(null);
+    } catch {
+      setSttError("Unable to reach the local API.");
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchSttSettings();
+  }, [fetchSttSettings]);
 
   const handleRecreateLiveKitThread = useCallback(async () => {
     setRecreatingLiveKitThread(true);
@@ -92,6 +124,98 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
     setRecreatingLiveKitThread(false);
   }, [onRestartScheduled]);
 
+  const handleDownloadKokoro = useCallback(async () => {
+    setDownloadingKokoro(true);
+    setDispatcherVoiceError(null);
+    setDispatcherVoiceMessage(null);
+    try {
+      const res = await apiFetch("/api/settings/tts/kokoro/download/", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        setDispatcherVoiceError(
+          await extractErrorMessage(
+            res,
+            `Unable to download Kokoro voices: ${res.status}`,
+          ),
+        );
+        setDownloadingKokoro(false);
+        return;
+      }
+      const data = (await res.json()) as TTSSettingsResponse;
+      setTtsSettings(data);
+      setVoices(data.voices_by_provider[selectedProvider] ?? data.voices);
+      setDispatcherVoiceMessage("Kokoro local voices downloaded.");
+    } catch {
+      setDispatcherVoiceError("Unable to reach the local API.");
+    }
+    setDownloadingKokoro(false);
+  }, [selectedProvider]);
+
+  const handleDownloadLocalStt = useCallback(async () => {
+    setDownloadingLocalStt(true);
+    setSttError(null);
+    setSttMessage(null);
+    try {
+      const res = await apiFetch("/api/settings/stt/local/download/", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        setSttError(
+          await extractErrorMessage(
+            res,
+            `Unable to download local STT model: ${res.status}`,
+          ),
+        );
+        setDownloadingLocalStt(false);
+        return;
+      }
+      const data = (await res.json()) as STTSettingsResponse;
+      setSttSettings(data);
+      setSttMessage("Local MLX Whisper model downloaded.");
+    } catch {
+      setSttError("Unable to reach the local API.");
+    }
+    setDownloadingLocalStt(false);
+  }, []);
+
+  const handleLocalSttToggle = useCallback(
+    async (checked: boolean) => {
+      const provider = checked ? "local_mlx_whisper" : "assemblyai";
+      if (checked && !sttSettings?.local_download.ready) {
+        setSttError("Download Local MLX Whisper before enabling local STT.");
+        return;
+      }
+      setSavingSttProvider(true);
+      setSttError(null);
+      setSttMessage(null);
+      try {
+        const res = await apiFetch("/api/settings/stt/", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider }),
+        });
+        if (!res.ok) {
+          setSttError(
+            await extractErrorMessage(
+              res,
+              `Unable to save STT settings: ${res.status}`,
+            ),
+          );
+          setSavingSttProvider(false);
+          return;
+        }
+        const data = (await res.json()) as STTSettingsResponse;
+        setSttSettings(data);
+        setSttMessage("Saved. Recreate the dispatcher thread to apply STT changes.");
+      } catch {
+        setSttError("Unable to reach the local API.");
+      }
+      setSavingSttProvider(false);
+    },
+    [sttSettings],
+  );
+
   const handleSaveDispatcherVoice = useCallback(async () => {
     if (!selectedDispatcherVoiceId) {
       return;
@@ -100,10 +224,13 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
     setDispatcherVoiceError(null);
     setDispatcherVoiceMessage(null);
     try {
-      const res = await apiFetch("/api/settings/dispatcher-voice/", {
+      const res = await apiFetch("/api/settings/tts/", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voice_id: selectedDispatcherVoiceId }),
+        body: JSON.stringify({
+          provider: selectedProvider,
+          voice_id: selectedDispatcherVoiceId,
+        }),
       });
       if (!res.ok) {
         setDispatcherVoiceError(
@@ -115,20 +242,47 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
         setSavingDispatcherVoice(false);
         return;
       }
-      const data = (await res.json()) as DispatcherVoiceUpdateResponse;
+      const data = (await res.json()) as TTSSettingsResponse;
+      setTtsSettings(data);
+      setVoices(data.voices);
       setDispatcherVoice(data.dispatcher_voice);
       setSelectedDispatcherVoiceId(data.dispatcher_voice.id);
       setDispatcherVoiceMessage(
-        "Saved. Recreate the dispatcher thread to apply this voice.",
+        "Saved. Recreate the dispatcher thread to apply this provider and voice.",
       );
     } catch {
       setDispatcherVoiceError("Unable to reach the local API.");
     }
     setSavingDispatcherVoice(false);
-  }, [selectedDispatcherVoiceId]);
+  }, [selectedDispatcherVoiceId, selectedProvider]);
 
-  const selectedDispatcherVoice = cartesiaVoices.find(
+  const selectedDispatcherVoice = voices.find(
     (voice) => voice.id === selectedDispatcherVoiceId,
+  );
+  const currentProviderEntry = ttsSettings?.providers.find(
+    (provider) => provider.id === dispatcherVoice?.provider,
+  );
+  const kokoroReady = Boolean(ttsSettings?.local_download.ready);
+  const selectedProviderNeedsDownload = selectedProvider === "kokoro" && !kokoroReady;
+  const localSttReady = Boolean(sttSettings?.local_download.ready);
+  const localSttEnabled = sttSettings?.provider === "local_mlx_whisper";
+
+  const handleProviderChange = useCallback(
+    (providerId: string) => {
+      setSelectedProvider(providerId);
+      const nextProvider =
+        ttsSettings?.providers.find((provider) => provider.id === providerId) ?? null;
+      const nextVoices = ttsSettings?.voices_by_provider[providerId] ?? [];
+      setVoices(nextVoices);
+      setSelectedDispatcherVoiceId(nextVoices[0]?.id ?? "");
+      setDispatcherVoiceMessage(null);
+      setDispatcherVoiceError(
+        nextProvider?.id === "kokoro" && !kokoroReady
+          ? "Download Kokoro voices before saving local TTS."
+          : null,
+      );
+    },
+    [kokoroReady, ttsSettings],
   );
 
   return (
@@ -136,15 +290,17 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
       <div className="flex flex-col gap-3 border-b border-border px-3 py-2.5 lg:flex-row lg:items-center">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
-            Dispatcher voice
+            Text-to-speech provider
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Select the Cartesia voice used by the dispatcher. Recreate the
-            dispatcher thread to apply a saved change.
+            Select the provider and voice used by the dispatcher and Super Agents.
+            Recreate the dispatcher thread to apply a saved change.
           </p>
           {dispatcherVoice ? (
             <p className="mt-1 truncate text-[11px] text-muted-foreground">
-              Current: {dispatcherVoice.name}
+              Current:{" "}
+              {currentProviderEntry?.name ?? dispatcherVoice.provider ?? "TTS"} ·{" "}
+              {dispatcherVoice.name}
             </p>
           ) : null}
           {selectedDispatcherVoice ? (
@@ -165,9 +321,33 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
         </div>
         <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
           <Select
+            value={selectedProvider}
+            onValueChange={handleProviderChange}
+            disabled={loadingDispatcherVoices || savingDispatcherVoice}
+          >
+            <SelectTrigger className="h-8 min-w-0 text-[12px] sm:w-44">
+              <SelectValue
+                placeholder={
+                  loadingDispatcherVoices ? "Loading…" : "Select provider"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {ttsSettings?.providers.map((provider) => (
+                <SelectItem key={provider.id} value={provider.id}>
+                  {provider.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
             value={selectedDispatcherVoiceId}
             onValueChange={setSelectedDispatcherVoiceId}
-            disabled={loadingDispatcherVoices || savingDispatcherVoice}
+            disabled={
+              loadingDispatcherVoices ||
+              savingDispatcherVoice ||
+              selectedProviderNeedsDownload
+            }
           >
             <SelectTrigger className="h-8 min-w-0 text-[12px] sm:w-72">
               <SelectValue
@@ -177,13 +357,27 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
               />
             </SelectTrigger>
             <SelectContent>
-              {cartesiaVoices.map((voice) => (
+              {voices.map((voice) => (
                 <SelectItem key={voice.id} value={voice.id}>
                   {voice.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {selectedProvider === "kokoro" && !kokoroReady ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2.5 text-[12px]"
+              onClick={() => {
+                void handleDownloadKokoro();
+              }}
+              disabled={downloadingKokoro}
+            >
+              <Download className="h-3 w-3" />
+              {downloadingKokoro ? "Downloading…" : "Download"}
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             size="sm"
@@ -194,8 +388,10 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
             disabled={
               savingDispatcherVoice ||
               loadingDispatcherVoices ||
+              selectedProviderNeedsDownload ||
               !selectedDispatcherVoiceId ||
-              selectedDispatcherVoiceId === dispatcherVoice?.id
+              (selectedDispatcherVoiceId === dispatcherVoice?.id &&
+                selectedProvider === dispatcherVoice?.provider)
             }
           >
             {savingDispatcherVoice ? "Saving…" : "Save voice"}
@@ -203,6 +399,50 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
         </div>
       </div>
       <div className="flex items-center gap-3 px-3 py-2.5">
+        <div className="min-w-0 flex-1">
+          <p className="text-[12.5px] font-medium text-foreground">
+            Local speech-to-text
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            Use MLX Whisper small.en locally on this Mac instead of cloud STT.
+          </p>
+          {sttSettings ? (
+            <p className="mt-1 truncate font-mono text-[10.5px] text-muted-foreground">
+              {sttSettings.local_download.model}
+            </p>
+          ) : null}
+          {sttMessage ? (
+            <p className="mt-1 text-[12px] text-success">{sttMessage}</p>
+          ) : null}
+          {sttError ? (
+            <p className="mt-1 text-[12px] text-destructive">{sttError}</p>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-2">
+          {!localSttReady ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2.5 text-[12px]"
+              onClick={() => {
+                void handleDownloadLocalStt();
+              }}
+              disabled={downloadingLocalStt}
+            >
+              <Download className="h-3 w-3" />
+              {downloadingLocalStt ? "Downloading…" : "Download"}
+            </Button>
+          ) : null}
+          <Switch
+            checked={localSttEnabled}
+            onCheckedChange={(checked) => {
+              void handleLocalSttToggle(checked);
+            }}
+            disabled={savingSttProvider || !sttSettings || (!localSttReady && !localSttEnabled)}
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-3 border-t border-border px-3 py-2.5">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
             LiveKit dispatcher thread
@@ -230,7 +470,9 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled })
           }}
           disabled={recreatingLiveKitThread}
         >
-          <RefreshCw className={`h-3 w-3 ${recreatingLiveKitThread ? "animate-spin" : ""}`} />
+          <RefreshCw
+            className={`h-3 w-3 ${recreatingLiveKitThread ? "animate-spin" : ""}`}
+          />
           {recreatingLiveKitThread ? "Recreating…" : "Recreate thread"}
         </Button>
       </div>

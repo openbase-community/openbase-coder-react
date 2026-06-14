@@ -25,6 +25,7 @@ export const useReportFileActions = ({
   const [fileLoadingKey, setFileLoadingKey] = useState<string | null>(null);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
 
   const loadReportFile = useCallback(
     async (target: ReportFileTarget) => {
@@ -94,14 +95,54 @@ export const useReportFileActions = ({
     }
   }, []);
 
+  const saveReportFile = useCallback(
+    async (target: ReportFileTarget, content: string) => {
+      setSavingKey(target.key);
+      let data;
+      let res: Response | null = null;
+      try {
+        const params = new URLSearchParams({
+          path: target.projectPath,
+          file: target.file.path,
+        });
+        res = await apiFetch(`/api/projects/reports/file/?${params}`, {
+          method: "PATCH",
+          body: JSON.stringify({ content }),
+        });
+        data = await readJson(res);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to save report");
+        return null;
+      } finally {
+        setSavingKey(null);
+      }
+
+      if (!res || !res.ok || !data) {
+        toast.error(data?.error || "Failed to save report");
+        return null;
+      }
+
+      const payload = data as ReportFilePayload;
+      setPayloads((current) => ({
+        ...current,
+        [target.key]: payload,
+      }));
+      toast.success("Report saved");
+      return payload;
+    },
+    [],
+  );
+
   return {
     payloads,
     fileLoadingKey,
     deletingKey,
     downloadingKey,
+    savingKey,
     loadReportFile,
     deleteReport,
     downloadReport,
+    saveReportFile,
     setPayloads,
   };
 };

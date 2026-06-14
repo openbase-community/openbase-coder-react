@@ -75,9 +75,11 @@ const ProjectDetail = () => {
     fileLoadingKey: reportsFileLoadingKey,
     deletingKey: deletingReportKey,
     downloadingKey: downloadingReportKey,
+    savingKey: savingReportKey,
     loadReportFile,
     deleteReport: deleteReportAction,
     downloadReport: downloadReportAction,
+    saveReportFile,
     setPayloads: setReportsPayloads,
   } = useReportFileActions({
     loadErrorMessage: "Unable to load this file. The local API may need to restart.",
@@ -155,6 +157,24 @@ const ProjectDetail = () => {
       await downloadReportAction({ key: file.path, projectPath, file });
     },
     [downloadReportAction, projectPath],
+  );
+
+  const saveReportContent = useCallback(
+    async (file: ReportsFile, content: string) => {
+      const payload = await saveReportFile(
+        { key: file.path, projectPath, file },
+        content,
+      );
+      if (payload?.file) {
+        setReportsFiles((current) =>
+          current.map((currentFile) =>
+            currentFile.path === file.path ? payload.file : currentFile,
+          ),
+        );
+      }
+      return payload;
+    },
+    [projectPath, saveReportFile],
   );
 
   const updateReportTags = useCallback(
@@ -452,12 +472,16 @@ const ProjectDetail = () => {
                                 onToggle={() => toggleReport(file)}
                                 onDownload={() => void downloadReport(file)}
                                 onDelete={() => void deleteReportFile(file)}
+                                onSaveContent={(content) =>
+                                  saveReportContent(file, content)
+                                }
                                 onTagsChange={(tags) =>
                                   updateReportTags(file, tags)
                                 }
                                 tagOptions={tagOptions}
                                 downloading={downloadingReportKey === file.path}
                                 deleting={deletingReportKey === file.path}
+                                saving={savingReportKey === file.path}
                               />
                             );
                           })}
@@ -488,10 +512,12 @@ const ProjectDetail = () => {
                     onToggle={() => toggleReport(file)}
                     onDownload={() => void downloadReport(file)}
                     onDelete={() => void deleteReportFile(file)}
+                    onSaveContent={(content) => saveReportContent(file, content)}
                     onTagsChange={(tags) => updateReportTags(file, tags)}
                     tagOptions={tagOptions}
                     downloading={downloadingReportKey === file.path}
                     deleting={deletingReportKey === file.path}
+                    saving={savingReportKey === file.path}
                   />
                 );
               })}

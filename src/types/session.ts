@@ -50,7 +50,13 @@ export interface ThreadListResponse {
   previous: string | null;
 }
 
-export type GitStatus = "clean" | "dirty" | "unpushed" | "no_git" | "unknown";
+export type GitStatus =
+  | "clean"
+  | "dirty"
+  | "out-of-sync"
+  | "no_git"
+  | "missing"
+  | "unknown";
 
 export interface Project {
   path: string;
