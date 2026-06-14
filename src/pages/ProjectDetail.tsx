@@ -76,10 +76,12 @@ const ProjectDetail = () => {
     deletingKey: deletingReportKey,
     downloadingKey: downloadingReportKey,
     savingKey: savingReportKey,
+    actioningKey: actioningReportKey,
     loadReportFile,
     deleteReport: deleteReportAction,
     downloadReport: downloadReportAction,
     saveReportFile,
+    startReportAction,
     setPayloads: setReportsPayloads,
   } = useReportFileActions({
     loadErrorMessage: "Unable to load this file. The local API may need to restart.",
@@ -175,6 +177,16 @@ const ProjectDetail = () => {
       return payload;
     },
     [projectPath, saveReportFile],
+  );
+
+  const startReportActionTurn = useCallback(
+    async (file: ReportsFile) => {
+      const result = await startReportAction({ key: file.path, projectPath, file });
+      if (result?.thread_id) {
+        navigate(`/dashboard/threads/${result.thread_id}`);
+      }
+    },
+    [navigate, projectPath, startReportAction],
   );
 
   const updateReportTags = useCallback(
@@ -470,6 +482,7 @@ const ProjectDetail = () => {
                                 }
                                 loadingLabel="Loading file..."
                                 onToggle={() => toggleReport(file)}
+                                onStartAction={() => void startReportActionTurn(file)}
                                 onDownload={() => void downloadReport(file)}
                                 onDelete={() => void deleteReportFile(file)}
                                 onSaveContent={(content) =>
@@ -479,6 +492,7 @@ const ProjectDetail = () => {
                                   updateReportTags(file, tags)
                                 }
                                 tagOptions={tagOptions}
+                                actioning={actioningReportKey === file.path}
                                 downloading={downloadingReportKey === file.path}
                                 deleting={deletingReportKey === file.path}
                                 saving={savingReportKey === file.path}
@@ -510,11 +524,13 @@ const ProjectDetail = () => {
                     }
                     loadingLabel="Loading file..."
                     onToggle={() => toggleReport(file)}
+                    onStartAction={() => void startReportActionTurn(file)}
                     onDownload={() => void downloadReport(file)}
                     onDelete={() => void deleteReportFile(file)}
                     onSaveContent={(content) => saveReportContent(file, content)}
                     onTagsChange={(tags) => updateReportTags(file, tags)}
                     tagOptions={tagOptions}
+                    actioning={actioningReportKey === file.path}
                     downloading={downloadingReportKey === file.path}
                     deleting={deletingReportKey === file.path}
                     saving={savingReportKey === file.path}

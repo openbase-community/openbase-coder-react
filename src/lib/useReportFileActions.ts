@@ -12,6 +12,15 @@ export type ReportFileTarget = {
   file: ReportsFile;
 };
 
+export type ReportActionResult = {
+  status: "started";
+  thread_id: string;
+  turn_id: string;
+  thread_name?: string | null;
+  agent_name?: string | null;
+  origin_source?: string | null;
+};
+
 type UseReportFileActionsOptions = {
   loadErrorMessage?: string;
   onDeleted?: (target: ReportFileTarget) => void;
@@ -26,6 +35,7 @@ export const useReportFileActions = ({
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [actioningKey, setActioningKey] = useState<string | null>(null);
 
   const loadReportFile = useCallback(
     async (target: ReportFileTarget) => {
@@ -133,16 +143,52 @@ export const useReportFileActions = ({
     [],
   );
 
+  const startReportAction = useCallback(
+    async (target: ReportFileTarget): Promise<ReportActionResult | null> => {
+      setActioningKey(target.key);
+      try {
+        const res = await apiFetch("/api/projects/reports/action/", {
+          method: "POST",
+          body: JSON.stringify({
+            path: target.projectPath,
+            file: target.file.path,
+          }),
+        });
+        const data = await readJson<ReportActionResult & { error?: string }>(res);
+
+        if (!res.ok || !data) {
+          toast.error(data?.error || "Failed to start report implementation");
+          return null;
+        }
+
+        toast.success("Implementation turn started");
+        return data;
+      } catch (err) {
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "Failed to start report implementation",
+        );
+        return null;
+      } finally {
+        setActioningKey(null);
+      }
+    },
+    [],
+  );
+
   return {
     payloads,
     fileLoadingKey,
     deletingKey,
     downloadingKey,
     savingKey,
+    actioningKey,
     loadReportFile,
     deleteReport,
     downloadReport,
     saveReportFile,
+    startReportAction,
     setPayloads,
   };
 };

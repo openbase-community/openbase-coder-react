@@ -59,10 +59,12 @@ const Reports = () => {
     deletingKey,
     downloadingKey,
     savingKey,
+    actioningKey,
     loadReportFile,
     deleteReport,
     downloadReport,
     saveReportFile,
+    startReportAction,
     setPayloads,
   } = useReportFileActions({
     onDeleted: ({ key }) => {
@@ -141,6 +143,20 @@ const Reports = () => {
       return payload;
     },
     [saveReportFile],
+  );
+
+  const startActionItem = useCallback(
+    async (item: ReportsItem) => {
+      const result = await startReportAction({
+        key: itemKey(item),
+        projectPath: item.project.path,
+        file: item.file,
+      });
+      if (result?.thread_id) {
+        navigate(`/dashboard/threads/${result.thread_id}`);
+      }
+    },
+    [navigate, startReportAction],
   );
 
   const updateItemTags = useCallback(
@@ -372,6 +388,7 @@ const Reports = () => {
                                 </div>
                               }
                               onToggle={() => toggleItem(item)}
+                              onStartAction={() => void startActionItem(item)}
                               onDownload={() => void downloadItem(item)}
                               onDelete={() => void deleteItem(item)}
                               onSaveContent={(content) =>
@@ -379,6 +396,7 @@ const Reports = () => {
                               }
                               onTagsChange={(tags) => updateItemTags(item, tags)}
                               tagOptions={tagOptions}
+                              actioning={actioningKey === childKey}
                               downloading={downloadingKey === childKey}
                               deleting={deletingKey === childKey}
                               saving={savingKey === childKey}
@@ -429,11 +447,13 @@ const Reports = () => {
                     </div>
                   }
                   onToggle={() => toggleItem(item)}
+                  onStartAction={() => void startActionItem(item)}
                   onDownload={() => void downloadItem(item)}
                   onDelete={() => void deleteItem(item)}
                   onSaveContent={(content) => saveItemContent(item, content)}
                   onTagsChange={(tags) => updateItemTags(item, tags)}
                   tagOptions={tagOptions}
+                  actioning={actioningKey === key}
                   downloading={downloadingKey === key}
                   deleting={deletingKey === key}
                   saving={savingKey === key}

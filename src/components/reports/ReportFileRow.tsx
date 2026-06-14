@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { TagOption } from "@/lib/item-tags";
 import { reportDisplayName } from "@/lib/reportTitle";
 import type { ReportsFile } from "@/types/session";
-import { ChevronDown, ChevronRight, Download, FileText, ImageIcon, Save, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, FileText, ImageIcon, Play, Save, Trash2 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -39,10 +39,12 @@ type ReportFileRowProps = {
   expandedHeader?: ReactNode;
   loadingLabel?: string;
   onToggle: () => void;
+  onStartAction?: () => void;
   onDownload: () => void;
   onDelete: () => void;
   onSaveContent?: (content: string) => Promise<ReportFilePayload | null> | ReportFilePayload | null;
   onTagsChange?: (tags: string[]) => Promise<void> | void;
+  actioning?: boolean;
   downloading?: boolean;
   deleting?: boolean;
   saving?: boolean;
@@ -62,10 +64,12 @@ export const ReportFileRow = ({
   expandedHeader,
   loadingLabel = "Loading file...",
   onToggle,
+  onStartAction,
   onDownload,
   onDelete,
   onSaveContent,
   onTagsChange,
+  actioning = false,
   downloading = false,
   deleting = false,
   saving = false,
@@ -160,7 +164,24 @@ export const ReportFileRow = ({
 
       {expanded ? (
         <div className="border-t border-border bg-background px-4 py-4">
-          {expandedHeader}
+          {expandedHeader || onStartAction ? (
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">{expandedHeader}</div>
+              {onStartAction ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 shrink-0 px-2 text-[12px]"
+                  disabled={actioning}
+                  onClick={onStartAction}
+                >
+                  <Play className="h-3 w-3" />
+                  Implement
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
           <ReportFilePreview
             loading={loading}
             loadingLabel={loadingLabel}
