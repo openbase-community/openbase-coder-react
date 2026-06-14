@@ -31,13 +31,39 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 interface SessionDetailProps {
   threadIdOverride?: string;
 }
+
+const scrollToBottomInstantly = (target: HTMLElement | null) => {
+  const scrollRoot = findScrollContainer(target);
+  if (!scrollRoot) return;
+  scrollRoot.scrollTop = scrollRoot.scrollHeight;
+};
+
+const findScrollContainer = (target: HTMLElement | null) => {
+  if (!target) return null;
+
+  let parent = target.parentElement;
+  while (parent) {
+    const overflowY = window.getComputedStyle(parent).overflowY;
+    if (
+      ["auto", "scroll", "overlay"].includes(overflowY) &&
+      parent.scrollHeight > parent.clientHeight
+    ) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+
+  return document.scrollingElement instanceof HTMLElement
+    ? document.scrollingElement
+    : document.documentElement;
+};
 
 const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
   const { threadId: routeThreadId } = useParams<{ threadId: string }>();
@@ -52,14 +78,26 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
   const currentTurnOutput = thread?.current_turn?.accumulated_output;
   const currentTurnStderr = thread?.current_turn?.accumulated_stderr;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const scrollRoot = findScrollContainer(threadEndRef.current);
+    if (!scrollRoot) return;
+
+    const previousScrollBehavior = scrollRoot.style.scrollBehavior;
+    scrollRoot.style.scrollBehavior = "auto";
+
+    return () => {
+      scrollRoot.style.scrollBehavior = previousScrollBehavior;
+    };
+  }, [thread?.thread_id]);
+
+  useLayoutEffect(() => {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
   }, [currentTurnOutput]);
 
-  useEffect(() => {
-    threadEndRef.current?.scrollIntoView({ block: "end" });
+  useLayoutEffect(() => {
+    scrollToBottomInstantly(threadEndRef.current);
   }, [
     thread?.thread_id,
     thread?.turn_history.length,
@@ -122,109 +160,111 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-3 pb-24">
+      <div className="flex flex-col gap-3 pb-24">
         {thread ? (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              {fromProjectPath ? (
+          <div className="sticky top-9 z-[5] -mx-5 border-b border-border bg-background/95 px-5 py-3 backdrop-blur">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                {fromProjectPath ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={goBackToProject}
+                    className="h-6 px-2 text-[11px]"
+                  >
+                    <ArrowLeft className="h-3 w-3" />
+                    Back
+                  </Button>
+                ) : null}
+                <h1 className="text-sm font-semibold text-foreground">
+                  {threadDisplayName(thread)}
+                </h1>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleFavorite}
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                  title={
+                    thread.is_favorite ? "Remove favorite" : "Favorite thread"
+                  }
+                  aria-label={
+                    thread.is_favorite ? "Remove favorite" : "Favorite thread"
+                  }
+                >
+                  <Star
+                    className={`h-3 w-3 ${
+                      thread.is_favorite ? "fill-current text-warning" : ""
+                    }`}
+                  />
+                </Button>
+                <StatusBadge status={thread.status} />
+                {agentVoiceName ? (
+                  <span className="font-mono text-[10px] text-warning">
+                    {agentVoiceName}
+                  </span>
+                ) : null}
+                <span className="truncate font-mono text-[11px] text-muted-foreground">
+                  {threadProjectLabel(thread)}
+                </span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={goBackToProject}
+                  onClick={openProject}
                   className="h-6 px-2 text-[11px]"
                 >
-                  <ArrowLeft className="h-3 w-3" />
-                  Back
+                  <FolderOpen className="h-3 w-3" />
+                  Project
                 </Button>
-              ) : null}
-              <h1 className="text-sm font-semibold text-foreground">
-                {threadDisplayName(thread)}
-              </h1>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleFavorite}
-                className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                title={
-                  thread.is_favorite ? "Remove favorite" : "Favorite thread"
-                }
-                aria-label={
-                  thread.is_favorite ? "Remove favorite" : "Favorite thread"
-                }
-              >
-                <Star
-                  className={`h-3 w-3 ${
-                    thread.is_favorite ? "fill-current text-warning" : ""
-                  }`}
-                />
-              </Button>
-              <StatusBadge status={thread.status} />
-              {agentVoiceName ? (
-                <span className="font-mono text-[10px] text-warning">
-                  {agentVoiceName}
-                </span>
-              ) : null}
-              <span className="truncate font-mono text-[11px] text-muted-foreground">
-                {threadProjectLabel(thread)}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={openProject}
-                className="h-6 px-2 text-[11px]"
-              >
-                <FolderOpen className="h-3 w-3" />
-                Project
-              </Button>
-              {!isDispatchThread ? (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-                    >
-                      <Archive className="h-3 w-3" />
-                      Archive
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Archive thread?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This hides the thread from active thread lists. If it is
-                        running, the current turn will be interrupted first.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={archiveThread}>
+                {!isDispatchThread ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                      >
+                        <Archive className="h-3 w-3" />
                         Archive
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              ) : null}
-              <span className="ml-auto flex items-center gap-1 font-mono text-[10.5px]">
-                {isConnected ? (
-                  <>
-                    <Wifi className="h-3 w-3 text-success" />
-                    <span className="text-success">connected</span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="h-3 w-3 text-destructive" />
-                    <span className="text-destructive">disconnected</span>
-                  </>
-                )}
-              </span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Archive thread?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This hides the thread from active thread lists. If it is
+                          running, the current turn will be interrupted first.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={archiveThread}>
+                          Archive
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : null}
+                <span className="ml-auto flex items-center gap-1 font-mono text-[10.5px]">
+                  {isConnected ? (
+                    <>
+                      <Wifi className="h-3 w-3 text-success" />
+                      <span className="text-success">connected</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="h-3 w-3 text-destructive" />
+                      <span className="text-destructive">disconnected</span>
+                    </>
+                  )}
+                </span>
+              </div>
+              <p className="truncate font-mono text-[11px] text-muted-foreground">
+                {thread.directory}
+              </p>
+              <p className="truncate font-mono text-[10.5px] text-muted-foreground/60">
+                {thread.thread_id}
+              </p>
             </div>
-            <p className="truncate font-mono text-[11px] text-muted-foreground">
-              {thread.directory}
-            </p>
-            <p className="truncate font-mono text-[10.5px] text-muted-foreground/60">
-              {thread.thread_id}
-            </p>
           </div>
         ) : null}
 
