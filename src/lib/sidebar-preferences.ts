@@ -1,6 +1,7 @@
 import {
   Activity,
   CalendarClock,
+  Cloud,
   FilePenLine,
   FileText,
   FolderOpen,
@@ -25,6 +26,7 @@ export type SidebarItem = {
   icon: LucideIcon;
   title: string;
   section: SidebarSection;
+  externalUrl?: string;
   exact?: boolean;
   locked?: boolean;
 };
@@ -140,6 +142,14 @@ export const BUILT_IN_SIDEBAR_ITEMS: SidebarItem[] = [
     title: "Settings",
     section: "system",
     locked: true,
+  },
+  {
+    key: "cloud",
+    path: "https://app.openbase.cloud",
+    icon: Cloud,
+    title: "Cloud",
+    section: "system",
+    externalUrl: "https://app.openbase.cloud",
   },
 ];
 

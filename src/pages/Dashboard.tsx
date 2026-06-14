@@ -46,10 +46,18 @@ const Dashboard = () => {
     .slice(0, 8);
   const recentProjects = projects.slice(0, 3);
   const serviceEntries = Object.entries(services);
-  const runningServices = serviceEntries.filter(([, service]) => service.running);
-  const stoppedServices = serviceEntries.filter(([, service]) => !service.running);
+  const requiredServiceEntries = serviceEntries.filter(
+    ([, service]) => !service.optional,
+  );
+  const runningServices = requiredServiceEntries.filter(
+    ([, service]) => service.running,
+  );
+  const stoppedServices = requiredServiceEntries.filter(
+    ([, service]) => !service.running,
+  );
   const serviceWarning =
-    serviceEntries.length > 0 && runningServices.length !== serviceEntries.length;
+    requiredServiceEntries.length > 0 &&
+    runningServices.length !== requiredServiceEntries.length;
   const openProject = (project: Project) =>
     navigate(`/dashboard/project?path=${encodeURIComponent(project.path)}`);
   const toggleThreadFavorite = async (thread: ThreadInfo) => {
@@ -88,7 +96,7 @@ const Dashboard = () => {
                 Service warning
               </p>
               <p className="mt-0.5 text-[12px] text-muted-foreground">
-                {runningServices.length}/{serviceEntries.length} services
+                {runningServices.length}/{requiredServiceEntries.length} services
                 running
                 {stoppedServices.length > 0
                   ? ` · stopped: ${stoppedServices

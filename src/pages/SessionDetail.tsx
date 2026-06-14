@@ -123,6 +123,9 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
   };
 
   const isRunning = thread?.status === "running";
+  const hasActiveCurrentTurn =
+    thread?.current_turn?.status === "running" ||
+    thread?.current_turn?.status === "waiting";
   const fromProjectPath = searchParams.get("fromProject");
   const openProject = () => {
     if (!thread?.directory) return;
@@ -296,7 +299,7 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
                   </span>
                 ) : null}
               </div>
-              {isRunning ? (
+              {hasActiveCurrentTurn ? (
                 <Button
                   variant="outline"
                   size="sm"

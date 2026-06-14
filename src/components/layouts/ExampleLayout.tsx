@@ -82,8 +82,16 @@ const ExampleDashboardLayout: React.FC<ExampleDashboardLayoutProps> = ({
     items.map((item) => (
       <SidebarMenuItem key={item.path}>
         <SidebarMenuButton
-          isActive={isActive(item.path, item.exact ?? false)}
-          onClick={() => navigate(item.path)}
+          isActive={
+            item.externalUrl ? false : isActive(item.path, item.exact ?? false)
+          }
+          onClick={() => {
+            if (item.externalUrl) {
+              window.open(item.externalUrl, "_blank", "noopener,noreferrer");
+              return;
+            }
+            navigate(item.path);
+          }}
           tooltip={item.title}
           className="h-7 gap-2 rounded px-2 text-[12.5px] font-normal text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
         >

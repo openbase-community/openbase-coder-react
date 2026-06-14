@@ -92,4 +92,5 @@ export interface ServiceStatus {
   port: number | null;
   url?: string | null;
   running: boolean;
+  optional?: boolean;
 }

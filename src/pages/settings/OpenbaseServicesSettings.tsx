@@ -80,7 +80,11 @@ export const OpenbaseServicesSettings: React.FC<Props> = ({ controller }) => {
               <div className="flex min-w-0 items-center gap-3">
                 <span
                   className={`h-2 w-2 shrink-0 rounded-full ${
-                    service.running ? "bg-success" : "bg-destructive"
+                    service.running
+                      ? "bg-success"
+                      : service.optional
+                        ? "bg-muted-foreground/40"
+                        : "bg-destructive"
                   }`}
                 />
                 <div className="min-w-0 flex-1">

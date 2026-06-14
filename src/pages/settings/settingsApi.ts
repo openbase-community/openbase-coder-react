@@ -11,6 +11,7 @@ export type OpenbaseService = {
   running: boolean;
   pid: string | null;
   last_exit_code: string | null;
+  optional: boolean;
 };
 
 export type OpenbaseServicesResponse = {
@@ -33,6 +34,9 @@ export type CodingBackendOption = {
 
 export type CodingBackendSettingsResponse = {
   backend: string;
+  configured_backend?: string;
+  codex_provider?: string;
+  backend_note?: string | null;
   default_backend: string;
   supported_backends: CodingBackendOption[];
   env_file_exists: boolean;
@@ -53,6 +57,28 @@ export type ReasoningSettingsResponse = {
   options: ReasoningEffort[];
   config_path: string;
   config_exists: boolean;
+  changed: boolean;
+  restart_required: boolean;
+  restart_hint: string;
+};
+
+export type CodexServiceTier = "fast" | "standard";
+
+export type ServiceTierOption = {
+  id: CodexServiceTier;
+  label: string;
+  summary: string;
+};
+
+export type ServiceTierSettingsResponse = {
+  codex_service_tier: CodexServiceTier;
+  effective: {
+    codex_service_tier: string;
+  };
+  options: ServiceTierOption[];
+  config_path: string;
+  config_exists: boolean;
+  env_file_exists: boolean;
   changed: boolean;
   restart_required: boolean;
   restart_hint: string;

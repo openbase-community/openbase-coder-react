@@ -28,7 +28,8 @@ const Status = () => {
   };
 
   const entries = Object.entries(services);
-  const runningCount = entries.filter(([, s]) => s.running).length;
+  const requiredEntries = entries.filter(([, s]) => !s.optional);
+  const runningCount = requiredEntries.filter(([, s]) => s.running).length;
 
   return (
     <DashboardLayout>
@@ -39,7 +40,8 @@ const Status = () => {
               Service status
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              {runningCount}/{entries.length} running · auto-refresh 30s
+              {runningCount}/{requiredEntries.length} required running ·
+              auto-refresh 30s
             </p>
           </div>
           <Button
@@ -69,7 +71,11 @@ const Status = () => {
               >
                 <span
                   className={`h-2 w-2 shrink-0 rounded-full ${
-                    svc.running ? "bg-success" : "bg-destructive"
+                    svc.running
+                      ? "bg-success"
+                      : svc.optional
+                        ? "bg-muted-foreground/40"
+                        : "bg-destructive"
                   }`}
                 />
                 <span className="text-[12.5px] font-medium text-foreground">
@@ -80,10 +86,14 @@ const Status = () => {
                 </span>
                 <span
                   className={`ml-auto font-mono text-[10.5px] ${
-                    svc.running ? "text-success" : "text-destructive"
+                    svc.running
+                      ? "text-success"
+                      : svc.optional
+                        ? "text-muted-foreground"
+                        : "text-destructive"
                   }`}
                 >
-                  {svc.running ? "running" : "stopped"}
+                  {svc.running ? "running" : svc.optional ? "optional" : "stopped"}
                 </span>
               </div>
             ))}

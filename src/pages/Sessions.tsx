@@ -136,7 +136,7 @@ const Sessions = () => {
                   Start a new thread
                 </DialogTitle>
                 <DialogDescription className="text-[12px]">
-                  Pick a project to launch a Codex session against.
+                  Pick a project to launch a coding session against.
                 </DialogDescription>
               </DialogHeader>
               <div className="mt-1 max-h-72 space-y-px overflow-y-auto">
