@@ -41,6 +41,23 @@ export type CodingBackendSettingsResponse = {
   restart_hint: string;
 };
 
+export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
+
+export type ReasoningSettingsResponse = {
+  dispatcher_reasoning_effort: ReasoningEffort | null;
+  super_agents_reasoning_effort: ReasoningEffort | null;
+  effective: {
+    dispatcher_reasoning_effort: string;
+    super_agents_reasoning_effort: string;
+  };
+  options: ReasoningEffort[];
+  config_path: string;
+  config_exists: boolean;
+  changed: boolean;
+  restart_required: boolean;
+  restart_hint: string;
+};
+
 export type TTSProvider = {
   id: string;
   name: string;

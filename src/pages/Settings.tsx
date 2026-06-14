@@ -8,6 +8,7 @@ import { EnvSettings } from "./settings/EnvSettings";
 import { IgnoredLaunchctlSettings } from "./settings/IgnoredLaunchctlSettings";
 import { LiveKitCompanionSettings } from "./settings/LiveKitCompanionSettings";
 import { OpenbaseServicesSettings } from "./settings/OpenbaseServicesSettings";
+import { ReasoningSettings } from "./settings/ReasoningSettings";
 import { SidebarItemsSettings } from "./settings/SidebarItemsSettings";
 import { useOpenbaseServices } from "./settings/useOpenbaseServices";
 
@@ -28,6 +29,7 @@ const Settings: React.FC = () => {
 
         <OpenbaseServicesSettings controller={openbaseServices} />
         <CodingBackendSettings />
+        <ReasoningSettings />
         <EnvSettings />
 
         {getRuntimeShell() === "electron" ? <LiveKitCompanionSettings /> : null}
