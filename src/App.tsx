@@ -29,6 +29,7 @@ import SessionDetail from "./pages/SessionDetail";
 import Sessions from "./pages/Sessions";
 import Settings from "./pages/Settings";
 import Skills from "./pages/Skills";
+import ThreadSyncConflicts from "./pages/ThreadSyncConflicts";
 import Launchctl from "./pages/Launchctl";
 import Status from "./pages/Status";
 import ToolDetail from "./pages/ToolDetail";
@@ -56,6 +57,28 @@ function PluginConsoleRoute({
   const [searchParams] = useSearchParams();
   const projectPath = searchParams.get("path") || undefined;
   const stack = searchParams.get("stack") || undefined;
+  if (page.render === "iframe" && page.iframeUrl) {
+    const url = new URL(page.iframeUrl, window.location.origin);
+    if (projectPath) {
+      url.searchParams.set("projectPath", projectPath);
+    }
+    if (stack) {
+      url.searchParams.set("stack", stack);
+    }
+    url.searchParams.set("pluginId", page.pluginId);
+    return (
+      <iframe
+        title={page.title}
+        src={`${url.pathname}${url.search}`}
+        className="h-screen w-full border-0"
+      />
+    );
+  }
+
+  if (!page.component) {
+    return <NotFound />;
+  }
+
   const Component = page.component;
   return (
     <Component
@@ -133,6 +156,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Sessions />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/threads/sync-conflicts"
+        element={
+          <ProtectedRoute>
+            <ThreadSyncConflicts />
           </ProtectedRoute>
         }
       />

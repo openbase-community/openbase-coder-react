@@ -18,7 +18,9 @@ export type PluginConsolePage = {
   title: string;
   route: string;
   sidebar: boolean;
-  component: ComponentType<PluginComponentProps>;
+  component?: ComponentType<PluginComponentProps>;
+  render?: "component" | "iframe";
+  iframeUrl?: string;
 };
 
 export type PluginProjectView = {

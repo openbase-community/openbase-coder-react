@@ -25,7 +25,7 @@ import { projectName } from "@/lib/project-display";
 import { setThreadFavorite } from "@/lib/thread-favorites";
 import { groupThreadsByDay, threadListDisplayNames } from "@/lib/thread-display";
 import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
-import { Archive, FolderOpen, Plus, Terminal } from "lucide-react";
+import { AlertTriangle, Archive, FolderOpen, Plus, Terminal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -45,7 +45,30 @@ const Sessions = () => {
     loadMoreThreads,
   } = useProjectsAndThreads();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [syncConflictCount, setSyncConflictCount] = useState<number | null>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchSyncConflicts = async () => {
+      try {
+        const res = await apiFetch("/api/settings/thread-device-sync/conflicts/");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setSyncConflictCount(data.conflict_count ?? 0);
+        }
+      } catch {
+        if (!cancelled) {
+          setSyncConflictCount(null);
+        }
+      }
+    };
+    void fetchSyncConflicts();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const sentinel = loadMoreSentinelRef.current;
@@ -123,60 +146,72 @@ const Sessions = () => {
             </p>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="h-7 px-2.5 text-[12px]">
-                <Plus className="h-3 w-3" />
-                New thread
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-sm font-semibold">
-                  Start a new thread
-                </DialogTitle>
-                <DialogDescription className="text-[12px]">
-                  Pick a project to launch a coding session against.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="mt-1 max-h-72 space-y-px overflow-y-auto">
-                {projects.length === 0 ? (
-                  <p className="py-6 text-center text-[12px] text-muted-foreground">
-                    No recent projects
-                  </p>
-                ) : (
-                  projects.map((project) => (
-                    <button
-                      key={project.path}
-                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-surface-muted"
-                      onClick={() => createThread(project.path)}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={syncConflictCount ? "destructive" : "outline"}
+              size="sm"
+              className="h-7 px-2.5 text-[12px]"
+              onClick={() => navigate("/dashboard/threads/sync-conflicts")}
+            >
+              <AlertTriangle className="h-3 w-3" />
+              Sync conflicts
+              {syncConflictCount ? ` · ${syncConflictCount}` : ""}
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="h-7 px-2.5 text-[12px]">
+                  <Plus className="h-3 w-3" />
+                  New thread
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-sm font-semibold">
+                    Start a new thread
+                  </DialogTitle>
+                  <DialogDescription className="text-[12px]">
+                    Pick a project to launch a coding session against.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="mt-1 max-h-72 space-y-px overflow-y-auto">
+                  {projects.length === 0 ? (
+                    <p className="py-6 text-center text-[12px] text-muted-foreground">
+                      No recent projects
+                    </p>
+                  ) : (
+                    projects.map((project) => (
+                      <button
+                        key={project.path}
+                        className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-surface-muted"
+                        onClick={() => createThread(project.path)}
+                      >
+                        <FolderOpen className="h-3 w-3 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[12.5px] font-medium">
+                            {projectName(project.path)}
+                          </div>
+                          <div className="truncate font-mono text-[11px] text-muted-foreground">
+                            {project.path}
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                  {nextProjectsUrl ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-1 h-7 w-full text-[12px]"
+                      disabled={loadingMoreProjects}
+                      onClick={() => void loadMoreProjects()}
                     >
-                      <FolderOpen className="h-3 w-3 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[12.5px] font-medium">
-                          {projectName(project.path)}
-                        </div>
-                        <div className="truncate font-mono text-[11px] text-muted-foreground">
-                          {project.path}
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                )}
-                {nextProjectsUrl ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-1 h-7 w-full text-[12px]"
-                    disabled={loadingMoreProjects}
-                    onClick={() => void loadMoreProjects()}
-                  >
-                    {loadingMoreProjects ? "Loading..." : "Load more projects"}
-                  </Button>
-                ) : null}
-              </div>
-            </DialogContent>
-          </Dialog>
+                      {loadingMoreProjects ? "Loading..." : "Load more projects"}
+                    </Button>
+                  ) : null}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {loading ? (

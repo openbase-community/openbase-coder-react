@@ -100,10 +100,10 @@ export const ServiceTierSettings: React.FC = () => {
       <div className="flex flex-col gap-3 border-b border-border px-3 py-2.5 lg:flex-row lg:items-center">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
-            Codex service tier
+            Agent service tier
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Select the speed tier used for Codex and Openbase Cloud turns.
+            Select the speed tier used for Codex, Openbase Cloud, and Claude turns.
           </p>
           {settings ? (
             <p className="mt-1 text-[11px] text-muted-foreground">
