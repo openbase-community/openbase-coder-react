@@ -3,6 +3,7 @@ import { getRuntimeShell } from "@/lib/runtime-config";
 import React from "react";
 import { AuthenticationSettings } from "./settings/AuthenticationSettings";
 import { CodingBackendSettings } from "./settings/CodingBackendSettings";
+import { DangerousConfirmationSettings } from "./settings/DangerousConfirmationSettings";
 import { DispatcherVoiceSettings } from "./settings/DispatcherVoiceSettings";
 import { EnvSettings } from "./settings/EnvSettings";
 import { IgnoredLaunchctlSettings } from "./settings/IgnoredLaunchctlSettings";
@@ -40,6 +41,7 @@ const Settings: React.FC = () => {
         />
         <IgnoredLaunchctlSettings />
         <AuthenticationSettings />
+        <DangerousConfirmationSettings />
         <SidebarItemsSettings />
         <EnvSettings />
       </div>

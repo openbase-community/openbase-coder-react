@@ -18,6 +18,7 @@ import {
   GitBranch,
   Plus,
   Zap,
+  GitFork,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -37,6 +38,9 @@ const Projects = () => {
   } = useProjectsAndThreads();
   const [newPath, setNewPath] = useState("");
   const [query, setQuery] = useState("");
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const getActiveThreads = (path: string) =>
     threads.filter((t) => t.directory === path && t.status === "running");
@@ -77,12 +81,30 @@ const Projects = () => {
   const filtered = useMemo(() => {
     if (!query.trim()) return projects;
     const q = query.trim().toLowerCase();
-    return projects.filter(
-      (p) =>
+    return projects.filter((p) => {
+      const matchesProject =
         p.path.toLowerCase().includes(q) ||
-        projectName(p.path).toLowerCase().includes(q),
-    );
+        projectName(p.path).toLowerCase().includes(q);
+      const matchesWorktree = (p.worktrees ?? []).some(
+        (worktree) =>
+          worktree.path.toLowerCase().includes(q) ||
+          projectName(worktree.path).toLowerCase().includes(q),
+      );
+      return matchesProject || matchesWorktree;
+    });
   }, [projects, query]);
+
+  const toggleExpanded = (path: string) => {
+    setExpandedProjects((current) => {
+      const next = new Set(current);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  };
 
   const activeCount = threads.filter((t) => t.status === "running").length;
 
@@ -125,7 +147,7 @@ const Projects = () => {
               className="h-7 flex-1 text-[12.5px]"
             />
             <Button
-              onClick={addProject}
+              type="submit"
               disabled={!newPath.trim()}
               size="sm"
               className="h-7 px-2.5 text-[12px]"
@@ -148,107 +170,164 @@ const Projects = () => {
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
             {filtered.map((project, idx) => {
-              const active = getActiveThreads(project.path);
-              const gs = GIT_STATUS[project.git_status ?? "unknown"];
+              const rows = [
+                { project, depth: 0 },
+                ...(expandedProjects.has(project.path) || query.trim()
+                  ? (project.worktrees ?? []).map((worktree) => ({
+                      project: worktree,
+                      depth: 1,
+                    }))
+                  : []),
+              ];
               return (
                 <div
-                  role="button"
-                  tabIndex={0}
                   key={project.path}
-                  onClick={() => openProject(project)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      openProject(project);
-                    }
-                  }}
-                  className={`group flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-muted ${
+                  className={`${
                     idx > 0 ? "border-t border-border" : ""
                   }`}
                 >
-                  <TooltipProvider delayDuration={150}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="shrink-0">
-                          <span
-                            className={`block h-2 w-2 rounded-full ${gs.dot}`}
-                          />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>{gs.label}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  {rows.map(({ project: rowProject, depth }, rowIndex) => {
+                    const active = getActiveThreads(rowProject.path);
+                    const gs = GIT_STATUS[rowProject.git_status ?? "unknown"];
+                    const worktrees = rowProject.worktrees ?? [];
+                    const hasWorktrees = depth === 0 && worktrees.length > 0;
+                    const expanded = expandedProjects.has(rowProject.path);
+                    return (
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        key={rowProject.path}
+                        onClick={() => openProject(rowProject)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openProject(rowProject);
+                          }
+                        }}
+                        className={`group flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-muted ${
+                          rowIndex > 0 ? "border-t border-border/60" : ""
+                        } ${depth > 0 ? "bg-surface-muted/40 pl-8" : ""}`}
+                      >
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="shrink-0">
+                                <span
+                                  className={`block h-2 w-2 rounded-full ${gs.dot}`}
+                                />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>{gs.label}</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
 
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
-                    <span className="truncate text-[13px] font-medium text-foreground">
-                      {projectName(project.path)}
-                    </span>
-                    <span className="truncate font-mono text-[11px] text-muted-foreground/70">
-                      {project.path}
-                    </span>
-                  </div>
+                        {hasWorktrees ? (
+                          <TooltipProvider delayDuration={150}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-5 w-5 shrink-0"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    toggleExpanded(rowProject.path);
+                                  }}
+                                >
+                                  <ChevronRight
+                                    className={`h-3.5 w-3.5 transition-transform ${
+                                      expanded ? "rotate-90" : ""
+                                    }`}
+                                  />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {expanded ? "Hide worktrees" : "Show worktrees"}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : depth > 0 ? (
+                          <GitFork className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                        ) : (
+                          <span className="h-5 w-5 shrink-0" />
+                        )}
 
-                  <div className="hidden shrink-0 items-center gap-2 font-mono text-[10.5px] md:flex">
-                    {active.length > 0 ? (
-                      <span className="text-info">{active.length} active</span>
-                    ) : null}
-                  </div>
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                          <span className="truncate text-[13px] font-medium text-foreground">
+                            {projectName(rowProject.path)}
+                          </span>
+                          <span className="truncate font-mono text-[11px] text-muted-foreground/70">
+                            {rowProject.path}
+                          </span>
+                        </div>
 
-                  <div className="hidden shrink-0 flex-wrap items-center justify-end gap-0.5 sm:flex">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 px-2 text-[11px]"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(
-                          `/dashboard/diff?path=${encodeURIComponent(project.path)}`,
-                        );
-                      }}
-                    >
-                      <GitBranch className="h-3 w-3" />
-                      Diff
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 px-2 text-[11px]"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openProject(project);
-                      }}
-                    >
-                      <FileText className="h-3 w-3" />
-                      Reports
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 px-2 text-[11px]"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(
-                          `/dashboard/skills?path=${encodeURIComponent(project.path)}`,
-                        );
-                      }}
-                    >
-                      <Zap className="h-3 w-3" />
-                      Skills
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-6 px-2 text-[11px]"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        createThread(project.path);
-                      }}
-                    >
-                      <Plus className="h-3 w-3" />
-                      Thread
-                    </Button>
-                  </div>
+                        <div className="hidden shrink-0 items-center gap-2 font-mono text-[10.5px] md:flex">
+                          {active.length > 0 ? (
+                            <span className="text-info">
+                              {active.length} active
+                            </span>
+                          ) : null}
+                        </div>
 
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
+                        <div className="hidden shrink-0 flex-wrap items-center justify-end gap-0.5 sm:flex">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[11px]"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              navigate(
+                                `/dashboard/diff?path=${encodeURIComponent(rowProject.path)}`,
+                              );
+                            }}
+                          >
+                            <GitBranch className="h-3 w-3" />
+                            Diff
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[11px]"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openProject(rowProject);
+                            }}
+                          >
+                            <FileText className="h-3 w-3" />
+                            Reports
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[11px]"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              navigate(
+                                `/dashboard/skills?path=${encodeURIComponent(rowProject.path)}`,
+                              );
+                            }}
+                          >
+                            <Zap className="h-3 w-3" />
+                            Skills
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-6 px-2 text-[11px]"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              createThread(rowProject.path);
+                            }}
+                          >
+                            <Plus className="h-3 w-3" />
+                            Thread
+                          </Button>
+                        </div>
+
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}

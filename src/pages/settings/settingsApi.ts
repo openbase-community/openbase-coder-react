@@ -2,6 +2,12 @@ export type IgnoredLaunchctlLabelsResponse = {
   ignored_labels: string[];
 };
 
+export type DangerousConfirmationSettingsResponse = {
+  dangerous_confirmation_phrase: string;
+  default_dangerous_confirmation_phrase: string;
+  refreshed: boolean;
+};
+
 export type OpenbaseService = {
   name: string;
   label: string;

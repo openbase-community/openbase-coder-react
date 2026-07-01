@@ -17,16 +17,20 @@ type Routine = {
   name: string;
   prompt: string;
   time: string;
+  scheduleType?: "daily" | "interval" | null;
+  intervalSeconds?: number | null;
   timezone?: string | null;
   enabled: boolean;
   targetName?: string | null;
   threadId?: string | null;
+  freshThreadPerRun?: boolean | null;
   cwd?: string | null;
   mode?: string | null;
   model?: string | null;
   reasoningEffort?: string | null;
   nextRunAt?: string | null;
   lastRunDate?: string | null;
+  lastRunAt?: string | null;
   lastStartedAt?: string | null;
   lastThreadId?: string | null;
   lastTurnId?: string | null;
@@ -43,10 +47,13 @@ type RoutinesResponse = {
 const defaultForm = {
   name: "",
   prompt: "",
+  scheduleType: "daily",
   time: "09:00",
+  intervalSeconds: "60",
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York",
   targetName: "",
   threadId: "",
+  freshThreadPerRun: false,
   cwd: "",
   mode: "default",
 };
@@ -111,10 +118,14 @@ const Routines = () => {
       const body = {
         name: form.name,
         prompt: form.prompt,
+        scheduleType: form.scheduleType,
         time: form.time,
+        intervalSeconds:
+          form.scheduleType === "interval" ? Number(form.intervalSeconds) : undefined,
         timezone: form.timezone,
         targetName: form.targetName,
         threadId: form.threadId,
+        freshThreadPerRun: form.freshThreadPerRun,
         cwd: form.cwd,
         mode: form.mode,
       };
@@ -252,13 +263,36 @@ const Routines = () => {
           </label>
           <label className="min-w-0">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Time
+              Schedule
+            </span>
+            <select
+              className="mt-1 h-8 w-full rounded border border-border bg-background px-2 text-[12px] outline-none focus:border-info"
+              value={form.scheduleType}
+              onChange={(event) =>
+                setForm({ ...form, scheduleType: event.target.value as "daily" | "interval" })
+              }
+            >
+              <option value="daily">daily</option>
+              <option value="interval">interval</option>
+            </select>
+          </label>
+          <label className="min-w-0">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {form.scheduleType === "interval" ? "Seconds" : "Time"}
             </span>
             <input
+              type={form.scheduleType === "interval" ? "number" : "text"}
               className="mt-1 h-8 w-full rounded border border-border bg-background px-2 font-mono text-[12px] outline-none focus:border-info"
-              value={form.time}
-              onChange={(event) => setForm({ ...form, time: event.target.value })}
-              pattern="[0-2][0-9]:[0-5][0-9]"
+              value={form.scheduleType === "interval" ? form.intervalSeconds : form.time}
+              onChange={(event) =>
+                setForm(
+                  form.scheduleType === "interval"
+                    ? { ...form, intervalSeconds: event.target.value }
+                    : { ...form, time: event.target.value },
+                )
+              }
+              min={form.scheduleType === "interval" ? 5 : undefined}
+              pattern={form.scheduleType === "interval" ? "[0-9]+" : "[0-2][0-9]:[0-5][0-9]"}
               required
             />
           </label>
@@ -304,6 +338,19 @@ const Routines = () => {
               value={form.threadId}
               onChange={(event) => setForm({ ...form, threadId: event.target.value })}
             />
+          </label>
+          <label className="flex min-w-0 items-center gap-2 md:col-span-6">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-border bg-background"
+              checked={form.freshThreadPerRun}
+              onChange={(event) =>
+                setForm({ ...form, freshThreadPerRun: event.target.checked })
+              }
+            />
+            <span className="text-[12px] text-muted-foreground">
+              Fresh thread per run
+            </span>
           </label>
           <label className="min-w-0 md:col-span-6">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -374,7 +421,9 @@ const Routines = () => {
                       </span>
                     )}
                     <span className="font-mono text-[10.5px] text-muted-foreground">
-                      {routine.time} {routine.timezone ?? ""}
+                      {routine.scheduleType === "interval"
+                        ? `every ${routine.intervalSeconds ?? 60}s`
+                        : `${routine.time} ${routine.timezone ?? ""}`}
                     </span>
                   </div>
                   <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10.5px] text-muted-foreground/75">
@@ -389,6 +438,7 @@ const Routines = () => {
                       </Link>
                     ) : null}
                     {routine.targetName ? <span>target {routine.targetName}</span> : null}
+                    {routine.freshThreadPerRun ? <span>fresh thread per run</span> : null}
                     {routine.mode ? <span>mode {routine.mode}</span> : null}
                     {routine.reasoningEffort ? <span>effort {routine.reasoningEffort}</span> : null}
                   </div>
@@ -410,6 +460,19 @@ const Routines = () => {
                     onClick={() => void patchRoutine(routine, { enabled: !routine.enabled })}
                   >
                     {routine.enabled ? "Disable" : "Enable"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2.5 text-[12px]"
+                    disabled={actionKey !== null}
+                    onClick={() =>
+                      void patchRoutine(routine, {
+                        freshThreadPerRun: !routine.freshThreadPerRun,
+                      })
+                    }
+                  >
+                    {routine.freshThreadPerRun ? "Reuse target" : "Fresh thread"}
                   </Button>
                   <Button
                     variant="outline"

@@ -15,10 +15,22 @@ const statusConfig: Record<
   },
 };
 
-export function StatusBadge({ status }: { status: ThreadStatus }) {
-  const config = statusConfig[status] || statusConfig.idle;
+export function StatusBadge({
+  status,
+  isLikelyStale = false,
+  statusWarning,
+}: {
+  status: ThreadStatus;
+  isLikelyStale?: boolean;
+  statusWarning?: string | null;
+}) {
+  const config =
+    isLikelyStale || statusWarning
+      ? { label: "stale", dot: "bg-warning", text: "text-warning" }
+      : statusConfig[status] || statusConfig.idle;
   return (
     <span
+      title={statusWarning || (isLikelyStale ? "Likely stale turn" : undefined)}
       className={`inline-flex items-center gap-1 font-mono text-[10.5px] ${config.text}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />

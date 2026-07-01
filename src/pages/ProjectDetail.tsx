@@ -637,7 +637,11 @@ const ProjectDetail = () => {
                         </button>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <StatusBadge status={thread.status} />
+                            <StatusBadge
+                              status={thread.status}
+                              isLikelyStale={thread.is_likely_stale}
+                              statusWarning={thread.status_warning}
+                            />
                             {thread.voice_route?.role === "active_target" ? (
                               <span className="font-mono text-[10px] text-warning">
                                 {threadVoiceLabel(thread)}

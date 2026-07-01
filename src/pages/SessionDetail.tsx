@@ -200,7 +200,11 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
                     }`}
                   />
                 </Button>
-                <StatusBadge status={thread.status} />
+                <StatusBadge
+                  status={thread.status}
+                  isLikelyStale={thread.is_likely_stale}
+                  statusWarning={thread.status_warning}
+                />
                 {agentVoiceName ? (
                   <span className="font-mono text-[10px] text-warning">
                     {agentVoiceName}

@@ -94,7 +94,11 @@ export const ThreadListItem = ({
           {threadProjectLabel(thread)}
         </span>
       </div>
-      <StatusBadge status={thread.status} />
+      <StatusBadge
+        status={thread.status}
+        isLikelyStale={thread.is_likely_stale}
+        statusWarning={thread.status_warning}
+      />
       <span className="hidden shrink-0 font-mono text-[10.5px] text-muted-foreground tabular-nums sm:inline">
         {formatUpdatedAt(thread.updated_at)}
       </span>

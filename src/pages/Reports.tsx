@@ -11,7 +11,7 @@ import { apiFetch } from "@/lib/api";
 import { readJson } from "@/lib/api-errors";
 import { setReportTags } from "@/lib/item-tags";
 import { fetchAllProjectPages, projectName } from "@/lib/project-display";
-import { groupReportItems } from "@/lib/reportGroups";
+import { groupReportItemsByDay } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
 import { useReportFileActions } from "@/lib/useReportFileActions";
 import { useTagOptions } from "@/lib/useTagOptions";
@@ -271,9 +271,9 @@ const Reports = () => {
     );
   }, [items, query]);
 
-  const groupedItems = useMemo(
+  const dateSections = useMemo(
     () =>
-      groupReportItems(
+      groupReportItemsByDay(
         filteredItems,
         (item) => item.file,
         (item) => item.project.path,
@@ -310,7 +310,15 @@ const Reports = () => {
           <ResourceEmptyState>No files match.</ResourceEmptyState>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
-            {groupedItems.map((node, index) => {
+            {dateSections.map((section, sectionIndex) => (
+              <section
+                key={section.key}
+                className={sectionIndex > 0 ? "border-t border-border" : ""}
+              >
+                <div className="bg-surface-muted px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {section.label}
+                </div>
+                {section.nodes.map((node, index) => {
               if (node.type === "group") {
                 const key = `group:${node.key}`;
                 const expanded = expandedGroups.has(key);
@@ -460,6 +468,8 @@ const Reports = () => {
                 />
               );
             })}
+              </section>
+            ))}
           </div>
         )}
       </div>

@@ -27,6 +27,10 @@ export const useProjectsAndThreads = () => {
       return current.map((project) => ({
         ...project,
         ...(byPath.get(project.path) ?? {}),
+        worktrees: project.worktrees?.map((worktree) => ({
+          ...worktree,
+          ...(byPath.get(worktree.path) ?? {}),
+        })),
       }));
     });
   }, []);
@@ -35,7 +39,10 @@ export const useProjectsAndThreads = () => {
     async (items: Project[]) => {
       const updates = await fetchProjectStatuses(
         apiFetch,
-        items.map((project) => project.path),
+        items.flatMap((project) => [
+          project.path,
+          ...(project.worktrees ?? []).map((worktree) => worktree.path),
+        ]),
       );
       mergeProjectUpdates(updates);
     },

@@ -20,6 +20,8 @@ export interface ThreadInfo {
   display_name: string;
   title?: string | null;
   preview?: string | null;
+  is_likely_stale?: boolean;
+  status_warning?: string | null;
   is_favorite?: boolean;
   favorited_at?: string | null;
   tags?: string[];
@@ -65,6 +67,8 @@ export interface Project {
   reports_count?: number;
   reports_updated_at?: number | null;
   global_reports?: boolean;
+  source?: string;
+  worktrees?: Project[];
 }
 
 export interface ProjectListResponse {
