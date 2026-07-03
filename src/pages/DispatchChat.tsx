@@ -11,18 +11,36 @@ const DispatchChat = () => {
   const [dispatchThread, setDispatchThread] = useState<ThreadInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchDispatchThreadFallback = useCallback(async () => {
+    try {
+      const data = await fetchThreadPage(
+        apiFetch,
+        `/api/threads/?page_size=${LARGE_THREAD_PAGE_SIZE}`,
+      );
+      return (
+        data.threads.find((thread) => thread.voice_route?.role === "dispatcher") ??
+        null
+      );
+    } catch {
+      return null;
+    }
+  }, []);
+
   const fetchDispatchThread = useCallback(async () => {
     setLoading(true);
-    const data = await fetchThreadPage(
-      apiFetch,
-      `/api/threads/?page_size=${LARGE_THREAD_PAGE_SIZE}`,
-    );
-    const threads: ThreadInfo[] = data.threads;
-    setDispatchThread(
-      threads.find((thread) => thread.voice_route?.role === "dispatcher") ?? null,
-    );
-    setLoading(false);
-  }, []);
+    try {
+      const response = await apiFetch("/api/threads/dispatcher/");
+      if (response.ok) {
+        setDispatchThread((await response.json()) as ThreadInfo);
+        return;
+      }
+      setDispatchThread(await fetchDispatchThreadFallback());
+    } catch {
+      setDispatchThread(await fetchDispatchThreadFallback());
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchDispatchThreadFallback]);
 
   useEffect(() => {
     void fetchDispatchThread();

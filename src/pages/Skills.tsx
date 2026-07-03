@@ -12,6 +12,7 @@ import {
   Link2,
   Loader2,
   Plus,
+  RefreshCw,
   Save,
   Search,
   Trash2,
@@ -34,6 +35,25 @@ interface SkillSection {
   label: string;
   skills_dir: string;
   skills: SkillEntry[];
+}
+
+interface AutoLinkSyncResult {
+  created: number;
+  already_linked: number;
+  conflicts: number;
+  errors: number;
+  results: Array<{
+    name: string;
+    status: string;
+    error?: string;
+  }>;
+}
+
+interface AutoLinkSettings {
+  auto_link_normal_codex_skills: boolean;
+  normal_codex_skills_dir: string;
+  openbase_codex_skills_dir: string;
+  sync: AutoLinkSyncResult | null;
 }
 
 interface PrintingPressCategory {
@@ -103,6 +123,12 @@ const Skills = () => {
     Record<string, boolean>
   >({});
   const [syncingSkill, setSyncingSkill] = useState("");
+  const [autoLinkSettings, setAutoLinkSettings] =
+    useState<AutoLinkSettings | null>(null);
+  const [autoLinkSync, setAutoLinkSync] = useState<AutoLinkSyncResult | null>(
+    null,
+  );
+  const [savingAutoLink, setSavingAutoLink] = useState(false);
 
   const [content, setContent] = useState("");
   const [filePath, setFilePath] = useState("");
@@ -139,6 +165,8 @@ const Skills = () => {
       setSkills(data.skills);
       setSections(data.sections ?? []);
       setSkillsDir(data.skills_dir);
+      setAutoLinkSettings(data.auto_link_normal_codex_skills ?? null);
+      setAutoLinkSync(data.auto_link_normal_codex_skills_sync ?? null);
     }
     setLoading(false);
   }, [listApiParams]);
@@ -286,6 +314,55 @@ const Skills = () => {
     } else {
       const data = await res.json().catch(() => ({}));
       toast.error(data.error || "Failed to link skill");
+    }
+  };
+
+  const updateAutoLinkSetting = async (enabled: boolean) => {
+    setSavingAutoLink(true);
+    const res = await apiFetch("/api/skills/auto-link-normal-codex/", {
+      method: "PATCH",
+      body: JSON.stringify({ auto_link_normal_codex_skills: enabled }),
+    });
+    setSavingAutoLink(false);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setAutoLinkSettings(data);
+      setAutoLinkSync(data.sync ?? null);
+      await fetchSkills();
+      if (enabled) {
+        const sync = data.sync as AutoLinkSyncResult | null;
+        toast.success(
+          sync?.created
+            ? `Auto-linked ${sync.created} skill${sync.created === 1 ? "" : "s"}`
+            : "Auto-link is enabled",
+        );
+      } else {
+        toast.success("Auto-link is disabled");
+      }
+    } else {
+      toast.error(data.error || "Failed to update auto-link setting");
+    }
+  };
+
+  const runAutoLinkSync = async () => {
+    setSavingAutoLink(true);
+    const res = await apiFetch("/api/skills/auto-link-normal-codex/", {
+      method: "POST",
+    });
+    setSavingAutoLink(false);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setAutoLinkSettings(data);
+      setAutoLinkSync(data.sync ?? null);
+      await fetchSkills();
+      const sync = data.sync as AutoLinkSyncResult | null;
+      toast.success(
+        sync?.created
+          ? `Auto-linked ${sync.created} skill${sync.created === 1 ? "" : "s"}`
+          : "Auto-link scan complete",
+      );
+    } else {
+      toast.error(data.error || "Failed to scan normal Codex skills");
     }
   };
 
@@ -722,15 +799,84 @@ const Skills = () => {
 
             {loading ? (
               <div className="text-[12px] text-muted-foreground">Loading…</div>
-            ) : totalSkills === 0 ? (
-              <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
-                <Zap className="mx-auto h-4 w-4 text-muted-foreground/40" />
-                <p className="mt-2 text-[12px] text-muted-foreground">
-                  No skills yet.
-                </p>
-              </div>
             ) : (
               <div className="space-y-3">
+                {!projectPath && autoLinkSettings ? (
+                  <div className="rounded border border-border bg-surface px-3 py-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <label className="flex min-w-0 items-center gap-2">
+                        <Checkbox
+                          checked={
+                            autoLinkSettings.auto_link_normal_codex_skills
+                          }
+                          disabled={savingAutoLink}
+                          onCheckedChange={(checked) =>
+                            updateAutoLinkSetting(checked === true)
+                          }
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-[13px] font-medium text-foreground">
+                            Auto-link normal Codex skills
+                          </span>
+                          <span className="block truncate text-[11.5px] text-muted-foreground">
+                            Symlink normal Codex skills into Openbase Codex when
+                            this page refreshes.
+                          </span>
+                        </span>
+                      </label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 text-[12px]"
+                        disabled={savingAutoLink}
+                        onClick={runAutoLinkSync}
+                      >
+                        {savingAutoLink ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3 w-3" />
+                        )}
+                        Scan now
+                      </Button>
+                    </div>
+                    {autoLinkSync ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5 text-[10.5px]">
+                        <Badge variant="secondary">
+                          linked {autoLinkSync.created}
+                        </Badge>
+                        <Badge variant="outline">
+                          already linked {autoLinkSync.already_linked}
+                        </Badge>
+                        {autoLinkSync.conflicts ? (
+                          <Badge
+                            variant="outline"
+                            className="border-warning/40 text-warning"
+                          >
+                            conflicts {autoLinkSync.conflicts}
+                          </Badge>
+                        ) : null}
+                        {autoLinkSync.errors ? (
+                          <Badge
+                            variant="outline"
+                            className="border-destructive/40 text-destructive"
+                          >
+                            errors {autoLinkSync.errors}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {totalSkills === 0 ? (
+                  <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
+                    <Zap className="mx-auto h-4 w-4 text-muted-foreground/40" />
+                    <p className="mt-2 text-[12px] text-muted-foreground">
+                      No skills yet.
+                    </p>
+                  </div>
+                ) : null}
                 {visibleSections.map((section) => {
                   const collapsed = !!collapsedSections[section.key];
                   return (

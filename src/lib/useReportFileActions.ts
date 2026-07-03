@@ -36,6 +36,7 @@ export const useReportFileActions = ({
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [actioningKey, setActioningKey] = useState<string | null>(null);
+  const [followUpSendingKey, setFollowUpSendingKey] = useState<string | null>(null);
 
   const loadReportFile = useCallback(
     async (target: ReportFileTarget) => {
@@ -78,7 +79,7 @@ export const useReportFileActions = ({
 
       if (!res.ok) {
         toast.error(data?.error || "Failed to delete report");
-        return;
+        return false;
       }
 
       setPayloads((current) => {
@@ -88,6 +89,7 @@ export const useReportFileActions = ({
       });
       onDeleted?.(target);
       toast.success("Report deleted");
+      return true;
     },
     [onDeleted],
   );
@@ -177,6 +179,37 @@ export const useReportFileActions = ({
     [],
   );
 
+  const sendReportFollowUp = useCallback(
+    async (target: ReportFileTarget, threadId: string, message: string) => {
+      const prompt = message.trim();
+      if (!prompt) return false;
+
+      setFollowUpSendingKey(target.key);
+      try {
+        const res = await apiFetch(
+          `/api/threads/${encodeURIComponent(threadId)}/turns/`,
+          {
+            method: "POST",
+            body: JSON.stringify({ prompt }),
+          },
+        );
+        const data = await readJson<{ error?: string; turn_id?: string }>(res);
+        if (!res.ok) {
+          toast.error(data?.error || "Failed to send follow-up");
+          return false;
+        }
+        toast.success("Follow-up sent");
+        return true;
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to send follow-up");
+        return false;
+      } finally {
+        setFollowUpSendingKey(null);
+      }
+    },
+    [],
+  );
+
   return {
     payloads,
     fileLoadingKey,
@@ -184,11 +217,13 @@ export const useReportFileActions = ({
     downloadingKey,
     savingKey,
     actioningKey,
+    followUpSendingKey,
     loadReportFile,
     deleteReport,
     downloadReport,
     saveReportFile,
     startReportAction,
+    sendReportFollowUp,
     setPayloads,
   };
 };

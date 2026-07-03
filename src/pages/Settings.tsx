@@ -2,6 +2,8 @@ import DashboardLayout from "@/components/layouts/ExampleLayout";
 import { getRuntimeShell } from "@/lib/runtime-config";
 import React from "react";
 import { AuthenticationSettings } from "./settings/AuthenticationSettings";
+import { AgentsGenerationSettings } from "./settings/AgentsGenerationSettings";
+import { BackendModelSettings } from "./settings/BackendModelSettings";
 import { CodingBackendSettings } from "./settings/CodingBackendSettings";
 import { DangerousConfirmationSettings } from "./settings/DangerousConfirmationSettings";
 import { DispatcherVoiceSettings } from "./settings/DispatcherVoiceSettings";
@@ -31,6 +33,7 @@ const Settings: React.FC = () => {
 
         <OpenbaseServicesSettings controller={openbaseServices} />
         <CodingBackendSettings />
+        <BackendModelSettings />
         <ServiceTierSettings />
         <ReasoningSettings />
 
@@ -41,6 +44,7 @@ const Settings: React.FC = () => {
         />
         <IgnoredLaunchctlSettings />
         <AuthenticationSettings />
+        <AgentsGenerationSettings />
         <DangerousConfirmationSettings />
         <SidebarItemsSettings />
         <EnvSettings />

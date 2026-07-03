@@ -8,6 +8,12 @@ export type DangerousConfirmationSettingsResponse = {
   refreshed: boolean;
 };
 
+export type AgentsGenerationSettingsResponse = {
+  include_normal_codex_agents_in_openbase_agents: boolean;
+  default_include_normal_codex_agents_in_openbase_agents: boolean;
+  refreshed: boolean;
+};
+
 export type OpenbaseService = {
   name: string;
   label: string;
@@ -46,6 +52,30 @@ export type CodingBackendSettingsResponse = {
   default_backend: string;
   supported_backends: CodingBackendOption[];
   env_file_exists: boolean;
+  changed: boolean;
+  restart_required: boolean;
+  restart_hint: string;
+};
+
+export type BackendModelOption = {
+  id: string;
+  label: string;
+  description: string;
+};
+
+export type BackendModelSettingsResponse = {
+  backend: string;
+  models: {
+    dispatcher: string | null;
+    super_agents: string | null;
+  };
+  effective: {
+    dispatcher: string;
+    super_agents: string;
+  };
+  options: BackendModelOption[];
+  allows_custom: boolean;
+  config_path: string;
   changed: boolean;
   restart_required: boolean;
   restart_hint: string;

@@ -52,7 +52,7 @@ const Sessions = () => {
     let cancelled = false;
     const fetchSyncConflicts = async () => {
       try {
-        const res = await apiFetch("/api/settings/thread-device-sync/conflicts/");
+        const res = await apiFetch("/api/settings/thread-sync/conflicts/");
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) {

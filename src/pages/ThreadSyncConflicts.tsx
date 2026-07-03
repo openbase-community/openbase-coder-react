@@ -40,6 +40,8 @@ type ThreadSnapshotSummary = {
 };
 
 type ThreadSyncConflict = {
+  id?: string | null;
+  source_type?: "home" | "device" | null;
   thread_id: string;
   title: string;
   cwd?: string | null;
@@ -50,15 +52,24 @@ type ThreadSyncConflict = {
   local_fingerprint?: string | null;
   current_local_fingerprint?: string | null;
   incoming_fingerprint?: string | null;
+  normal_fingerprint?: string | null;
+  voice_fingerprint?: string | null;
+  remote_label?: string | null;
+  is_resolvable?: boolean | null;
   local?: ThreadSnapshotSummary | null;
   incoming_snapshot?: ThreadSnapshotSummary | null;
   latest_remote_snapshot?: ThreadSnapshotSummary | null;
+  normal?: ThreadSnapshotSummary | null;
+  voice?: ThreadSnapshotSummary | null;
 };
 
 type ThreadSyncConflictsPayload = {
   conflict_count: number;
+  home_conflict_count?: number;
+  device_conflict_count?: number;
   conflicts: ThreadSyncConflict[];
-  exchange_dir: string;
+  exchange_dir?: string | null;
+  home_ledger_path?: string | null;
 };
 
 const shortHash = (value?: string | null) =>
@@ -111,16 +122,16 @@ const ThreadSyncConflicts = () => {
   const [loading, setLoading] = useState(true);
   const [resolving, setResolving] = useState<string | null>(null);
 
-  const fetchConflicts = async () => {
-    setLoading(true);
+  const fetchConflicts = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
-      const res = await apiFetch("/api/settings/thread-device-sync/conflicts/");
+      const res = await apiFetch("/api/settings/thread-sync/conflicts/");
       if (!res.ok) throw new Error("request_failed");
       setPayload(await res.json());
     } catch {
       toast.error("Failed to load sync conflicts");
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -142,8 +153,7 @@ const ThreadSyncConflicts = () => {
         },
       );
       if (!res.ok) throw new Error("request_failed");
-      const data = await res.json();
-      setPayload(data.conflicts);
+      await fetchConflicts(false);
       toast.success("Conflict resolved");
     } catch {
       toast.error("Failed to resolve conflict");
@@ -153,6 +163,12 @@ const ThreadSyncConflicts = () => {
   };
 
   const conflicts = payload?.conflicts ?? [];
+  const homeConflictCount =
+    payload?.home_conflict_count ??
+    conflicts.filter((conflict) => conflict.source_type === "home").length;
+  const deviceConflictCount =
+    payload?.device_conflict_count ??
+    conflicts.filter((conflict) => conflict.source_type !== "home").length;
 
   return (
     <DashboardLayout>
@@ -178,7 +194,9 @@ const ThreadSyncConflicts = () => {
               ) : null}
             </div>
             <p className="truncate font-mono text-[11px] text-muted-foreground">
-              {payload?.exchange_dir ?? "~/.openbase/thread-sync"}
+              {payload
+                ? `${homeConflictCount} homes · ${deviceConflictCount} devices`
+                : "~/.openbase/thread-sync"}
             </p>
           </div>
           <Button
@@ -205,18 +223,30 @@ const ThreadSyncConflicts = () => {
         ) : (
           <div className="space-y-2">
             {conflicts.map((conflict) => {
-              const remote = conflict.latest_remote_snapshot ?? conflict.incoming_snapshot;
+              const sourceType = conflict.source_type ?? "device";
+              const isHomeConflict = sourceType === "home";
+              const remote = isHomeConflict
+                ? conflict.normal
+                : conflict.latest_remote_snapshot ?? conflict.incoming_snapshot;
+              const local = isHomeConflict ? conflict.voice : conflict.local;
               const remoteLabel =
+                conflict.remote_label ??
                 conflict.source_device_name ??
                 remote?.source_device_name ??
                 conflict.source_device_id ??
-                "remote";
-              const localActionKey = `${conflict.thread_id}:accept_local`;
-              const remoteActionKey = `${conflict.thread_id}:accept_remote_latest`;
+                (isHomeConflict ? "Normal Codex home" : "remote");
+              const localLabel = isHomeConflict ? "Voice home" : "Local";
+              const remoteColumnLabel = isHomeConflict ? "Normal home" : "Remote";
+              const sourceLabel = isHomeConflict ? "Homes" : "Devices";
+              const canResolve = !isHomeConflict && conflict.is_resolvable !== false;
+              const conflictKey =
+                conflict.id ?? `${sourceType}:${conflict.thread_id}`;
+              const localActionKey = `${conflictKey}:accept_local`;
+              const remoteActionKey = `${conflictKey}:accept_remote_latest`;
 
               return (
                 <div
-                  key={conflict.thread_id}
+                  key={conflictKey}
                   className="rounded border border-border bg-surface px-3 py-3"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -228,6 +258,12 @@ const ThreadSyncConflicts = () => {
                         </h2>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
+                        <Badge
+                          variant={isHomeConflict ? "secondary" : "outline"}
+                          className="h-5 px-1.5 font-sans text-[10px]"
+                        >
+                          {sourceLabel}
+                        </Badge>
                         <span>{shortHash(conflict.thread_id)}</span>
                         <span>{conflict.reason}</span>
                         <span>{remoteLabel}</span>
@@ -255,92 +291,105 @@ const ThreadSyncConflicts = () => {
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
                     <SnapshotColumn
                       icon={<HardDrive className="h-3 w-3" />}
-                      label="Local"
-                      snapshot={conflict.local}
+                      label={localLabel}
+                      snapshot={local}
                       fingerprint={
                         conflict.current_local_fingerprint ??
-                        conflict.local_fingerprint
+                        conflict.local_fingerprint ??
+                        conflict.voice_fingerprint
                       }
                     />
                     <SnapshotColumn
                       icon={<Download className="h-3 w-3" />}
-                      label="Remote"
+                      label={remoteColumnLabel}
                       snapshot={remote}
-                      fingerprint={remote?.fingerprint ?? conflict.incoming_fingerprint}
+                      fingerprint={
+                        remote?.fingerprint ??
+                        conflict.incoming_fingerprint ??
+                        conflict.normal_fingerprint
+                      }
                     />
                   </div>
 
                   <div className="mt-3 flex flex-wrap justify-end gap-2">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-2.5 text-[12px]"
-                          disabled={Boolean(resolving)}
-                        >
-                          Keep local
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Keep local thread?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Remote snapshots from {remoteLabel} will be ignored for
-                            this conflict.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            disabled={resolving === localActionKey}
-                            onClick={() =>
-                              void resolveConflict(
-                                conflict.thread_id,
-                                "accept_local",
-                              )
-                            }
-                          >
-                            Keep local
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    {canResolve ? (
+                      <>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2.5 text-[12px]"
+                              disabled={Boolean(resolving)}
+                            >
+                              Keep local
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Keep local thread?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Remote snapshots from {remoteLabel} will be ignored for
+                                this conflict.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                disabled={resolving === localActionKey}
+                                onClick={() =>
+                                  void resolveConflict(
+                                    conflict.thread_id,
+                                    "accept_local",
+                                  )
+                                }
+                              >
+                                Keep local
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
 
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          className="h-7 px-2.5 text-[12px]"
-                          disabled={Boolean(resolving)}
-                        >
-                          Use remote latest
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Use remote latest?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            The local thread state will be overwritten with the
-                            newest synced snapshot from {remoteLabel}.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            disabled={resolving === remoteActionKey}
-                            onClick={() =>
-                              void resolveConflict(
-                                conflict.thread_id,
-                                "accept_remote_latest",
-                              )
-                            }
-                          >
-                            Use remote latest
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              className="h-7 px-2.5 text-[12px]"
+                              disabled={Boolean(resolving)}
+                            >
+                              Use remote latest
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Use remote latest?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                The local thread state will be overwritten with the
+                                newest synced snapshot from {remoteLabel}.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                disabled={resolving === remoteActionKey}
+                                onClick={() =>
+                                  void resolveConflict(
+                                    conflict.thread_id,
+                                    "accept_remote_latest",
+                                  )
+                                }
+                              >
+                                Use remote latest
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </>
+                    ) : (
+                      <div className="text-[11px] text-muted-foreground">
+                        Resolve home conflicts with the Codex sync CLI.
+                      </div>
+                    )}
                   </div>
                 </div>
               );

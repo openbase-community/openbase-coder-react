@@ -5,12 +5,16 @@ import {
   ResourceLoading,
   ResourcePageHeader,
 } from "@/components/resource/ResourcePage";
-import { ReportFileRow } from "@/components/reports/ReportFileRow";
+import {
+  ReportFileDetailView,
+  ReportFileListRow,
+} from "@/components/reports/ReportFileRow";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { readJson } from "@/lib/api-errors";
 import { setReportTags } from "@/lib/item-tags";
 import { fetchAllProjectPages, projectName } from "@/lib/project-display";
+import { nextReportIndexAfterDelete } from "@/lib/reportDetailNavigation";
 import { groupReportItemsByDay } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
 import { useReportFileActions } from "@/lib/useReportFileActions";
@@ -19,10 +23,11 @@ import type { ReportsFile, Project } from "@/types/session";
 import {
   ChevronDown,
   ChevronRight,
+  ExternalLink,
   Folder,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 type ReportsItem = {
@@ -43,15 +48,18 @@ const mergeProjects = (projects: Project[], globalProjects: Project[]) => {
 
 const Reports = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState<ReportsItem[]>([]);
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [reportScrollTops, setReportScrollTops] = useState<Record<string, number>>({});
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set(),
   );
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const expandedKeyRef = useRef<string | null>(null);
+  const activeKeyRef = useRef<string | null>(null);
   const { tagOptions, refreshTagOptions } = useTagOptions();
   const {
     payloads,
@@ -60,30 +68,32 @@ const Reports = () => {
     downloadingKey,
     savingKey,
     actioningKey,
+    followUpSendingKey,
     loadReportFile,
     deleteReport,
     downloadReport,
     saveReportFile,
     startReportAction,
+    sendReportFollowUp,
     setPayloads,
   } = useReportFileActions({
     onDeleted: ({ key }) => {
       setItems((current) =>
         current.filter((currentItem) => itemKey(currentItem) !== key),
       );
-      if (expandedKeyRef.current === key) {
-        setExpandedKey(null);
+      if (activeKeyRef.current === key) {
+        setActiveKey(null);
       }
     },
   });
 
   useEffect(() => {
-    expandedKeyRef.current = expandedKey;
-  }, [expandedKey]);
+    activeKeyRef.current = activeKey;
+  }, [activeKey]);
 
   const loadFile = useCallback(async (item: ReportsItem) => {
     const key = itemKey(item);
-    setExpandedKey(key);
+    setActiveKey(key);
     await loadReportFile({
       key,
       projectPath: item.project.path,
@@ -91,14 +101,44 @@ const Reports = () => {
     });
   }, [loadReportFile]);
 
-  const toggleItem = (item: ReportsItem) => {
-    const key = itemKey(item);
-    if (expandedKey === key) {
-      setExpandedKey(null);
-      return;
-    }
+  const navigateToItem = useCallback(
+    (item: ReportsItem, options: { replace?: boolean } = {}) => {
+      const params = new URLSearchParams(searchParams);
+      params.set("project", item.project.path);
+      params.set("report", item.file.path);
+      navigate(
+        {
+          pathname: location.pathname,
+          search: params.toString(),
+        },
+        options,
+      );
+    },
+    [location.pathname, navigate, searchParams],
+  );
+
+  const navigateToList = useCallback(
+    (options: { replace?: boolean } = {}) => {
+      const params = new URLSearchParams(searchParams);
+      params.delete("project");
+      params.delete("report");
+      navigate(
+        {
+          pathname: location.pathname,
+          search: params.toString(),
+        },
+        options,
+      );
+    },
+    [location.pathname, navigate, searchParams],
+  );
+
+  const openItem = (item: ReportsItem) => {
+    navigateToItem(item);
     loadFile(item);
   };
+
+  const closeActiveItem = () => navigateToList({ replace: true });
 
   const deleteItem = useCallback(
     (item: ReportsItem) =>
@@ -153,6 +193,7 @@ const Reports = () => {
         file: item.file,
       });
       if (result?.thread_id) {
+        setActiveKey(null);
         navigate(`/dashboard/threads/${result.thread_id}`);
       }
     },
@@ -246,12 +287,12 @@ const Reports = () => {
     setItems(nextItems);
     setLoading(false);
 
-    const currentExpandedKey = expandedKeyRef.current;
+    const currentExpandedKey = activeKeyRef.current;
     if (
       currentExpandedKey &&
       !nextItems.some((item) => itemKey(item) === currentExpandedKey)
     ) {
-      setExpandedKey(null);
+      setActiveKey(null);
     }
   }, []);
 
@@ -271,6 +312,26 @@ const Reports = () => {
     );
   }, [items, query]);
 
+  const deleteActiveItem = useCallback(
+    async (item: ReportsItem) => {
+      const index = filteredItems.findIndex(
+        (currentItem) => itemKey(currentItem) === itemKey(item),
+      );
+      const nextIndex = nextReportIndexAfterDelete(index, filteredItems.length);
+      const nextItem = nextIndex >= 0 ? filteredItems[nextIndex] : null;
+      const deleted = await deleteItem(item);
+      if (!deleted) return;
+
+      if (nextItem) {
+        navigateToItem(nextItem, { replace: true });
+        await loadFile(nextItem);
+      } else {
+        navigateToList({ replace: true });
+      }
+    },
+    [deleteItem, filteredItems, loadFile, navigateToItem, navigateToList],
+  );
+
   const dateSections = useMemo(
     () =>
       groupReportItemsByDay(
@@ -280,6 +341,43 @@ const Reports = () => {
       ),
     [filteredItems],
   );
+
+  const activeIndex = useMemo(
+    () => filteredItems.findIndex((item) => itemKey(item) === activeKey),
+    [activeKey, filteredItems],
+  );
+  const activeItem = activeIndex >= 0 ? filteredItems[activeIndex] : null;
+  const activePayload = activeItem ? payloads[itemKey(activeItem)] : undefined;
+  const openAdjacentItem = (direction: number) => {
+    if (activeIndex < 0) return;
+    const nextItem = filteredItems[activeIndex + direction];
+    if (nextItem) {
+      navigateToItem(nextItem);
+      loadFile(nextItem);
+    }
+  };
+  const openProject = (projectPath: string) => {
+    setActiveKey(null);
+    navigate(`/dashboard/project?path=${encodeURIComponent(projectPath)}`);
+  };
+
+  useEffect(() => {
+    const projectPath = searchParams.get("project");
+    const reportPath = searchParams.get("report");
+    if (!projectPath || !reportPath) {
+      setActiveKey(null);
+      return;
+    }
+
+    const item = items.find(
+      (candidate) =>
+        candidate.project.path === projectPath &&
+        candidate.file.path === reportPath,
+    );
+    if (item) {
+      loadFile(item);
+    }
+  }, [items, loadFile, searchParams]);
 
   return (
     <DashboardLayout>
@@ -359,14 +457,13 @@ const Reports = () => {
                       <div className="border-t border-border bg-background/70">
                         {node.items.map((item) => {
                           const childKey = itemKey(item);
-                          const childExpanded = expandedKey === childKey;
+                          const childExpanded = activeKey === childKey;
                           const childPayload = payloads[childKey];
                           return (
-                            <ReportFileRow
+                            <ReportFileListRow
                               key={childKey}
                               file={item.file}
-                              expanded={childExpanded}
-                              loading={fileLoadingKey === childKey}
+                              active={childExpanded}
                               payload={childPayload}
                               className="border-t border-border first:border-t-0"
                               rowClassName="pl-8 pr-3"
@@ -377,37 +474,13 @@ const Reports = () => {
                                   {formatReportBytes(item.file.size)} · {item.file.path}
                                 </>
                               }
-                              expandedHeader={
-                                <div className="mb-3 flex items-center justify-between gap-3">
-                                  <div className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
-                                    {item.project.path}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    className="h-7 shrink-0 rounded border border-border px-2.5 text-[12px] text-foreground hover:bg-surface-muted"
-                                    onClick={() =>
-                                      navigate(
-                                        `/dashboard/project?path=${encodeURIComponent(item.project.path)}`,
-                                      )
-                                    }
-                                  >
-                                    Open project
-                                  </button>
-                                </div>
-                              }
-                              onToggle={() => toggleItem(item)}
-                              onStartAction={() => void startActionItem(item)}
+                              onOpen={() => openItem(item)}
                               onDownload={() => void downloadItem(item)}
                               onDelete={() => void deleteItem(item)}
-                              onSaveContent={(content) =>
-                                saveItemContent(item, content)
-                              }
                               onTagsChange={(tags) => updateItemTags(item, tags)}
                               tagOptions={tagOptions}
-                              actioning={actioningKey === childKey}
                               downloading={downloadingKey === childKey}
                               deleting={deletingKey === childKey}
-                              saving={savingKey === childKey}
                             />
                           );
                         })}
@@ -419,14 +492,13 @@ const Reports = () => {
 
               const item = node.item;
               const key = itemKey(item);
-              const expanded = expandedKey === key;
+              const expanded = activeKey === key;
               const payload = payloads[key];
               return (
-                <ReportFileRow
+                <ReportFileListRow
                   key={key}
                   file={item.file}
-                  expanded={expanded}
-                  loading={fileLoadingKey === key}
+                  active={expanded}
                   payload={payload}
                   className={index > 0 ? "border-t border-border" : ""}
                   subtitle={projectName(item.project.path)}
@@ -436,35 +508,13 @@ const Reports = () => {
                       {formatReportBytes(item.file.size)} · {item.file.path}
                     </>
                   }
-                  expandedHeader={
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
-                        {item.project.path}
-                      </div>
-                      <button
-                        type="button"
-                        className="h-7 shrink-0 rounded border border-border px-2.5 text-[12px] text-foreground hover:bg-surface-muted"
-                        onClick={() =>
-                          navigate(
-                            `/dashboard/project?path=${encodeURIComponent(item.project.path)}`,
-                          )
-                        }
-                      >
-                        Open project
-                      </button>
-                    </div>
-                  }
-                  onToggle={() => toggleItem(item)}
-                  onStartAction={() => void startActionItem(item)}
+                  onOpen={() => openItem(item)}
                   onDownload={() => void downloadItem(item)}
                   onDelete={() => void deleteItem(item)}
-                  onSaveContent={(content) => saveItemContent(item, content)}
                   onTagsChange={(tags) => updateItemTags(item, tags)}
                   tagOptions={tagOptions}
-                  actioning={actioningKey === key}
                   downloading={downloadingKey === key}
                   deleting={deletingKey === key}
-                  saving={savingKey === key}
                 />
               );
             })}
@@ -472,6 +522,79 @@ const Reports = () => {
             ))}
           </div>
         )}
+        {activeItem ? (
+          <ReportFileDetailView
+            file={activeItem.file}
+            loading={fileLoadingKey === itemKey(activeItem)}
+            payload={activePayload}
+            subtitle={projectName(activeItem.project.path)}
+            metadata={
+              <>
+                {formatReportDate(activeItem.file.updated_at)} ·{" "}
+                {formatReportBytes(activeItem.file.size)} · {activeItem.file.path}
+              </>
+            }
+            detailHeader={
+              <button
+                type="button"
+                className="inline-flex max-w-full items-center gap-1.5 rounded border border-border px-2.5 py-1.5 text-[12px] text-foreground hover:bg-surface-muted"
+                onClick={() => openProject(activeItem.project.path)}
+              >
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0 truncate font-mono">
+                  {activeItem.project.path}
+                </span>
+              </button>
+            }
+            onClose={closeActiveItem}
+            onPrevious={() => openAdjacentItem(-1)}
+            onNext={() => openAdjacentItem(1)}
+            hasPrevious={activeIndex > 0}
+            hasNext={activeIndex >= 0 && activeIndex < filteredItems.length - 1}
+            onStartAction={() => void startActionItem(activeItem)}
+            onOpenThread={
+              activePayload?.provenance?.thread_id
+                ? () => {
+                    setActiveKey(null);
+                    navigate(
+                      `/dashboard/threads/${encodeURIComponent(activePayload.provenance!.thread_id!)}`,
+                    );
+                  }
+                : undefined
+            }
+            onSendFollowUp={
+              activePayload?.provenance?.thread_id
+                ? (message) =>
+                    sendReportFollowUp(
+                      {
+                        key: itemKey(activeItem),
+                        projectPath: activeItem.project.path,
+                        file: activeItem.file,
+                      },
+                      activePayload.provenance!.thread_id!,
+                      message,
+                    )
+                : undefined
+            }
+            onDownload={() => void downloadItem(activeItem)}
+            onDelete={() => void deleteActiveItem(activeItem)}
+            onSaveContent={(content) => saveItemContent(activeItem, content)}
+            onTagsChange={(tags) => updateItemTags(activeItem, tags)}
+            tagOptions={tagOptions}
+            actioning={actioningKey === itemKey(activeItem)}
+            followUpSending={followUpSendingKey === itemKey(activeItem)}
+            downloading={downloadingKey === itemKey(activeItem)}
+            deleting={deletingKey === itemKey(activeItem)}
+            saving={savingKey === itemKey(activeItem)}
+            scrollTop={reportScrollTops[itemKey(activeItem)] ?? 0}
+            onScrollTopChange={(scrollTop) =>
+              setReportScrollTops((current) => ({
+                ...current,
+                [itemKey(activeItem)]: scrollTop,
+              }))
+            }
+          />
+        ) : null}
       </div>
     </DashboardLayout>
   );

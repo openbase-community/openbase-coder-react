@@ -8,6 +8,7 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  Terminal,
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -15,7 +16,10 @@ import { toast } from "sonner";
 
 type Routine = {
   name: string;
+  kind?: "agent" | "command" | null;
   prompt: string;
+  command?: string | null;
+  commandTimeoutSeconds?: number | null;
   time: string;
   scheduleType?: "daily" | "interval" | null;
   intervalSeconds?: number | null;
@@ -46,7 +50,10 @@ type RoutinesResponse = {
 
 const defaultForm = {
   name: "",
+  kind: "agent",
   prompt: "",
+  command: "",
+  commandTimeoutSeconds: "300",
   scheduleType: "daily",
   time: "09:00",
   intervalSeconds: "60",
@@ -117,7 +124,11 @@ const Routines = () => {
     try {
       const body = {
         name: form.name,
+        kind: form.kind,
         prompt: form.prompt,
+        command: form.kind === "command" ? form.command : undefined,
+        commandTimeoutSeconds:
+          form.kind === "command" ? Number(form.commandTimeoutSeconds) : undefined,
         scheduleType: form.scheduleType,
         time: form.time,
         intervalSeconds:
@@ -263,6 +274,21 @@ const Routines = () => {
           </label>
           <label className="min-w-0">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Kind
+            </span>
+            <select
+              className="mt-1 h-8 w-full rounded border border-border bg-background px-2 text-[12px] outline-none focus:border-info"
+              value={form.kind}
+              onChange={(event) =>
+                setForm({ ...form, kind: event.target.value as "agent" | "command" })
+              }
+            >
+              <option value="agent">agent</option>
+              <option value="command">command</option>
+            </select>
+          </label>
+          <label className="min-w-0">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Schedule
             </span>
             <select
@@ -296,7 +322,7 @@ const Routines = () => {
               required
             />
           </label>
-          <label className="min-w-0 md:col-span-2">
+          <label className="min-w-0">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Timezone
             </span>
@@ -362,15 +388,44 @@ const Routines = () => {
               onChange={(event) => setForm({ ...form, cwd: event.target.value })}
             />
           </label>
+          {form.kind === "command" ? (
+            <>
+              <label className="min-w-0 md:col-span-5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Command
+                </span>
+                <input
+                  className="mt-1 h-8 w-full rounded border border-border bg-background px-2 font-mono text-[12px] outline-none focus:border-info"
+                  value={form.command}
+                  onChange={(event) => setForm({ ...form, command: event.target.value })}
+                  required
+                />
+              </label>
+              <label className="min-w-0">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Timeout
+                </span>
+                <input
+                  type="number"
+                  className="mt-1 h-8 w-full rounded border border-border bg-background px-2 font-mono text-[12px] outline-none focus:border-info"
+                  value={form.commandTimeoutSeconds}
+                  min={1}
+                  onChange={(event) =>
+                    setForm({ ...form, commandTimeoutSeconds: event.target.value })
+                  }
+                />
+              </label>
+            </>
+          ) : null}
           <label className="min-w-0 md:col-span-6">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Prompt
+              {form.kind === "command" ? "Agent handoff prompt" : "Prompt"}
             </span>
             <textarea
               className="mt-1 min-h-20 w-full resize-y rounded border border-border bg-background px-2 py-1.5 text-[12px] outline-none focus:border-info"
               value={form.prompt}
               onChange={(event) => setForm({ ...form, prompt: event.target.value })}
-              required
+              required={form.kind === "agent"}
             />
           </label>
           <div className="md:col-span-6">
@@ -406,7 +461,11 @@ const Routines = () => {
               >
                 <div className="min-w-0">
                   <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                    <CalendarClock className="h-3.5 w-3.5 shrink-0 text-info" />
+                    {routine.kind === "command" ? (
+                      <Terminal className="h-3.5 w-3.5 shrink-0 text-info" />
+                    ) : (
+                      <CalendarClock className="h-3.5 w-3.5 shrink-0 text-info" />
+                    )}
                     <span className="truncate text-[12.5px] font-medium text-foreground">
                       {routine.name}
                     </span>
@@ -420,6 +479,9 @@ const Routines = () => {
                         disabled
                       </span>
                     )}
+                    <span className="font-mono text-[10.5px] text-muted-foreground">
+                      {routine.kind ?? "agent"}
+                    </span>
                     <span className="font-mono text-[10.5px] text-muted-foreground">
                       {routine.scheduleType === "interval"
                         ? `every ${routine.intervalSeconds ?? 60}s`
@@ -442,8 +504,8 @@ const Routines = () => {
                     {routine.mode ? <span>mode {routine.mode}</span> : null}
                     {routine.reasoningEffort ? <span>effort {routine.reasoningEffort}</span> : null}
                   </div>
-                  <p className="mt-2 line-clamp-2 text-[12px] text-muted-foreground">
-                    {routine.prompt}
+                  <p className="mt-2 line-clamp-2 font-mono text-[12px] text-muted-foreground">
+                    {routine.kind === "command" ? routine.command : routine.prompt}
                   </p>
                   {routine.lastError ? (
                     <p className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">
