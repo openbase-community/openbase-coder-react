@@ -98,18 +98,24 @@ export type ReasoningSettingsResponse = {
   restart_hint: string;
 };
 
-export type CodexServiceTier = "fast" | "standard";
+export type ServiceTier = "fast" | "standard";
 
 export type ServiceTierOption = {
-  id: CodexServiceTier;
+  id: ServiceTier;
   label: string;
   summary: string;
 };
 
 export type ServiceTierSettingsResponse = {
-  codex_service_tier: CodexServiceTier;
+  dispatcher_service_tier: ServiceTier;
+  super_agents_service_tier: ServiceTier;
   effective: {
-    codex_service_tier: string;
+    dispatcher_service_tier: string;
+    super_agents_service_tier: string;
+  };
+  defaults: {
+    dispatcher_service_tier: ServiceTier;
+    super_agents_service_tier: ServiceTier;
   };
   options: ServiceTierOption[];
   config_path: string;

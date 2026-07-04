@@ -40,11 +40,16 @@ export function getRuntimeShell() {
 }
 
 export function getBackendUrl(path: string) {
-  return new URL(path, `${getBackendBaseUrl()}/`).toString();
+  // Join relative to the base so a base that includes a path prefix (e.g. when
+  // the console is served behind a reverse proxy under a subpath) is preserved.
+  // Absolute-path inputs like "/api/threads/" would otherwise reset to origin.
+  return new URL(path.replace(/^\//, ""), `${getBackendBaseUrl()}/`).toString();
 }
 
 export function getBackendWebSocketUrl(path: string) {
   const base = new URL(getBackendBaseUrl());
   const protocol = base.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${base.host}${path}`;
+  // Preserve any base path prefix (subpath reverse-proxy) ahead of the ws path.
+  const basePath = base.pathname.replace(/\/$/, "");
+  return `${protocol}//${base.host}${basePath}${path}`;
 }
