@@ -43,23 +43,34 @@ export const useReportFileActions = ({
       if (payloads[target.key]) return;
 
       setFileLoadingKey(target.key);
-      const params = new URLSearchParams({
-        path: target.projectPath,
-        file: target.file.path,
-      });
-      const res = await apiFetch(`/api/projects/reports/file/?${params}`);
-      setFileLoadingKey(null);
-      const data = await readJson(res);
-      setPayloads((current) => ({
-        ...current,
-        [target.key]:
-          res.ok && data
-            ? data
-            : {
-                file: target.file,
-                error: data?.error || loadErrorMessage,
-              },
-      }));
+      try {
+        const params = new URLSearchParams({
+          path: target.projectPath,
+          file: target.file.path,
+        });
+        const res = await apiFetch(`/api/projects/reports/file/?${params}`);
+        const data = await readJson(res);
+        setPayloads((current) => ({
+          ...current,
+          [target.key]:
+            res.ok && data
+              ? data
+              : {
+                  file: target.file,
+                  error: data?.error || loadErrorMessage,
+                },
+        }));
+      } catch (err) {
+        setPayloads((current) => ({
+          ...current,
+          [target.key]: {
+            file: target.file,
+            error: err instanceof Error ? err.message : loadErrorMessage,
+          },
+        }));
+      } finally {
+        setFileLoadingKey(null);
+      }
     },
     [loadErrorMessage, payloads],
   );
@@ -67,29 +78,37 @@ export const useReportFileActions = ({
   const deleteReport = useCallback(
     async (target: ReportFileTarget) => {
       setDeletingKey(target.key);
-      const params = new URLSearchParams({
-        path: target.projectPath,
-        file: target.file.path,
-      });
-      const res = await apiFetch(`/api/projects/reports/file/?${params}`, {
-        method: "DELETE",
-      });
-      const data = await readJson(res);
-      setDeletingKey(null);
+      try {
+        const params = new URLSearchParams({
+          path: target.projectPath,
+          file: target.file.path,
+        });
+        const res = await apiFetch(`/api/projects/reports/file/?${params}`, {
+          method: "DELETE",
+        });
+        const data = await readJson(res);
 
-      if (!res.ok) {
-        toast.error(data?.error || "Failed to delete report");
+        if (!res.ok) {
+          toast.error(data?.error || "Failed to delete report");
+          return false;
+        }
+
+        setPayloads((current) => {
+          const next = { ...current };
+          delete next[target.key];
+          return next;
+        });
+        onDeleted?.(target);
+        toast.success("Report deleted");
+        return true;
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to delete report",
+        );
         return false;
+      } finally {
+        setDeletingKey(null);
       }
-
-      setPayloads((current) => {
-        const next = { ...current };
-        delete next[target.key];
-        return next;
-      });
-      onDeleted?.(target);
-      toast.success("Report deleted");
-      return true;
     },
     [onDeleted],
   );

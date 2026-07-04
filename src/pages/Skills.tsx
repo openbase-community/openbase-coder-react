@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
 import {
   ArrowLeft,
   ChevronDown,
@@ -118,6 +119,7 @@ const Skills = () => {
   const [sections, setSections] = useState<SkillSection[]>([]);
   const [skillsDir, setSkillsDir] = useState("");
   const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [collapsedSections, setCollapsedSections] = useState<
     Record<string, boolean>
@@ -135,6 +137,7 @@ const Skills = () => {
   const [sourcePath, setSourcePath] = useState("");
   const [saving, setSaving] = useState(false);
   const [editorLoading, setEditorLoading] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
   const [printingPressCatalog, setPrintingPressCatalog] =
     useState<PrintingPressCatalog | null>(null);
   const [printingPressLoading, setPrintingPressLoading] = useState(false);
@@ -159,30 +162,43 @@ const Skills = () => {
   })();
 
   const fetchSkills = useCallback(async () => {
-    const res = await apiFetch(`/api/skills/${listApiParams}`);
-    if (res.ok) {
+    try {
+      const res = await apiFetch(`/api/skills/${listApiParams}`);
+      if (!res.ok) {
+        throw new Error(await extractErrorMessage(res, "Failed to load skills"));
+      }
       const data = await res.json();
       setSkills(data.skills);
       setSections(data.sections ?? []);
       setSkillsDir(data.skills_dir);
       setAutoLinkSettings(data.auto_link_personal_skills ?? null);
       setAutoLinkSync(data.auto_link_personal_skills_sync ?? null);
+      setListError(null);
+    } catch (err) {
+      setListError(
+        err instanceof Error ? err.message : "Unable to reach the local API.",
+      );
     }
     setLoading(false);
   }, [listApiParams]);
 
   useEffect(() => {
-    fetchSkills();
+    void fetchSkills();
   }, [fetchSkills]);
 
   const fetchPrintingPressCatalog = useCallback(async () => {
     setPrintingPressLoading(true);
-    const params = new URLSearchParams();
-    if (printingPressQuery.trim()) params.set("q", printingPressQuery.trim());
-    if (printingPressCategory) params.set("category", printingPressCategory);
-    const suffix = params.toString() ? `?${params.toString()}` : "";
-    const res = await apiFetch(`/api/skills/printing-press/catalog/${suffix}`);
-    if (res.ok) {
+    try {
+      const params = new URLSearchParams();
+      if (printingPressQuery.trim()) params.set("q", printingPressQuery.trim());
+      if (printingPressCategory) params.set("category", printingPressCategory);
+      const suffix = params.toString() ? `?${params.toString()}` : "";
+      const res = await apiFetch(`/api/skills/printing-press/catalog/${suffix}`);
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to load Printing Press catalog"),
+        );
+      }
       const data: PrintingPressCatalog = await res.json();
       setPrintingPressCatalog(data);
       setSelectedPrintingPressName((current) => {
@@ -191,9 +207,12 @@ const Skills = () => {
         }
         return data.entries[0]?.name ?? "";
       });
-    } else {
-      const data = await res.json().catch(() => ({}));
-      toast.error(data.error || "Failed to load Printing Press catalog");
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to load Printing Press catalog",
+      );
     }
     setPrintingPressLoading(false);
   }, [printingPressCategory, printingPressQuery]);
@@ -209,17 +228,29 @@ const Skills = () => {
   useEffect(() => {
     if (!editingSkill) return;
     setEditorLoading(true);
-    apiFetch(
-      `/api/skills/${encodeURIComponent(editingSkill)}/${detailApiParams}`,
-    ).then(async (res) => {
-      if (res.ok) {
+    setEditorError(null);
+    const loadSkill = async () => {
+      try {
+        const res = await apiFetch(
+          `/api/skills/${encodeURIComponent(editingSkill)}/${detailApiParams}`,
+        );
+        if (!res.ok) {
+          throw new Error(
+            await extractErrorMessage(res, `Failed to load /${editingSkill}`),
+          );
+        }
         const data = await res.json();
         setContent(data.content);
         setFilePath(data.path);
         setSourcePath(data.source_path ?? "");
+      } catch (err) {
+        setEditorError(
+          err instanceof Error ? err.message : "Unable to reach the local API.",
+        );
       }
       setEditorLoading(false);
-    });
+    };
+    void loadSkill();
   }, [editingSkill, detailApiParams]);
 
   const openSkill = (name: string, scope = "home") => {
@@ -247,43 +278,54 @@ const Skills = () => {
   const createSkill = async () => {
     const trimmed = newName.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
     if (!trimmed) return;
-    const res = await apiFetch(`/api/skills/${listApiParams}`, {
-      method: "POST",
-      body: JSON.stringify({ name: trimmed }),
-    });
-    if (res.ok) {
+    try {
+      const res = await apiFetch(`/api/skills/${listApiParams}`, {
+        method: "POST",
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) {
+        throw new Error(await extractErrorMessage(res, "Failed to create skill"));
+      }
       setNewName("");
       await fetchSkills();
       openSkill(trimmed);
       toast.success(`Skill '${trimmed}' created`);
-    } else {
-      const data = await res.json();
-      toast.error(data.error || "Failed to create skill");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create skill");
     }
   };
 
   const handleSave = async () => {
     setSaving(true);
-    const res = await apiFetch(
-      `/api/skills/${encodeURIComponent(editingSkill)}/${detailApiParams}`,
-      { method: "PUT", body: JSON.stringify({ content }) },
-    );
+    try {
+      const res = await apiFetch(
+        `/api/skills/${encodeURIComponent(editingSkill)}/${detailApiParams}`,
+        { method: "PUT", body: JSON.stringify({ content }) },
+      );
+      if (!res.ok) {
+        throw new Error(await extractErrorMessage(res, "Failed to save"));
+      }
+      toast.success("Saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
+    }
     setSaving(false);
-    if (res.ok) toast.success("Saved");
-    else toast.error("Failed to save");
   };
 
   const handleDelete = async () => {
-    const res = await apiFetch(
-      `/api/skills/${encodeURIComponent(editingSkill)}/${detailApiParams}`,
-      { method: "DELETE" },
-    );
-    if (res.ok) {
+    try {
+      const res = await apiFetch(
+        `/api/skills/${encodeURIComponent(editingSkill)}/${detailApiParams}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) {
+        throw new Error(await extractErrorMessage(res, "Failed to delete"));
+      }
       toast.success(`Deleted /${editingSkill}`);
       backToList();
-      fetchSkills();
-    } else {
-      toast.error("Failed to delete");
+      void fetchSkills();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
     }
   };
 
@@ -294,16 +336,18 @@ const Skills = () => {
   ) => {
     const operationId = `${sourceScope}:${targetScope}:${skill.name}`;
     setSyncingSkill(operationId);
-    const res = await apiFetch("/api/skills/symlink/", {
-      method: "POST",
-      body: JSON.stringify({
-        name: skill.name,
-        source_scope: sourceScope,
-        target_scope: targetScope,
-      }),
-    });
-    setSyncingSkill("");
-    if (res.ok) {
+    try {
+      const res = await apiFetch("/api/skills/symlink/", {
+        method: "POST",
+        body: JSON.stringify({
+          name: skill.name,
+          source_scope: sourceScope,
+          target_scope: targetScope,
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(await extractErrorMessage(res, "Failed to link skill"));
+      }
       const data = await res.json();
       await fetchSkills();
       toast.success(
@@ -311,21 +355,25 @@ const Skills = () => {
           ? `Linked /${skill.name}`
           : `/${skill.name} was already linked`,
       );
-    } else {
-      const data = await res.json().catch(() => ({}));
-      toast.error(data.error || "Failed to link skill");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to link skill");
     }
+    setSyncingSkill("");
   };
 
   const updateAutoLinkSetting = async (enabled: boolean) => {
     setSavingAutoLink(true);
-    const res = await apiFetch("/api/skills/auto-link-personal/", {
-      method: "PATCH",
-      body: JSON.stringify({ auto_link_personal_skills: enabled }),
-    });
-    setSavingAutoLink(false);
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
+    try {
+      const res = await apiFetch("/api/skills/auto-link-personal/", {
+        method: "PATCH",
+        body: JSON.stringify({ auto_link_personal_skills: enabled }),
+      });
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to update auto-link setting"),
+        );
+      }
+      const data = await res.json();
       setAutoLinkSettings(data);
       setAutoLinkSync(data.sync ?? null);
       await fetchSkills();
@@ -339,19 +387,26 @@ const Skills = () => {
       } else {
         toast.success("Auto-link is disabled");
       }
-    } else {
-      toast.error(data.error || "Failed to update auto-link setting");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update auto-link setting",
+      );
     }
+    setSavingAutoLink(false);
   };
 
   const runAutoLinkSync = async () => {
     setSavingAutoLink(true);
-    const res = await apiFetch("/api/skills/auto-link-personal/", {
-      method: "POST",
-    });
-    setSavingAutoLink(false);
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
+    try {
+      const res = await apiFetch("/api/skills/auto-link-personal/", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to scan personal skills"),
+        );
+      }
+      const data = await res.json();
       setAutoLinkSettings(data);
       setAutoLinkSync(data.sync ?? null);
       await fetchSkills();
@@ -361,9 +416,12 @@ const Skills = () => {
           ? `Auto-linked ${sync.created} skill${sync.created === 1 ? "" : "s"}`
           : "Auto-link scan complete",
       );
-    } else {
-      toast.error(data.error || "Failed to scan personal skills");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to scan personal skills",
+      );
     }
+    setSavingAutoLink(false);
   };
 
   const scopeLabel = projectPath ? projectPath.split("/").pop() : "global";
@@ -426,16 +484,23 @@ const Skills = () => {
 
   const installPrintingPressSkill = async (entry: PrintingPressEntry) => {
     setInstallingPrintingPressSkill(entry.name);
-    const res = await apiFetch("/api/skills/printing-press/install/", {
-      method: "POST",
-      body: JSON.stringify({
-        name: entry.name,
-        targets: selectedPrintingPressTargets,
-      }),
-    });
-    setInstallingPrintingPressSkill("");
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
+    try {
+      const res = await apiFetch("/api/skills/printing-press/install/", {
+        method: "POST",
+        body: JSON.stringify({
+          name: entry.name,
+          targets: selectedPrintingPressTargets,
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(
+            res,
+            `Failed to install /${entry.skill_name}`,
+          ),
+        );
+      }
+      const data = await res.json().catch(() => ({}));
       await fetchPrintingPressCatalog();
       const installed = Array.isArray(data.results)
         ? data.results.filter((result: { status: string }) => result.status === "installed").length
@@ -445,9 +510,14 @@ const Skills = () => {
           ? `Installed /${entry.skill_name}`
           : `/${entry.skill_name} was already installed`,
       );
-    } else {
-      toast.error(data.error || `Failed to install /${entry.skill_name}`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : `Failed to install /${entry.skill_name}`,
+      );
     }
+    setInstallingPrintingPressSkill("");
   };
 
   if (editingSkill) {
@@ -492,6 +562,10 @@ const Skills = () => {
               <div className="flex h-72 items-center justify-center text-[12px] text-muted-foreground">
                 Loading…
               </div>
+            ) : editorError ? (
+              <div className="flex h-72 items-center justify-center px-4 text-center text-[12px] text-destructive">
+                {editorError}
+              </div>
             ) : (
               <textarea
                 value={content}
@@ -505,7 +579,7 @@ const Skills = () => {
           <div className="flex gap-2">
             <Button
               onClick={handleSave}
-              disabled={saving || editorLoading}
+              disabled={saving || editorLoading || editorError !== null}
               size="sm"
               className="h-7 px-2.5 text-[12px]"
             >
@@ -798,6 +872,25 @@ const Skills = () => {
                 Create
               </Button>
             </form>
+
+            {listError ? (
+              <div className="flex items-center justify-between gap-3 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+                <span className="min-w-0">{listError}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 shrink-0 px-2 text-[11px]"
+                  onClick={() => {
+                    setLoading(true);
+                    void fetchSkills();
+                  }}
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Retry
+                </Button>
+              </div>
+            ) : null}
 
             {loading ? (
               <div className="text-[12px] text-muted-foreground">Loading…</div>

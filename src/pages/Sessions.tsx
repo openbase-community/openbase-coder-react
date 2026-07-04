@@ -21,6 +21,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
 import { projectName } from "@/lib/project-display";
 import { setThreadFavorite } from "@/lib/thread-favorites";
 import { groupThreadsByDay, threadListDisplayNames } from "@/lib/thread-display";
@@ -37,6 +38,7 @@ const Sessions = () => {
     threads,
     nextThreadsUrl,
     nextProjectsUrl,
+    error: listError,
     loading,
     loadingMoreProjects,
     loadingMoreThreads,
@@ -51,6 +53,8 @@ const Sessions = () => {
   useEffect(() => {
     let cancelled = false;
     const fetchSyncConflicts = async () => {
+      // Deliberately silent: this only decorates the "Sync conflicts" button
+      // with a count; the conflicts page itself surfaces load failures.
       try {
         const res = await apiFetch("/api/settings/thread-sync/conflicts/");
         if (!res.ok) return;
@@ -88,28 +92,38 @@ const Sessions = () => {
   }, [loadMoreThreads, nextThreadsUrl]);
 
   const deleteThread = async (threadId: string) => {
-    const res = await apiFetch(`/api/threads/${threadId}/`, {
-      method: "DELETE",
-    });
-    if (res.ok) {
+    try {
+      const res = await apiFetch(`/api/threads/${threadId}/`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to archive thread"),
+        );
+      }
       void fetchData();
       toast.success("Thread archived");
-    } else {
-      toast.error("Failed to archive thread");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to archive thread");
     }
   };
 
   const createThread = async (directory: string) => {
-    const res = await apiFetch("/api/threads/", {
-      method: "POST",
-      body: JSON.stringify({ directory }),
-    });
-    if (res.ok) {
+    try {
+      const res = await apiFetch("/api/threads/", {
+        method: "POST",
+        body: JSON.stringify({ directory }),
+      });
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to create thread"),
+        );
+      }
       const data = await res.json();
       setDialogOpen(false);
       navigate(`/dashboard/threads/${data.thread_id}`);
-    } else {
-      toast.error("Failed to create thread");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create thread");
     }
   };
 
@@ -213,6 +227,12 @@ const Sessions = () => {
             </Dialog>
           </div>
         </div>
+
+        {listError ? (
+          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+            {listError} — retrying automatically.
+          </div>
+        ) : null}
 
         {loading ? (
           <div className="text-[12px] text-muted-foreground">Loading…</div>

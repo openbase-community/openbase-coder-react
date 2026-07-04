@@ -10,33 +10,38 @@ import SessionDetail from "./SessionDetail";
 const DispatchChat = () => {
   const [dispatchThread, setDispatchThread] = useState<ThreadInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchDispatchThreadFallback = useCallback(async () => {
-    try {
-      const data = await fetchThreadPage(
-        apiFetch,
-        `/api/threads/?page_size=${LARGE_THREAD_PAGE_SIZE}`,
-      );
-      return (
-        data.threads.find((thread) => thread.voice_route?.role === "dispatcher") ??
-        null
-      );
-    } catch {
-      return null;
-    }
+    const data = await fetchThreadPage(
+      apiFetch,
+      `/api/threads/?page_size=${LARGE_THREAD_PAGE_SIZE}`,
+    );
+    return (
+      data.threads.find((thread) => thread.voice_route?.role === "dispatcher") ??
+      null
+    );
   }, []);
 
   const fetchDispatchThread = useCallback(async () => {
     setLoading(true);
     try {
+      let thread: ThreadInfo | null = null;
       const response = await apiFetch("/api/threads/dispatcher/");
       if (response.ok) {
-        setDispatchThread((await response.json()) as ThreadInfo);
-        return;
+        thread = (await response.json()) as ThreadInfo;
+      } else {
+        // Older CLIs do not expose the dispatcher endpoint; fall back to
+        // scanning the thread list before reporting a failure.
+        thread = await fetchDispatchThreadFallback();
       }
-      setDispatchThread(await fetchDispatchThreadFallback());
-    } catch {
-      setDispatchThread(await fetchDispatchThreadFallback());
+      setDispatchThread(thread);
+      setError(null);
+    } catch (err) {
+      setDispatchThread(null);
+      setError(
+        err instanceof Error ? err.message : "Unable to reach the local API.",
+      );
     } finally {
       setLoading(false);
     }
@@ -61,6 +66,12 @@ const DispatchChat = () => {
             Shared voice dispatch chat
           </p>
         </div>
+
+        {error ? (
+          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+            {error}
+          </div>
+        ) : null}
 
         <div className="rounded border border-dashed border-border bg-surface px-4 py-8 text-center">
           <MessageSquare className="mx-auto h-5 w-5 text-muted-foreground/40" />

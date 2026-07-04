@@ -210,51 +210,81 @@ const Reports = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [recentProjects, globalProjectsRes] = await Promise.all([
-      fetchAllProjectPages(apiFetch),
-      apiFetch("/api/projects/reports/global/"),
-    ]);
-    const globalProjectsData = await readJson(globalProjectsRes);
+    try {
+      const [recentProjects, globalProjectsRes] = await Promise.all([
+        fetchAllProjectPages(apiFetch),
+        apiFetch("/api/projects/reports/global/"),
+      ]);
+      const globalProjectsData = await readJson(globalProjectsRes);
 
-    const projects = mergeProjects(
-      recentProjects,
-      globalProjectsRes.ok ? (globalProjectsData?.projects ?? []) : [],
-    );
-    const candidates = projects.filter(
-      (project) =>
-        typeof project.reports_count !== "number" ||
-        project.reports_count > 0,
-    );
+      const projects = mergeProjects(
+        recentProjects,
+        globalProjectsRes.ok ? (globalProjectsData?.projects ?? []) : [],
+      );
+      const candidates = projects.filter(
+        (project) =>
+          typeof project.reports_count !== "number" ||
+          project.reports_count > 0,
+      );
 
-    const loaded = await Promise.all(
-      candidates.map(async (project) => {
-        const params = new URLSearchParams({ path: project.path });
-        const res = await apiFetch(`/api/projects/reports/?${params}`);
-        const data = await readJson(res);
-        if (!res.ok || !data) return [];
-        const files: ReportsFile[] = data.files ?? [];
-        return files.map((file) => ({ project, file }));
-      }),
-    );
+      let failedProjectCount = 0;
+      const loaded = await Promise.all(
+        candidates.map(async (project) => {
+          try {
+            const params = new URLSearchParams({ path: project.path });
+            const res = await apiFetch(`/api/projects/reports/?${params}`);
+            const data = await readJson(res);
+            if (!res.ok || !data) {
+              failedProjectCount += 1;
+              return [];
+            }
+            const files: ReportsFile[] = data.files ?? [];
+            return files.map((file) => ({ project, file }));
+          } catch {
+            failedProjectCount += 1;
+            return [];
+          }
+        }),
+      );
+      const partialFailures: string[] = [];
+      if (!globalProjectsRes.ok) {
+        partialFailures.push("Global report sources could not be loaded.");
+      }
+      if (failedProjectCount > 0) {
+        partialFailures.push(
+          `Reports could not be loaded for ${failedProjectCount} project${
+            failedProjectCount === 1 ? "" : "s"
+          }.`,
+        );
+      }
+      if (partialFailures.length > 0) {
+        setError(partialFailures.join(" "));
+      }
 
-    const nextItems = loaded
-      .flat()
-      .sort((a, b) => b.file.updated_at - a.file.updated_at);
+      const nextItems = loaded
+        .flat()
+        .sort((a, b) => b.file.updated_at - a.file.updated_at);
 
-    setItems(nextItems);
-    setLoading(false);
+      setItems(nextItems);
 
-    const currentExpandedKey = activeKeyRef.current;
-    if (
-      currentExpandedKey &&
-      !nextItems.some((item) => itemKey(item) === currentExpandedKey)
-    ) {
-      setActiveKey(null);
+      const currentExpandedKey = activeKeyRef.current;
+      if (
+        currentExpandedKey &&
+        !nextItems.some((item) => itemKey(item) === currentExpandedKey)
+      ) {
+        setActiveKey(null);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to reach the local API.",
+      );
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [fetchData]);
 
   const dateSections = useMemo(

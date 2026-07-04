@@ -34,6 +34,9 @@ export function PluginRegistryProvider({ children }: { children: ReactNode }) {
         setPluginConsolePages(normalizeRuntimeConsolePages(payload));
       })
       .catch(() => {
+        // Deliberately silent: plugin console pages are an optional
+        // enhancement, and a startup toast here would fire on every load
+        // when the local API is down (auth/login flows surface that state).
         if (!cancelled) {
           setPluginConsolePages([]);
         }

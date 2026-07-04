@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
-import { readJson } from "@/lib/api-errors";
+import { extractErrorMessage, readJson } from "@/lib/api-errors";
 import { setReportTags } from "@/lib/item-tags";
 import { GIT_STATUS, projectName } from "@/lib/project-display";
 import { groupReportItems } from "@/lib/reportGroups";
@@ -59,6 +59,7 @@ const ProjectDetail = () => {
     projects,
     threads,
     nextThreadsUrl,
+    error: listError,
     loading,
     loadingMoreThreads,
     fetchThreads,
@@ -66,6 +67,7 @@ const ProjectDetail = () => {
   } = useProjectsAndThreads();
   const [reportsFiles, setReportsFiles] = useState<ReportsFile[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsError, setReportsError] = useState<string | null>(null);
   const [removingProject, setRemovingProject] = useState(false);
   const threadsRef = useRef<HTMLDivElement | null>(null);
   const { tagOptions, refreshTagOptions } = useTagOptions();
@@ -227,42 +229,59 @@ const ProjectDetail = () => {
   const fetchReports = useCallback(async () => {
     if (!projectPath) return;
     setReportsLoading(true);
-    const params = new URLSearchParams({ path: projectPath });
-    const res = await apiFetch(`/api/projects/reports/?${params}`);
-    setReportsLoading(false);
-    const data = await readJson(res);
-    if (!res.ok || !data) {
+    try {
+      const params = new URLSearchParams({ path: projectPath });
+      const res = await apiFetch(`/api/projects/reports/?${params}`);
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to load reports"),
+        );
+      }
+      const data = await readJson(res);
+      if (!data) {
+        throw new Error("Failed to load reports");
+      }
+      const files = [...(data.files ?? [])].sort(
+        (a, b) => b.updated_at - a.updated_at,
+      );
+      setReportsFiles(files);
+      setReportsError(null);
+      if (
+        activeReportKey &&
+        !files.some((file) => file.path === activeReportKey)
+      ) {
+        setActiveReportKey(null);
+      }
+    } catch (err) {
       setReportsFiles([]);
       setReportsPayloads({});
       setActiveReportKey(null);
-      return;
+      setReportsError(
+        err instanceof Error ? err.message : "Unable to reach the local API.",
+      );
     }
-    const files = [...(data.files ?? [])].sort(
-      (a, b) => b.updated_at - a.updated_at,
-    );
-    setReportsFiles(files);
-    if (
-      activeReportKey &&
-      !files.some((file) => file.path === activeReportKey)
-    ) {
-      setActiveReportKey(null);
-    }
+    setReportsLoading(false);
   }, [activeReportKey, projectPath]);
 
   useEffect(() => {
-    fetchReports();
+    void fetchReports();
   }, [fetchReports]);
 
   const createThread = async () => {
-    const res = await apiFetch("/api/threads/", {
-      method: "POST",
-      body: JSON.stringify({ directory: projectPath }),
-    });
-    if (res.ok) {
+    try {
+      const res = await apiFetch("/api/threads/", {
+        method: "POST",
+        body: JSON.stringify({ directory: projectPath }),
+      });
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to create thread"),
+        );
+      }
       const data = await res.json();
       navigate(`/dashboard/threads/${data.thread_id}`);
-    } else {
-      toast.error("Failed to create thread");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create thread");
     }
   };
 
@@ -277,20 +296,24 @@ const ProjectDetail = () => {
 
   const removeProject = async () => {
     setRemovingProject(true);
-    const res = await apiFetch("/api/projects/recent/", {
-      method: "DELETE",
-      body: JSON.stringify({ path: projectPath }),
-    });
-    const data = await readJson(res);
-    setRemovingProject(false);
-
-    if (!res.ok) {
-      toast.error(data?.error || "Failed to stop tracking project");
-      return;
+    try {
+      const res = await apiFetch("/api/projects/recent/", {
+        method: "DELETE",
+        body: JSON.stringify({ path: projectPath }),
+      });
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to stop tracking project"),
+        );
+      }
+      toast.success("Project removed from recent projects");
+      navigate("/dashboard/projects");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to stop tracking project",
+      );
     }
-
-    toast.success("Project removed from recent projects");
-    navigate("/dashboard/projects");
+    setRemovingProject(false);
   };
 
   const goToDiff = () =>
@@ -330,6 +353,12 @@ const ProjectDetail = () => {
             </p>
           </div>
         </div>
+
+        {listError ? (
+          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+            {listError} — retrying automatically.
+          </div>
+        ) : null}
 
         <div className="grid gap-2 md:grid-cols-2">
           <div className="rounded border border-border bg-surface px-3 py-2">
@@ -421,6 +450,19 @@ const ProjectDetail = () => {
           {reportsLoading ? (
             <div className="px-3 py-6 text-[12px] text-muted-foreground">
               Loading reports…
+            </div>
+          ) : reportsError ? (
+            <div className="flex items-center justify-between gap-3 px-3 py-3 text-[12px] text-destructive">
+              <span className="min-w-0">{reportsError}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 shrink-0 px-2 text-[11px]"
+                onClick={() => void fetchReports()}
+              >
+                Retry
+              </Button>
             </div>
           ) : reportsFiles.length === 0 ? (
             <div className="px-3 py-6 text-[12px] text-muted-foreground">

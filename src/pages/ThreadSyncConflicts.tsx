@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -126,10 +127,16 @@ const ThreadSyncConflicts = () => {
     if (showLoading) setLoading(true);
     try {
       const res = await apiFetch("/api/settings/thread-sync/conflicts/");
-      if (!res.ok) throw new Error("request_failed");
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to load sync conflicts"),
+        );
+      }
       setPayload(await res.json());
-    } catch {
-      toast.error("Failed to load sync conflicts");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to load sync conflicts",
+      );
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -152,11 +159,17 @@ const ThreadSyncConflicts = () => {
           body: JSON.stringify({ action }),
         },
       );
-      if (!res.ok) throw new Error("request_failed");
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to resolve conflict"),
+        );
+      }
       await fetchConflicts(false);
       toast.success("Conflict resolved");
-    } catch {
-      toast.error("Failed to resolve conflict");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to resolve conflict",
+      );
     } finally {
       setResolving(null);
     }

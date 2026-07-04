@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { THREAD_LIST_REFRESH_INTERVAL_MS } from "@/lib/polling";
 import {
@@ -19,6 +20,11 @@ export const useProjectsAndThreads = () => {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [loadingMoreThreads, setLoadingMoreThreads] = useState(false);
   const [loadingMoreProjects, setLoadingMoreProjects] = useState(false);
+  const [threadsError, setThreadsError] = useState<string | null>(null);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+
+  const toErrorMessage = (err: unknown) =>
+    err instanceof Error ? err.message : "Unable to reach the local API.";
 
   const mergeProjectUpdates = useCallback((updates: Project[]) => {
     if (updates.length === 0) return;
@@ -37,14 +43,20 @@ export const useProjectsAndThreads = () => {
 
   const refreshProjectStatuses = useCallback(
     async (items: Project[]) => {
-      const updates = await fetchProjectStatuses(
-        apiFetch,
-        items.flatMap((project) => [
-          project.path,
-          ...(project.worktrees ?? []).map((worktree) => worktree.path),
-        ]),
-      );
-      mergeProjectUpdates(updates);
+      // Best-effort enrichment of git status dots: a failure leaves statuses
+      // as "checking" instead of erroring the whole page.
+      try {
+        const updates = await fetchProjectStatuses(
+          apiFetch,
+          items.flatMap((project) => [
+            project.path,
+            ...(project.worktrees ?? []).map((worktree) => worktree.path),
+          ]),
+        );
+        mergeProjectUpdates(updates);
+      } catch {
+        // Silent by design; see above.
+      }
     },
     [mergeProjectUpdates],
   );
@@ -55,6 +67,10 @@ export const useProjectsAndThreads = () => {
       setThreads(page.threads);
       setTotalThreadCount(page.count);
       setNextThreadsUrl(page.next);
+      setThreadsError(null);
+    } catch (err) {
+      // Runs on an interval, so surface via a persistent inline error state.
+      setThreadsError(toErrorMessage(err));
     } finally {
       setThreadsLoading(false);
     }
@@ -66,7 +82,10 @@ export const useProjectsAndThreads = () => {
       setProjects(page.projects);
       setTotalProjectCount(page.count);
       setNextProjectsUrl(page.next);
+      setProjectsError(null);
       void refreshProjectStatuses(page.projects);
+    } catch (err) {
+      setProjectsError(toErrorMessage(err));
     } finally {
       setProjectsLoading(false);
     }
@@ -91,6 +110,8 @@ export const useProjectsAndThreads = () => {
       });
       setTotalThreadCount(page.count);
       setNextThreadsUrl(page.next);
+    } catch (err) {
+      toast.error(toErrorMessage(err));
     } finally {
       setLoadingMoreThreads(false);
     }
@@ -112,6 +133,8 @@ export const useProjectsAndThreads = () => {
       setTotalProjectCount(page.count);
       setNextProjectsUrl(page.next);
       void refreshProjectStatuses(page.projects);
+    } catch (err) {
+      toast.error(toErrorMessage(err));
     } finally {
       setLoadingMoreProjects(false);
     }
@@ -133,6 +156,7 @@ export const useProjectsAndThreads = () => {
     totalProjectCount,
     nextThreadsUrl,
     nextProjectsUrl,
+    error: threadsError ?? projectsError,
     loading: threadsLoading,
     threadsLoading,
     projectsLoading,

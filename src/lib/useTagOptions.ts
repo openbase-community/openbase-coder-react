@@ -9,6 +9,9 @@ export const useTagOptions = () => {
     setTagOptionsLoading(true);
     try {
       setTagOptions(await fetchTagOptions());
+    } catch {
+      // Deliberately silent: tag options only power autocomplete suggestions,
+      // and tag save/update failures are surfaced by the callers themselves.
     } finally {
       setTagOptionsLoading(false);
     }

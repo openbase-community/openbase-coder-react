@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/auth";
 import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
 import { getBackendWebSocketUrl } from "@/lib/runtime-config";
 import type { ThreadInfo } from "@/types/session";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,15 +10,27 @@ export function useThreadWebSocket(threadId: string | undefined) {
   const { token } = useAuth();
   const [thread, setThread] = useState<ThreadInfo | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const reconnectDelayRef = useRef(1000);
 
   const refreshThread = useCallback(async () => {
     if (!threadId) return;
-    const res = await apiFetch(`/api/threads/${threadId}/`);
-    if (res.ok) {
+    // This runs on an interval, so failures update a persistent inline error
+    // instead of toasting on every tick.
+    try {
+      const res = await apiFetch(`/api/threads/${threadId}/`);
+      if (!res.ok) {
+        setLoadError(
+          await extractErrorMessage(res, `Unable to load thread (HTTP ${res.status}).`),
+        );
+        return;
+      }
       setThread(await res.json());
+      setLoadError(null);
+    } catch {
+      setLoadError("Unable to reach the local API.");
     }
   }, [threadId]);
 
@@ -50,7 +63,13 @@ export function useThreadWebSocket(threadId: string | undefined) {
     };
 
     ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
+      let msg;
+      try {
+        msg = JSON.parse(event.data);
+      } catch {
+        // Ignore malformed frames; the periodic refresh keeps state converging.
+        return;
+      }
 
       switch (msg.type) {
         case "thread_state":
@@ -140,8 +159,12 @@ export function useThreadWebSocket(threadId: string | undefined) {
   }, []);
 
   const interruptTurn = useCallback(() => {
-    wsRef.current?.send(JSON.stringify({ action: "interrupt_turn" }));
+    if (wsRef.current?.readyState !== WebSocket.OPEN) {
+      toast.error("Thread is not connected yet");
+      return;
+    }
+    wsRef.current.send(JSON.stringify({ action: "interrupt_turn" }));
   }, []);
 
-  return { thread, isConnected, startTurn, interruptTurn, refreshThread };
+  return { thread, isConnected, loadError, startTurn, interruptTurn, refreshThread };
 }

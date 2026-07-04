@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
 import { GIT_STATUS, projectName } from "@/lib/project-display";
 import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
 import type { Project } from "@/types/session";
@@ -31,6 +32,7 @@ const Projects = () => {
     threads,
     totalProjectCount,
     nextProjectsUrl,
+    error: listError,
     projectsLoading,
     loadingMoreProjects,
     fetchData,
@@ -48,17 +50,19 @@ const Projects = () => {
   const addProject = async () => {
     const trimmed = newPath.trim();
     if (!trimmed) return;
-    const res = await apiFetch("/api/projects/recent/", {
-      method: "POST",
-      body: JSON.stringify({ path: trimmed }),
-    });
-    if (res.ok) {
+    try {
+      const res = await apiFetch("/api/projects/recent/", {
+        method: "POST",
+        body: JSON.stringify({ path: trimmed }),
+      });
+      if (!res.ok) {
+        throw new Error(await extractErrorMessage(res, "Failed to add project"));
+      }
       setNewPath("");
-      fetchData();
+      void fetchData();
       toast.success("Project added");
-    } else {
-      const data = await res.json();
-      toast.error(data.error || "Failed to add project");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add project");
     }
   };
 
@@ -66,15 +70,20 @@ const Projects = () => {
     navigate(`/dashboard/project?path=${encodeURIComponent(project.path)}`);
 
   const createThread = async (directory: string) => {
-    const res = await apiFetch("/api/threads/", {
-      method: "POST",
-      body: JSON.stringify({ directory }),
-    });
-    if (res.ok) {
+    try {
+      const res = await apiFetch("/api/threads/", {
+        method: "POST",
+        body: JSON.stringify({ directory }),
+      });
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to create thread"),
+        );
+      }
       const data = await res.json();
       navigate(`/dashboard/threads/${data.thread_id}`);
-    } else {
-      toast.error("Failed to create thread");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create thread");
     }
   };
 
@@ -157,6 +166,12 @@ const Projects = () => {
             </Button>
           </form>
         </div>
+
+        {listError ? (
+          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+            {listError} — retrying automatically.
+          </div>
+        ) : null}
 
         {/* List */}
         {projectsLoading ? (

@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
 import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
 import { setThreadFavorite } from "@/lib/thread-favorites";
 import {
   threadAgentVoiceName,
@@ -70,9 +71,14 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
   const threadId = threadIdOverride ?? routeThreadId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { thread, isConnected, startTurn, interruptTurn, refreshThread } =
+  const { thread, isConnected, loadError, startTurn, interruptTurn, refreshThread } =
     useThreadWebSocket(threadId);
   const [prompt, setPrompt] = useState("");
+  const hasConnectedRef = useRef(false);
+  if (isConnected) {
+    hasConnectedRef.current = true;
+  }
+  const connectionLost = hasConnectedRef.current && !isConnected;
   const outputRef = useRef<HTMLPreElement>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
   const currentTurnOutput = thread?.current_turn?.accumulated_output;
@@ -140,14 +146,17 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
 
   const archiveThread = async () => {
     if (!thread) return;
-    const res = await apiFetch(`/api/threads/${thread.thread_id}/`, {
-      method: "DELETE",
-    });
-    if (res.ok) {
+    try {
+      const res = await apiFetch(`/api/threads/${thread.thread_id}/`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        throw new Error(await extractErrorMessage(res, "Failed to archive thread"));
+      }
       toast.success("Thread archived");
       navigate("/dashboard/threads");
-    } else {
-      toast.error("Failed to archive thread");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to archive thread");
     }
   };
 
@@ -275,6 +284,14 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
           </div>
         ) : null}
 
+        {thread && (connectionLost || loadError) ? (
+          <div className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-[12px] text-warning">
+            {loadError
+              ? loadError
+              : "Live connection lost — reconnecting… Updates may be delayed."}
+          </div>
+        ) : null}
+
         {thread && thread.turn_history.length > 0 ? (
           <section className="overflow-hidden rounded border border-border bg-surface">
             <div className="border-b border-border bg-surface-muted px-3 py-1.5">
@@ -370,9 +387,15 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
         ) : null}
 
         {!thread ? (
-          <div className="py-12 text-center text-[12px] text-muted-foreground">
-            {isConnected ? "Loading…" : "Connecting…"}
-          </div>
+          loadError ? (
+            <div className="mx-auto mt-12 max-w-md rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-[12px] text-destructive">
+              {loadError}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-[12px] text-muted-foreground">
+              {isConnected ? "Loading…" : "Connecting…"}
+            </div>
+          )
         ) : null}
       </div>
     </DashboardLayout>

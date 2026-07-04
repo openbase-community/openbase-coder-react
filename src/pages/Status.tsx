@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
 import type { ServiceStatus } from "@/types/session";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -8,10 +9,24 @@ import { useCallback, useEffect, useState } from "react";
 const Status = () => {
   const [services, setServices] = useState<Record<string, ServiceStatus>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
-    const res = await apiFetch("/api/status/");
-    if (res.ok) setServices((await res.json()).services);
+    // Polled every 30s: failures update a persistent inline banner.
+    try {
+      const res = await apiFetch("/api/status/");
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Failed to load service status"),
+        );
+      }
+      setServices((await res.json()).services);
+      setError(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to reach the local API.",
+      );
+    }
     setLoading(false);
   }, []);
 
@@ -55,6 +70,12 @@ const Status = () => {
             Refresh
           </Button>
         </div>
+
+        {error ? (
+          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+            {error} — retrying automatically.
+          </div>
+        ) : null}
 
         {entries.length === 0 ? (
           <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center text-[12px] text-muted-foreground">

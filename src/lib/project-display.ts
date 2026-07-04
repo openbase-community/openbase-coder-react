@@ -1,3 +1,4 @@
+import { extractErrorMessage } from "@/lib/api-errors";
 import type {
   GitStatus,
   Project,
@@ -45,14 +46,9 @@ export const fetchThreadPage = async (
 ): Promise<ThreadListResponse> => {
   const response = await fetcher(path);
   if (!response.ok) {
-    return {
-      threads: [],
-      count: 0,
-      page: 1,
-      page_size: THREAD_PAGE_SIZE,
-      next: null,
-      previous: null,
-    };
+    throw new Error(
+      await extractErrorMessage(response, "Failed to load threads"),
+    );
   }
 
   const data = await response.json();
@@ -74,14 +70,9 @@ export const fetchProjectPage = async (
 ): Promise<ProjectListResponse> => {
   const response = await fetcher(path);
   if (!response.ok) {
-    return {
-      projects: [],
-      count: 0,
-      page: 1,
-      page_size: PROJECT_PAGE_SIZE,
-      next: null,
-      previous: null,
-    };
+    throw new Error(
+      await extractErrorMessage(response, "Failed to load projects"),
+    );
   }
 
   const data = await response.json();

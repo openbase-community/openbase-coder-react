@@ -2,6 +2,7 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { ThreadListItem } from "@/components/ThreadListItem";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
 import { THREAD_LIST_REFRESH_INTERVAL_MS } from "@/lib/polling";
 import {
   fetchProjectPage,
@@ -20,16 +21,31 @@ const Dashboard = () => {
   const [threads, setThreads] = useState<ThreadInfo[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [services, setServices] = useState<Record<string, ServiceStatus>>({});
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    const [threadsPage, projectsPage, statusRes] = await Promise.all([
-      fetchThreadPage(apiFetch),
-      fetchProjectPage(apiFetch),
-      apiFetch("/api/status/"),
-    ]);
-    setThreads(threadsPage.threads);
-    setProjects(projectsPage.projects);
-    if (statusRes.ok) setServices((await statusRes.json()).services);
+    // Polled on an interval: failures update a persistent inline banner
+    // instead of toasting on every tick.
+    try {
+      const [threadsPage, projectsPage, statusRes] = await Promise.all([
+        fetchThreadPage(apiFetch),
+        fetchProjectPage(apiFetch),
+        apiFetch("/api/status/"),
+      ]);
+      setThreads(threadsPage.threads);
+      setProjects(projectsPage.projects);
+      if (!statusRes.ok) {
+        throw new Error(
+          await extractErrorMessage(statusRes, "Failed to load service status"),
+        );
+      }
+      setServices((await statusRes.json()).services);
+      setError(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to reach the local API.",
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -85,6 +101,12 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <div className="space-y-5">
+        {error ? (
+          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+            {error} — retrying automatically.
+          </div>
+        ) : null}
+
         {serviceWarning ? (
           <button
             onClick={() => navigate("/dashboard/status")}
