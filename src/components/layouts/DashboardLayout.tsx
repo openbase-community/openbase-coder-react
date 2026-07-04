@@ -27,6 +27,7 @@ import {
 } from "@/lib/sidebar-preferences";
 import { openExternalUrl } from "@/lib/external-links";
 import { getBackendBaseUrl } from "@/lib/runtime-config";
+import { useCliVersions } from "@/lib/useCliVersions";
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -53,6 +54,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const [hiddenSidebarItems, setHiddenSidebarItems] = useState<string[]>(() =>
     readHiddenSidebarItems(),
   );
+  const cliVersions = useCliVersions();
 
   useEffect(() => {
     const refresh = () => setHiddenSidebarItems(readHiddenSidebarItems());
@@ -169,6 +171,30 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
           <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
             <SidebarMenu className="gap-px">{renderNavItems(settingsNav)}</SidebarMenu>
+            {cliVersions?.cli ? (
+              <div
+                className="flex items-center gap-1.5 px-2 pt-1 text-[10px] text-sidebar-foreground/45"
+                title={
+                  cliVersions.update_required
+                    ? "CLI update required"
+                    : cliVersions.update_available
+                      ? "CLI update available"
+                      : undefined
+                }
+              >
+                <span className="truncate font-mono">
+                  CLI v{cliVersions.cli}
+                  {cliVersions.standalone && cliVersions.channel
+                    ? ` · ${cliVersions.channel}`
+                    : ""}
+                </span>
+                {cliVersions.update_required ? (
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warning" />
+                ) : cliVersions.update_available ? (
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-foreground/40" />
+                ) : null}
+              </div>
+            ) : null}
           </SidebarFooter>
         </Sidebar>
 
