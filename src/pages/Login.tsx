@@ -1,13 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { ArrowRight, Terminal } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function Login() {
   const { refreshAuth } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -21,11 +20,7 @@ export default function Login() {
       const description =
         error instanceof Error ? error.message : "Unable to verify local login.";
       setMessage(description);
-      toast({
-        title: "Unable to continue",
-        description,
-        variant: "destructive",
-      });
+      toast.error("Unable to continue", { description });
     } finally {
       setIsLoading(false);
     }

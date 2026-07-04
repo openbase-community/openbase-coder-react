@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layouts/ExampleLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -119,7 +119,6 @@ const mergeExpectedDocuments = (
           ? "~/.openbase/claude_config"
           : codexHome,
     exists: false,
-    existenceKnown: false,
     ...apiByTarget.get(target.id),
     existenceKnown: apiByTarget.has(target.id),
   }));

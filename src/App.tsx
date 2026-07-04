@@ -1,6 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/contexts/auth";
-import { getRuntimeShell } from "@/lib/runtime-config";
+import { getBackendBaseUrl, getRuntimeShell } from "@/lib/runtime-config";
 import { usePluginRegistry } from "@/plugin-registry";
 import type { PluginConsolePage } from "@/types/plugins";
 import {
@@ -22,7 +22,6 @@ import Devices from "./pages/Devices";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import ProjectDetail from "./pages/ProjectDetail";
-import ProjectView from "./pages/ProjectView";
 import Projects from "./pages/Projects";
 import Routines from "./pages/Routines";
 import SessionDetail from "./pages/SessionDetail";
@@ -57,34 +56,19 @@ function PluginConsoleRoute({
   const [searchParams] = useSearchParams();
   const projectPath = searchParams.get("path") || undefined;
   const stack = searchParams.get("stack") || undefined;
-  if (page.render === "iframe" && page.iframeUrl) {
-    const url = new URL(page.iframeUrl, window.location.origin);
-    if (projectPath) {
-      url.searchParams.set("projectPath", projectPath);
-    }
-    if (stack) {
-      url.searchParams.set("stack", stack);
-    }
-    url.searchParams.set("pluginId", page.pluginId);
-    return (
-      <iframe
-        title={page.title}
-        src={`${url.pathname}${url.search}`}
-        className="h-screen w-full border-0"
-      />
-    );
+  const url = new URL(page.iframeUrl, `${getBackendBaseUrl()}/`);
+  if (projectPath) {
+    url.searchParams.set("projectPath", projectPath);
   }
-
-  if (!page.component) {
-    return <NotFound />;
+  if (stack) {
+    url.searchParams.set("stack", stack);
   }
-
-  const Component = page.component;
+  url.searchParams.set("pluginId", page.pluginId);
   return (
-    <Component
-      projectPath={projectPath}
-      stack={stack}
-      pluginId={page.pluginId}
+    <iframe
+      title={page.title}
+      src={url.toString()}
+      className="h-screen w-full border-0"
     />
   );
 }
@@ -116,14 +100,6 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Projects />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard/project-view"
-        element={
-          <ProtectedRoute>
-            <ProjectView />
           </ProtectedRoute>
         }
       />

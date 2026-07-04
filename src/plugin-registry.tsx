@@ -6,57 +6,36 @@ import {
   useContext,
   type ReactNode,
 } from "react";
-export type {
-  PluginConsolePage,
-  PluginProjectView,
-} from "./types/plugins";
-import type {
-  PluginConsolePage,
-  PluginProjectView,
-} from "./types/plugins";
-
-export type PluginRegistryModule = {
-  pluginConsolePages?: PluginConsolePage[];
-  pluginProjectViews?: PluginProjectView[];
-};
+import { getBackendUrl } from "@/lib/runtime-config";
+export type { PluginConsolePage } from "./types/plugins";
+import type { PluginConsolePage } from "./types/plugins";
 
 type PluginRegistryValue = {
   pluginConsolePages: PluginConsolePage[];
-  pluginProjectViews: PluginProjectView[];
 };
 
 const PluginRegistryContext = createContext<PluginRegistryValue>({
   pluginConsolePages: [],
-  pluginProjectViews: [],
 });
 
-export function PluginRegistryProvider({
-  children,
-  pluginConsolePages,
-  pluginProjectViews,
-}: PluginRegistryValue & { children: ReactNode }) {
-  const [runtimeConsolePages, setRuntimeConsolePages] = useState<
+export function PluginRegistryProvider({ children }: { children: ReactNode }) {
+  const [pluginConsolePages, setPluginConsolePages] = useState<
     PluginConsolePage[]
-  >([]);
-  const [runtimeProjectViews, setRuntimeProjectViews] = useState<
-    PluginProjectView[]
   >([]);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/plugins/console-registry/")
+    fetch(getBackendUrl("/api/plugins/console-registry/"))
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
         if (cancelled || !payload) {
           return;
         }
-        setRuntimeConsolePages(normalizeRuntimeConsolePages(payload));
-        setRuntimeProjectViews([]);
+        setPluginConsolePages(normalizeRuntimeConsolePages(payload));
       })
       .catch(() => {
         if (!cancelled) {
-          setRuntimeConsolePages([]);
-          setRuntimeProjectViews([]);
+          setPluginConsolePages([]);
         }
       });
     return () => {
@@ -64,21 +43,7 @@ export function PluginRegistryProvider({
     };
   }, []);
 
-  const value = useMemo(
-    () => ({
-      pluginConsolePages: mergeConsolePages(
-        pluginConsolePages,
-        runtimeConsolePages,
-      ),
-      pluginProjectViews: [...pluginProjectViews, ...runtimeProjectViews],
-    }),
-    [
-      pluginConsolePages,
-      pluginProjectViews,
-      runtimeConsolePages,
-      runtimeProjectViews,
-    ],
-  );
+  const value = useMemo(() => ({ pluginConsolePages }), [pluginConsolePages]);
 
   return (
     <PluginRegistryContext.Provider value={value}>
@@ -89,27 +54,6 @@ export function PluginRegistryProvider({
 
 export function usePluginRegistry() {
   return useContext(PluginRegistryContext);
-}
-
-export function resolvePluginRegistry(
-  generated: Record<string, PluginRegistryModule>,
-  registryPath: string,
-): PluginRegistryValue {
-  const generatedRegistry = generated[registryPath];
-  return {
-    pluginConsolePages: generatedRegistry?.pluginConsolePages ?? [],
-    pluginProjectViews: generatedRegistry?.pluginProjectViews ?? [],
-  };
-}
-
-export function getProjectViewByStack(
-  pluginProjectViews: PluginProjectView[],
-  stack: string | null | undefined,
-): PluginProjectView | undefined {
-  if (!stack) {
-    return undefined;
-  }
-  return pluginProjectViews.find((item) => item.stack === stack);
 }
 
 function normalizeRuntimeConsolePages(payload: unknown): PluginConsolePage[] {
@@ -142,8 +86,7 @@ function normalizeRuntimeConsolePages(payload: unknown): PluginConsolePage[] {
       const title = stringValue(page.title) || key;
       const route = stringValue(page.route);
       const iframeUrl = stringValue(page.iframe_url);
-      const render = stringValue(page.render);
-      if (!key || !title || !route || render !== "iframe" || !iframeUrl) {
+      if (!key || !title || !route || !iframeUrl) {
         continue;
       }
       pages.push({
@@ -152,26 +95,11 @@ function normalizeRuntimeConsolePages(payload: unknown): PluginConsolePage[] {
         title,
         route,
         sidebar: page.sidebar !== false,
-        render: "iframe",
         iframeUrl,
       });
     }
   }
   return pages;
-}
-
-function mergeConsolePages(
-  compiledPages: PluginConsolePage[],
-  runtimePages: PluginConsolePage[],
-): PluginConsolePage[] {
-  const byKey = new Map<string, PluginConsolePage>();
-  for (const page of compiledPages) {
-    byKey.set(`${page.pluginId}:${page.key}`, page);
-  }
-  for (const page of runtimePages) {
-    byKey.set(`${page.pluginId}:${page.key}`, page);
-  }
-  return [...byKey.values()];
 }
 
 function stringValue(value: unknown): string {

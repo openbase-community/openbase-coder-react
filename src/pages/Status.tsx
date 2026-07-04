@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layouts/ExampleLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import type { ServiceStatus } from "@/types/session";

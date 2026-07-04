@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layouts/ExampleLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { getRuntimeShell } from "@/lib/runtime-config";
 import React from "react";
 import { AuthenticationSettings } from "./settings/AuthenticationSettings";

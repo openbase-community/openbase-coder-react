@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layouts/ExampleLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
   ResourceEmptyState,
   ResourceError,
@@ -23,6 +23,7 @@ import {
   ArrowLeft,
   ChevronRight,
   EyeOff,
+  RefreshCw,
   Server,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";

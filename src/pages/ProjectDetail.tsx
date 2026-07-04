@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layouts/ExampleLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
   ReportFileDetailView,
   ReportFileListRow,
@@ -20,7 +20,6 @@ import { apiFetch } from "@/lib/api";
 import { readJson } from "@/lib/api-errors";
 import { setReportTags } from "@/lib/item-tags";
 import { GIT_STATUS, projectName } from "@/lib/project-display";
-import { nextReportIndexAfterDelete } from "@/lib/reportDetailNavigation";
 import { groupReportItems } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
 import { setThreadFavorite } from "@/lib/thread-favorites";
@@ -29,7 +28,8 @@ import {
   shouldDeemphasizeThread,
   threadVoiceLabel,
 } from "@/lib/thread-display";
-import { useReportFileActions } from "@/lib/useReportFileActions";
+import { useReportBrowser } from "@/lib/useReportBrowser";
+import type { ReportFileTarget } from "@/lib/useReportFileActions";
 import { useTagOptions } from "@/lib/useTagOptions";
 import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,6 @@ const ProjectDetail = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const projectPath = searchParams.get("path") || "";
-  const reportPathParam = searchParams.get("report");
   const {
     projects,
     threads,
@@ -66,17 +65,53 @@ const ProjectDetail = () => {
     loadMoreThreads,
   } = useProjectsAndThreads();
   const [reportsFiles, setReportsFiles] = useState<ReportsFile[]>([]);
-  const [activeReportKey, setActiveReportKey] = useState<string | null>(
-    null,
-  );
-  const [reportScrollTops, setReportScrollTops] = useState<Record<string, number>>({});
-  const [expandedReportGroups, setExpandedReportGroups] = useState<Set<string>>(
-    () => new Set(),
-  );
   const [reportsLoading, setReportsLoading] = useState(false);
   const [removingProject, setRemovingProject] = useState(false);
   const threadsRef = useRef<HTMLDivElement | null>(null);
   const { tagOptions, refreshTagOptions } = useTagOptions();
+
+  const getReportKey = useCallback((file: ReportsFile) => file.path, []);
+  const getReportTarget = useCallback(
+    (file: ReportsFile): ReportFileTarget => ({
+      key: file.path,
+      projectPath,
+      file,
+    }),
+    [projectPath],
+  );
+  const applyReportParams = useCallback(
+    (params: URLSearchParams, file: ReportsFile) => {
+      params.set("path", projectPath);
+      params.set("report", file.path);
+    },
+    [projectPath],
+  );
+  const clearReportParams = useCallback(
+    (params: URLSearchParams) => {
+      params.set("path", projectPath);
+      params.delete("report");
+    },
+    [projectPath],
+  );
+  const isReportRequested = useCallback(
+    (params: URLSearchParams) => Boolean(params.get("report")),
+    [],
+  );
+  const findRequestedReport = useCallback(
+    (params: URLSearchParams) => {
+      const reportPath = params.get("report");
+      return (
+        reportsFiles.find((candidate) => candidate.path === reportPath) ?? null
+      );
+    },
+    [reportsFiles],
+  );
+  const handleReportDeleted = useCallback(({ key }: ReportFileTarget) => {
+    setReportsFiles((current) =>
+      current.filter((currentFile) => currentFile.path !== key),
+    );
+  }, []);
+
   const {
     payloads: reportsPayloads,
     fileLoadingKey: reportsFileLoadingKey,
@@ -85,23 +120,36 @@ const ProjectDetail = () => {
     savingKey: savingReportKey,
     actioningKey: actioningReportKey,
     followUpSendingKey: followUpSendingReportKey,
-    loadReportFile,
-    deleteReport: deleteReportAction,
-    downloadReport: downloadReportAction,
     saveReportFile,
-    startReportAction,
     sendReportFollowUp,
     setPayloads: setReportsPayloads,
-  } = useReportFileActions({
+    activeKey: activeReportKey,
+    setActiveKey: setActiveReportKey,
+    activeItem: activeReportFile,
+    hasPrevious: hasPreviousReport,
+    hasNext: hasNextReport,
+    expandedGroups: expandedReportGroups,
+    toggleGroup: toggleReportGroup,
+    getScrollTop: getReportScrollTop,
+    setScrollTop: setReportScrollTop,
+    openItem: openReport,
+    closeItem: closeReport,
+    openAdjacentItem: openAdjacentReport,
+    deleteItem: deleteReportFile,
+    downloadItem: downloadReport,
+    deleteActiveItem: deleteActiveReportFile,
+    startItemAction: startReportActionTurn,
+  } = useReportBrowser<ReportsFile>({
+    items: reportsFiles,
+    getKey: getReportKey,
+    getTarget: getReportTarget,
+    pathname: "/dashboard/project",
+    applyItemParams: applyReportParams,
+    clearItemParams: clearReportParams,
+    isItemRequested: isReportRequested,
+    findRequestedItem: findRequestedReport,
     loadErrorMessage: "Unable to load this file. The local API may need to restart.",
-    onDeleted: ({ key }) => {
-      setReportsFiles((current) =>
-        current.filter((currentFile) => currentFile.path !== key),
-      );
-      if (activeReportKey === key) {
-        setActiveReportKey(null);
-      }
-    },
+    onItemDeleted: handleReportDeleted,
   });
 
   const project = useMemo(
@@ -128,79 +176,6 @@ const ProjectDetail = () => {
     [reportsFiles],
   );
 
-  const loadReportsFile = useCallback(
-    async (file: ReportsFile) => {
-      setActiveReportKey(file.path);
-      await loadReportFile({ key: file.path, projectPath, file });
-    },
-    [loadReportFile, projectPath],
-  );
-
-  const navigateToReport = useCallback(
-    (file: ReportsFile, options: { replace?: boolean } = {}) => {
-      const params = new URLSearchParams(searchParams);
-      params.set("path", projectPath);
-      params.set("report", file.path);
-      navigate(
-        {
-          pathname: "/dashboard/project",
-          search: params.toString(),
-        },
-        options,
-      );
-    },
-    [navigate, projectPath, searchParams],
-  );
-
-  const navigateToProjectList = useCallback(
-    (options: { replace?: boolean } = {}) => {
-      const params = new URLSearchParams(searchParams);
-      params.set("path", projectPath);
-      params.delete("report");
-      navigate(
-        {
-          pathname: "/dashboard/project",
-          search: params.toString(),
-        },
-        options,
-      );
-    },
-    [navigate, projectPath, searchParams],
-  );
-
-  const openReport = (file: ReportsFile) => {
-    navigateToReport(file);
-    loadReportsFile(file);
-  };
-
-  const closeReport = () => navigateToProjectList({ replace: true });
-
-  const toggleReportGroup = (key: string) => {
-    setExpandedReportGroups((current) => {
-      const next = new Set(current);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  };
-
-  const deleteReportFile = useCallback(
-    async (file: ReportsFile) => {
-      return deleteReportAction({ key: file.path, projectPath, file });
-    },
-    [deleteReportAction, projectPath],
-  );
-
-  const downloadReport = useCallback(
-    async (file: ReportsFile) => {
-      await downloadReportAction({ key: file.path, projectPath, file });
-    },
-    [downloadReportAction, projectPath],
-  );
-
   const saveReportContent = useCallback(
     async (file: ReportsFile, content: string) => {
       const payload = await saveReportFile(
@@ -217,17 +192,6 @@ const ProjectDetail = () => {
       return payload;
     },
     [projectPath, saveReportFile],
-  );
-
-  const startReportActionTurn = useCallback(
-    async (file: ReportsFile) => {
-      const result = await startReportAction({ key: file.path, projectPath, file });
-      if (result?.thread_id) {
-        setActiveReportKey(null);
-        navigate(`/dashboard/threads/${result.thread_id}`);
-      }
-    },
-    [navigate, projectPath, startReportAction],
   );
 
   const updateReportTags = useCallback(
@@ -301,59 +265,6 @@ const ProjectDetail = () => {
       toast.error("Failed to create thread");
     }
   };
-
-  const activeReportIndex = reportsFiles.findIndex(
-    (file) => file.path === activeReportKey,
-  );
-  const activeReportFile =
-    activeReportIndex >= 0 ? reportsFiles[activeReportIndex] : null;
-  const openAdjacentReport = (direction: number) => {
-    if (activeReportIndex < 0) return;
-    const nextFile = reportsFiles[activeReportIndex + direction];
-    if (nextFile) {
-      navigateToReport(nextFile);
-      loadReportsFile(nextFile);
-    }
-  };
-  const deleteActiveReportFile = useCallback(
-    async (file: ReportsFile) => {
-      const index = reportsFiles.findIndex(
-        (currentFile) => currentFile.path === file.path,
-      );
-      const nextIndex = nextReportIndexAfterDelete(index, reportsFiles.length);
-      const nextFile = nextIndex >= 0 ? reportsFiles[nextIndex] : null;
-      const deleted = await deleteReportFile(file);
-      if (!deleted) return;
-
-      if (nextFile) {
-        navigateToReport(nextFile, { replace: true });
-        await loadReportsFile(nextFile);
-      } else {
-        navigateToProjectList({ replace: true });
-      }
-    },
-    [
-      deleteReportFile,
-      loadReportsFile,
-      navigateToProjectList,
-      navigateToReport,
-      reportsFiles,
-    ],
-  );
-
-  useEffect(() => {
-    if (!reportPathParam) {
-      setActiveReportKey(null);
-      return;
-    }
-
-    const file = reportsFiles.find(
-      (candidate) => candidate.path === reportPathParam,
-    );
-    if (file) {
-      loadReportsFile(file);
-    }
-  }, [loadReportsFile, reportPathParam, reportsFiles]);
 
   const toggleThreadFavorite = async (thread: ThreadInfo) => {
     try {
@@ -650,10 +561,8 @@ const ProjectDetail = () => {
             onClose={closeReport}
             onPrevious={() => openAdjacentReport(-1)}
             onNext={() => openAdjacentReport(1)}
-            hasPrevious={activeReportIndex > 0}
-            hasNext={
-              activeReportIndex >= 0 && activeReportIndex < reportsFiles.length - 1
-            }
+            hasPrevious={hasPreviousReport}
+            hasNext={hasNextReport}
             onStartAction={() => void startReportActionTurn(activeReportFile)}
             onOpenThread={
               reportsPayloads[activeReportFile.path]?.provenance?.thread_id
@@ -693,12 +602,9 @@ const ProjectDetail = () => {
             downloading={downloadingReportKey === activeReportFile.path}
             deleting={deletingReportKey === activeReportFile.path}
             saving={savingReportKey === activeReportFile.path}
-            scrollTop={reportScrollTops[activeReportFile.path] ?? 0}
+            scrollTop={getReportScrollTop(activeReportFile.path)}
             onScrollTopChange={(scrollTop) =>
-              setReportScrollTops((current) => ({
-                ...current,
-                [activeReportFile.path]: scrollTop,
-              }))
+              setReportScrollTop(activeReportFile.path, scrollTop)
             }
           />
         ) : null}

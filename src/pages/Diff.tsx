@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layouts/ExampleLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/contexts/auth";
 import { projectName } from "@/lib/project-display";

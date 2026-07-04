@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layouts/ExampleLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,8 +50,8 @@ interface AutoLinkSyncResult {
 }
 
 interface AutoLinkSettings {
-  auto_link_normal_codex_skills: boolean;
-  normal_codex_skills_dir: string;
+  auto_link_personal_skills: boolean;
+  personal_skills_dir: string;
   openbase_codex_skills_dir: string;
   sync: AutoLinkSyncResult | null;
 }
@@ -100,9 +100,9 @@ interface PrintingPressCatalog {
 }
 
 const printingPressTargets = [
-  { key: "home", label: "Normal Codex" },
-  { key: "voice_coder", label: "Openbase Codex" },
-  { key: "claude", label: "Openbase Claude" },
+  { key: "home", label: "Personal" },
+  { key: "openbase_codex", label: "Openbase Codex" },
+  { key: "openbase_claude", label: "Openbase Claude" },
 ];
 
 const Skills = () => {
@@ -142,7 +142,7 @@ const Skills = () => {
   const [printingPressCategory, setPrintingPressCategory] = useState("");
   const [selectedPrintingPressName, setSelectedPrintingPressName] = useState("");
   const [selectedPrintingPressTargets, setSelectedPrintingPressTargets] =
-    useState(["home", "voice_coder", "claude"]);
+    useState(["home", "openbase_codex", "openbase_claude"]);
   const [installingPrintingPressSkill, setInstallingPrintingPressSkill] =
     useState("");
 
@@ -165,8 +165,8 @@ const Skills = () => {
       setSkills(data.skills);
       setSections(data.sections ?? []);
       setSkillsDir(data.skills_dir);
-      setAutoLinkSettings(data.auto_link_normal_codex_skills ?? null);
-      setAutoLinkSync(data.auto_link_normal_codex_skills_sync ?? null);
+      setAutoLinkSettings(data.auto_link_personal_skills ?? null);
+      setAutoLinkSync(data.auto_link_personal_skills_sync ?? null);
     }
     setLoading(false);
   }, [listApiParams]);
@@ -319,9 +319,9 @@ const Skills = () => {
 
   const updateAutoLinkSetting = async (enabled: boolean) => {
     setSavingAutoLink(true);
-    const res = await apiFetch("/api/skills/auto-link-normal-codex/", {
+    const res = await apiFetch("/api/skills/auto-link-personal/", {
       method: "PATCH",
-      body: JSON.stringify({ auto_link_normal_codex_skills: enabled }),
+      body: JSON.stringify({ auto_link_personal_skills: enabled }),
     });
     setSavingAutoLink(false);
     const data = await res.json().catch(() => ({}));
@@ -346,7 +346,7 @@ const Skills = () => {
 
   const runAutoLinkSync = async () => {
     setSavingAutoLink(true);
-    const res = await apiFetch("/api/skills/auto-link-normal-codex/", {
+    const res = await apiFetch("/api/skills/auto-link-personal/", {
       method: "POST",
     });
     setSavingAutoLink(false);
@@ -362,7 +362,7 @@ const Skills = () => {
           : "Auto-link scan complete",
       );
     } else {
-      toast.error(data.error || "Failed to scan normal Codex skills");
+      toast.error(data.error || "Failed to scan personal skills");
     }
   };
 
@@ -394,16 +394,16 @@ const Skills = () => {
   const scopeName = (scope: string) =>
     sectionsByKey[scope]?.label ??
     (scope === "home"
-      ? "Normal Codex"
-      : scope === "voice_coder"
+      ? "Personal"
+      : scope === "openbase_codex"
         ? "Openbase Codex"
         : scope);
   const scopeButtonLabel = (scope: string) =>
     scope === "home"
-      ? "Normal"
-      : scope === "voice_coder"
+      ? "Personal"
+      : scope === "openbase_codex"
         ? "Codex"
-        : scope === "claude"
+        : scope === "openbase_claude"
           ? "Claude"
           : scopeName(scope);
   const skillDirForComparison = (skill: SkillEntry) =>
@@ -466,7 +466,9 @@ const Skills = () => {
             </h1>
             {!projectPath && editingScope !== "home" ? (
               <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                voice coder
+                {editingScope === "openbase_claude"
+                  ? "openbase claude"
+                  : "openbase codex"}
               </span>
             ) : null}
             <span className="font-mono text-[11px] text-muted-foreground/70">
@@ -806,9 +808,7 @@ const Skills = () => {
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <label className="flex min-w-0 items-center gap-2">
                         <Checkbox
-                          checked={
-                            autoLinkSettings.auto_link_normal_codex_skills
-                          }
+                          checked={autoLinkSettings.auto_link_personal_skills}
                           disabled={savingAutoLink}
                           onCheckedChange={(checked) =>
                             updateAutoLinkSetting(checked === true)
@@ -816,11 +816,11 @@ const Skills = () => {
                         />
                         <span className="min-w-0">
                           <span className="block text-[13px] font-medium text-foreground">
-                            Auto-link normal Codex skills
+                            Auto-link personal skills
                           </span>
                           <span className="block truncate text-[11.5px] text-muted-foreground">
-                            Symlink normal Codex skills into Openbase Codex when
-                            this page refreshes.
+                            Symlink personal skills into the Openbase Codex and
+                            Claude homes when this page refreshes.
                           </span>
                         </span>
                       </label>

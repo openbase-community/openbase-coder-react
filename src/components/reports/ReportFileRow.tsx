@@ -110,6 +110,8 @@ type ReportFileDetailViewProps = {
   hasPrevious?: boolean;
   hasNext?: boolean;
   onStartAction?: () => void;
+  onOpenThread?: () => void;
+  onSendFollowUp?: (message: string) => Promise<boolean> | boolean;
   onDownload: () => void;
   onDelete: () => void;
   onSaveContent?: (content: string) => Promise<ReportFilePayload | null> | ReportFilePayload | null;
@@ -118,6 +120,7 @@ type ReportFileDetailViewProps = {
   downloading?: boolean;
   deleting?: boolean;
   saving?: boolean;
+  followUpSending?: boolean;
   tagOptions?: TagOption[];
   tagsDisabled?: boolean;
   scrollTop?: number;

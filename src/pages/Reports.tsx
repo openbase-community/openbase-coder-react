@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layouts/ExampleLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
   ResourceEmptyState,
   ResourceError,
@@ -14,10 +14,10 @@ import { apiFetch } from "@/lib/api";
 import { readJson } from "@/lib/api-errors";
 import { setReportTags } from "@/lib/item-tags";
 import { fetchAllProjectPages, projectName } from "@/lib/project-display";
-import { nextReportIndexAfterDelete } from "@/lib/reportDetailNavigation";
 import { groupReportItemsByDay } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
-import { useReportFileActions } from "@/lib/useReportFileActions";
+import { useReportBrowser } from "@/lib/useReportBrowser";
+import type { ReportFileTarget } from "@/lib/useReportFileActions";
 import { useTagOptions } from "@/lib/useTagOptions";
 import type { ReportsFile, Project } from "@/types/session";
 import {
@@ -26,8 +26,8 @@ import {
   ExternalLink,
   Folder,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 type ReportsItem = {
@@ -36,6 +36,25 @@ type ReportsItem = {
 };
 
 const itemKey = (item: ReportsItem) => `${item.project.path}:${item.file.path}`;
+
+const itemTarget = (item: ReportsItem): ReportFileTarget => ({
+  key: itemKey(item),
+  projectPath: item.project.path,
+  file: item.file,
+});
+
+const applyItemParams = (params: URLSearchParams, item: ReportsItem) => {
+  params.set("project", item.project.path);
+  params.set("report", item.file.path);
+};
+
+const clearItemParams = (params: URLSearchParams) => {
+  params.delete("project");
+  params.delete("report");
+};
+
+const isItemRequested = (params: URLSearchParams) =>
+  Boolean(params.get("project") && params.get("report"));
 
 const mergeProjects = (projects: Project[], globalProjects: Project[]) => {
   const byPath = new Map<string, Project>();
@@ -48,19 +67,44 @@ const mergeProjects = (projects: Project[], globalProjects: Project[]) => {
 
 const Reports = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
   const [items, setItems] = useState<ReportsItem[]>([]);
-  const [activeKey, setActiveKey] = useState<string | null>(null);
-  const [reportScrollTops, setReportScrollTops] = useState<Record<string, number>>({});
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set(),
-  );
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const activeKeyRef = useRef<string | null>(null);
   const { tagOptions, refreshTagOptions } = useTagOptions();
+
+  const filteredItems = useMemo(() => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return items;
+    return items.filter(
+      (item) =>
+        item.file.name.toLowerCase().includes(trimmed) ||
+        item.file.path.toLowerCase().includes(trimmed) ||
+        projectName(item.project.path).toLowerCase().includes(trimmed) ||
+        item.project.path.toLowerCase().includes(trimmed),
+    );
+  }, [items, query]);
+
+  const findRequestedItem = useCallback(
+    (params: URLSearchParams) => {
+      const projectPath = params.get("project");
+      const reportPath = params.get("report");
+      return (
+        items.find(
+          (candidate) =>
+            candidate.project.path === projectPath &&
+            candidate.file.path === reportPath,
+        ) ?? null
+      );
+    },
+    [items],
+  );
+  const handleItemDeleted = useCallback(({ key }: ReportFileTarget) => {
+    setItems((current) =>
+      current.filter((currentItem) => itemKey(currentItem) !== key),
+    );
+  }, []);
+
   const {
     payloads,
     fileLoadingKey,
@@ -69,96 +113,36 @@ const Reports = () => {
     savingKey,
     actioningKey,
     followUpSendingKey,
-    loadReportFile,
-    deleteReport,
-    downloadReport,
     saveReportFile,
-    startReportAction,
     sendReportFollowUp,
     setPayloads,
-  } = useReportFileActions({
-    onDeleted: ({ key }) => {
-      setItems((current) =>
-        current.filter((currentItem) => itemKey(currentItem) !== key),
-      );
-      if (activeKeyRef.current === key) {
-        setActiveKey(null);
-      }
-    },
+    activeKey,
+    activeKeyRef,
+    setActiveKey,
+    activeItem,
+    hasPrevious,
+    hasNext,
+    expandedGroups,
+    toggleGroup,
+    getScrollTop,
+    setScrollTop,
+    openItem,
+    closeItem: closeActiveItem,
+    openAdjacentItem,
+    deleteItem,
+    downloadItem,
+    deleteActiveItem,
+    startItemAction: startActionItem,
+  } = useReportBrowser<ReportsItem>({
+    items: filteredItems,
+    getKey: itemKey,
+    getTarget: itemTarget,
+    applyItemParams,
+    clearItemParams,
+    isItemRequested,
+    findRequestedItem,
+    onItemDeleted: handleItemDeleted,
   });
-
-  useEffect(() => {
-    activeKeyRef.current = activeKey;
-  }, [activeKey]);
-
-  const loadFile = useCallback(async (item: ReportsItem) => {
-    const key = itemKey(item);
-    setActiveKey(key);
-    await loadReportFile({
-      key,
-      projectPath: item.project.path,
-      file: item.file,
-    });
-  }, [loadReportFile]);
-
-  const navigateToItem = useCallback(
-    (item: ReportsItem, options: { replace?: boolean } = {}) => {
-      const params = new URLSearchParams(searchParams);
-      params.set("project", item.project.path);
-      params.set("report", item.file.path);
-      navigate(
-        {
-          pathname: location.pathname,
-          search: params.toString(),
-        },
-        options,
-      );
-    },
-    [location.pathname, navigate, searchParams],
-  );
-
-  const navigateToList = useCallback(
-    (options: { replace?: boolean } = {}) => {
-      const params = new URLSearchParams(searchParams);
-      params.delete("project");
-      params.delete("report");
-      navigate(
-        {
-          pathname: location.pathname,
-          search: params.toString(),
-        },
-        options,
-      );
-    },
-    [location.pathname, navigate, searchParams],
-  );
-
-  const openItem = (item: ReportsItem) => {
-    navigateToItem(item);
-    loadFile(item);
-  };
-
-  const closeActiveItem = () => navigateToList({ replace: true });
-
-  const deleteItem = useCallback(
-    (item: ReportsItem) =>
-      deleteReport({
-        key: itemKey(item),
-        projectPath: item.project.path,
-        file: item.file,
-      }),
-    [deleteReport],
-  );
-
-  const downloadItem = useCallback(
-    (item: ReportsItem) =>
-      downloadReport({
-        key: itemKey(item),
-        projectPath: item.project.path,
-        file: item.file,
-      }),
-    [downloadReport],
-  );
 
   const saveItemContent = useCallback(
     async (item: ReportsItem, content: string) => {
@@ -183,21 +167,6 @@ const Reports = () => {
       return payload;
     },
     [saveReportFile],
-  );
-
-  const startActionItem = useCallback(
-    async (item: ReportsItem) => {
-      const result = await startReportAction({
-        key: itemKey(item),
-        projectPath: item.project.path,
-        file: item.file,
-      });
-      if (result?.thread_id) {
-        setActiveKey(null);
-        navigate(`/dashboard/threads/${result.thread_id}`);
-      }
-    },
-    [navigate, startReportAction],
   );
 
   const updateItemTags = useCallback(
@@ -237,18 +206,6 @@ const Reports = () => {
     },
     [refreshTagOptions, setPayloads],
   );
-
-  const toggleGroup = (key: string) => {
-    setExpandedGroups((current) => {
-      const next = new Set(current);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -300,38 +257,6 @@ const Reports = () => {
     fetchData();
   }, [fetchData]);
 
-  const filteredItems = useMemo(() => {
-    const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return items;
-    return items.filter(
-      (item) =>
-        item.file.name.toLowerCase().includes(trimmed) ||
-        item.file.path.toLowerCase().includes(trimmed) ||
-        projectName(item.project.path).toLowerCase().includes(trimmed) ||
-        item.project.path.toLowerCase().includes(trimmed),
-    );
-  }, [items, query]);
-
-  const deleteActiveItem = useCallback(
-    async (item: ReportsItem) => {
-      const index = filteredItems.findIndex(
-        (currentItem) => itemKey(currentItem) === itemKey(item),
-      );
-      const nextIndex = nextReportIndexAfterDelete(index, filteredItems.length);
-      const nextItem = nextIndex >= 0 ? filteredItems[nextIndex] : null;
-      const deleted = await deleteItem(item);
-      if (!deleted) return;
-
-      if (nextItem) {
-        navigateToItem(nextItem, { replace: true });
-        await loadFile(nextItem);
-      } else {
-        navigateToList({ replace: true });
-      }
-    },
-    [deleteItem, filteredItems, loadFile, navigateToItem, navigateToList],
-  );
-
   const dateSections = useMemo(
     () =>
       groupReportItemsByDay(
@@ -342,42 +267,11 @@ const Reports = () => {
     [filteredItems],
   );
 
-  const activeIndex = useMemo(
-    () => filteredItems.findIndex((item) => itemKey(item) === activeKey),
-    [activeKey, filteredItems],
-  );
-  const activeItem = activeIndex >= 0 ? filteredItems[activeIndex] : null;
   const activePayload = activeItem ? payloads[itemKey(activeItem)] : undefined;
-  const openAdjacentItem = (direction: number) => {
-    if (activeIndex < 0) return;
-    const nextItem = filteredItems[activeIndex + direction];
-    if (nextItem) {
-      navigateToItem(nextItem);
-      loadFile(nextItem);
-    }
-  };
   const openProject = (projectPath: string) => {
     setActiveKey(null);
     navigate(`/dashboard/project?path=${encodeURIComponent(projectPath)}`);
   };
-
-  useEffect(() => {
-    const projectPath = searchParams.get("project");
-    const reportPath = searchParams.get("report");
-    if (!projectPath || !reportPath) {
-      setActiveKey(null);
-      return;
-    }
-
-    const item = items.find(
-      (candidate) =>
-        candidate.project.path === projectPath &&
-        candidate.file.path === reportPath,
-    );
-    if (item) {
-      loadFile(item);
-    }
-  }, [items, loadFile, searchParams]);
 
   return (
     <DashboardLayout>
@@ -549,8 +443,8 @@ const Reports = () => {
             onClose={closeActiveItem}
             onPrevious={() => openAdjacentItem(-1)}
             onNext={() => openAdjacentItem(1)}
-            hasPrevious={activeIndex > 0}
-            hasNext={activeIndex >= 0 && activeIndex < filteredItems.length - 1}
+            hasPrevious={hasPrevious}
+            hasNext={hasNext}
             onStartAction={() => void startActionItem(activeItem)}
             onOpenThread={
               activePayload?.provenance?.thread_id
@@ -586,12 +480,9 @@ const Reports = () => {
             downloading={downloadingKey === itemKey(activeItem)}
             deleting={deletingKey === itemKey(activeItem)}
             saving={savingKey === itemKey(activeItem)}
-            scrollTop={reportScrollTops[itemKey(activeItem)] ?? 0}
+            scrollTop={getScrollTop(itemKey(activeItem))}
             onScrollTopChange={(scrollTop) =>
-              setReportScrollTops((current) => ({
-                ...current,
-                [itemKey(activeItem)]: scrollTop,
-              }))
+              setScrollTop(itemKey(activeItem), scrollTop)
             }
           />
         ) : null}

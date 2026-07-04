@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layouts/ExampleLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { RunDetail } from "@/components/RunDetail";
 import { StatusBadge } from "@/components/StatusBadge";
 import {

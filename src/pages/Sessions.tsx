@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layouts/ExampleLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { ThreadListItem } from "@/components/ThreadListItem";
 import {
   AlertDialog,
