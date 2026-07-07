@@ -79,7 +79,8 @@ export const SyncExplainerCard: React.FC<{
       {eligible ? (
         <div className="flex items-center justify-between gap-3 border-t border-border pt-2.5">
           <p className="text-[11px] text-muted-foreground">
-            Sync is available for this account but currently off.
+            Sync is available for this account but currently off. Enabling
+            downloads the Syncthing engine (~15 MB).
           </p>
           <Button
             size="sm"

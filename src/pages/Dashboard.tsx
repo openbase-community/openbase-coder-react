@@ -13,6 +13,7 @@ import { setThreadFavorite } from "@/lib/thread-favorites";
 import type { Project, ServiceStatus, ThreadInfo } from "@/types/session";
 import { AlertTriangle, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { SyncNudgeCard } from "./sync/SyncNudgeCard";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -101,6 +102,7 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <div className="space-y-5">
+        <SyncNudgeCard />
         {error ? (
           <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
             {error} — retrying automatically.
