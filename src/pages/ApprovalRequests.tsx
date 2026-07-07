@@ -8,13 +8,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { Check, ExternalLink, ShieldAlert, X } from "lucide-react";
-import type { ApprovalDecision, ApprovalRequest } from "openapprovals-react";
+import type { ApprovalDecision, ApprovalRequest } from "open-approvals-react";
 import {
   formatReceivedAt,
   requestDetail,
   requestLabel,
   useApprovalRequests,
-} from "openapprovals-react";
+} from "open-approvals-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
