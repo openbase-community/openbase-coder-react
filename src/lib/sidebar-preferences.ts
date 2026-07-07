@@ -5,6 +5,7 @@ import {
   FilePenLine,
   FileText,
   FolderOpen,
+  FolderSync,
   Home,
   LucideIcon,
   MessageSquare,
@@ -112,6 +113,13 @@ export const BUILT_IN_SIDEBAR_ITEMS: SidebarItem[] = [
     path: "/dashboard/devices",
     icon: Monitor,
     title: "Devices",
+    section: "system",
+  },
+  {
+    key: "sync",
+    path: "/dashboard/sync",
+    icon: FolderSync,
+    title: "Sync",
     section: "system",
   },
   {

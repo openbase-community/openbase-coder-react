@@ -28,6 +28,7 @@ import SessionDetail from "./pages/SessionDetail";
 import Sessions from "./pages/Sessions";
 import Settings from "./pages/Settings";
 import Skills from "./pages/Skills";
+import SyncPage from "./pages/SyncPage";
 import ThreadSyncConflicts from "./pages/ThreadSyncConflicts";
 import Launchctl from "./pages/Launchctl";
 import Status from "./pages/Status";
@@ -204,6 +205,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Devices />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/sync"
+        element={
+          <ProtectedRoute>
+            <SyncPage />
           </ProtectedRoute>
         }
       />
