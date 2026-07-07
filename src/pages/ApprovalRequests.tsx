@@ -7,126 +7,34 @@ import {
 } from "@/components/resource/ResourcePage";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
-import { extractErrorMessage } from "@/lib/api-errors";
 import { Check, ExternalLink, ShieldAlert, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ApprovalDecision, ApprovalRequest } from "openapprovals-react";
+import {
+  formatReceivedAt,
+  requestDetail,
+  requestLabel,
+  useApprovalRequests,
+} from "openapprovals-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
-type ApprovalRequest = {
-  id: string | number;
-  method?: string | null;
-  params?: Record<string, unknown>;
-  received_at?: string | null;
-  thread_id?: string | null;
-  turn_id?: string | null;
-};
-
-type ApprovalDecision = "accept" | "decline";
-
-const POLL_MS = 5000;
-
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function requestLabel(request: ApprovalRequest): string {
-  const params = request.params ?? {};
-  return (
-    stringValue(params.command) ??
-    stringValue(params.description) ??
-    stringValue(params.toolName) ??
-    stringValue(params.tool_name) ??
-    stringValue(params.name) ??
-    request.method ??
-    "Approval request"
-  );
-}
-
-function requestDetail(request: ApprovalRequest): string | null {
-  const params = request.params ?? {};
-  return (
-    stringValue(params.justification) ??
-    stringValue(params.reason) ??
-    stringValue(params.path) ??
-    stringValue(params.cwd)
-  );
-}
-
-function formatReceivedAt(value?: string | null): string {
-  if (!value) return "pending";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
 const ApprovalRequests = () => {
-  const [requests, setRequests] = useState<ApprovalRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [actingKey, setActingKey] = useState<string | null>(null);
-
-  const fetchRequests = useCallback(async () => {
-    try {
-      const res = await apiFetch("/api/approval-requests/");
-      if (!res.ok) {
-        throw new Error(
-          await extractErrorMessage(res, "Unable to load approval requests."),
-        );
-      }
-      const data = await res.json();
-      setRequests(Array.isArray(data.requests) ? data.requests : []);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to reach the local API.");
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    void fetchRequests();
-    const interval = window.setInterval(() => void fetchRequests(), POLL_MS);
-    return () => window.clearInterval(interval);
-  }, [fetchRequests]);
+  const { requests, loading, error, actingKey, refresh, answer } =
+    useApprovalRequests({ fetchFn: apiFetch });
 
   const answerRequest = async (
     request: ApprovalRequest,
     decision: ApprovalDecision,
   ) => {
-    const requestId = String(request.id);
-    const key = `${requestId}:${decision}`;
-    setActingKey(key);
-    try {
-      const res = await apiFetch(
-        `/api/approval-requests/${encodeURIComponent(requestId)}/`,
-        {
-          method: "POST",
-          body: JSON.stringify({ decision }),
-        },
-      );
-      if (!res.ok) {
-        throw new Error(
-          await extractErrorMessage(res, `Unable to ${decision} request.`),
-        );
-      }
-      setRequests((prev) => prev.filter((item) => String(item.id) !== requestId));
+    const result = await answer(request, decision);
+    if (result.ok) {
       toast.success(decision === "accept" ? "Approved" : "Denied");
-      void fetchRequests();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to answer request.");
-    } finally {
-      setActingKey(null);
+    } else {
+      toast.error(result.error);
     }
   };
 
   const pendingCount = requests.length;
-  const sortedRequests = useMemo(
-    () =>
-      [...requests].sort((a, b) =>
-        String(a.received_at ?? "").localeCompare(String(b.received_at ?? "")),
-      ),
-    [requests],
-  );
 
   return (
     <DashboardLayout>
@@ -134,21 +42,21 @@ const ApprovalRequests = () => {
         <ResourcePageHeader
           title="Approval requests"
           loading={loading}
-          onRefresh={() => void fetchRequests()}
+          onRefresh={() => void refresh()}
           subtitle={`${pendingCount} pending · auto-refresh 5s`}
         />
 
         <ResourceError message={error} />
 
-        {loading && sortedRequests.length === 0 ? (
+        {loading && requests.length === 0 ? (
           <ResourceLoading>Loading...</ResourceLoading>
-        ) : sortedRequests.length === 0 ? (
+        ) : requests.length === 0 ? (
           <ResourceEmptyState icon={ShieldAlert} className="py-8">
             No pending approvals.
           </ResourceEmptyState>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
-            {sortedRequests.map((request, idx) => {
+            {requests.map((request, idx) => {
               const requestId = String(request.id);
               const detail = requestDetail(request);
               return (
