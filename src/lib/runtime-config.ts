@@ -2,6 +2,12 @@ declare global {
   interface Window {
     __OPENBASE_RUNTIME_CONFIG__?: {
       backendBaseUrl?: string;
+      /**
+       * Path prefix the console is served under when behind a reverse proxy
+       * (e.g. an Openbase Cloud headless workspace). Fed to the router as its
+       * basename; omitted for normal root-served installs.
+       */
+      routerBasename?: string;
       shell?: "web" | "electron";
     };
   }
@@ -28,6 +34,13 @@ export function getBackendBaseUrl() {
   }
 
   return DEFAULT_BACKEND_URL;
+}
+
+export function getRouterBasename() {
+  if (typeof window === "undefined") {
+    return "/";
+  }
+  return window.__OPENBASE_RUNTIME_CONFIG__?.routerBasename?.trim() || "/";
 }
 
 export function getRuntimeShell() {

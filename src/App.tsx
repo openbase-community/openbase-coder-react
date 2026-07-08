@@ -1,6 +1,10 @@
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/contexts/auth";
-import { getBackendBaseUrl, getRuntimeShell } from "@/lib/runtime-config";
+import {
+  getBackendBaseUrl,
+  getRouterBasename,
+  getRuntimeShell,
+} from "@/lib/runtime-config";
 import { usePluginRegistry } from "@/plugin-registry";
 import type { PluginConsolePage } from "@/types/plugins";
 import {
@@ -288,7 +292,9 @@ function App() {
   const RouterComponent = getRuntimeShell() === "electron" ? HashRouter : Router;
 
   return (
-    <RouterComponent>
+    // basename lets the console run behind a reverse-proxy subpath (Openbase
+    // Cloud headless workspaces); it stays "/" for normal installs.
+    <RouterComponent basename={getRouterBasename()}>
       <AuthProvider>
         <AppRoutes />
         <Toaster />
