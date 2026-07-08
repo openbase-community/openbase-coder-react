@@ -1,3 +1,4 @@
+import RecommendedSkillsWelcome from "@/components/onboarding/RecommendedSkillsWelcome";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/contexts/auth";
 import {
@@ -297,6 +298,7 @@ function App() {
     <RouterComponent basename={getRouterBasename()}>
       <AuthProvider>
         <AppRoutes />
+        <RecommendedSkillsWelcome />
         <Toaster />
       </AuthProvider>
     </RouterComponent>

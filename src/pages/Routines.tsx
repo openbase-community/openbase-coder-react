@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import MarketplaceTab from "@/pages/routines/MarketplaceTab";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +16,7 @@ import {
   Play,
   Plus,
   RefreshCw,
+  Store,
   Trash2,
   Terminal,
 } from "lucide-react";
@@ -27,7 +29,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 type Routine = {
@@ -386,6 +388,11 @@ const CreateRoutineDialog = ({
 );
 
 const Routines = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const marketplaceSlug = searchParams.get("marketplace") || "";
+  const [activeView, setActiveView] = useState<"installed" | "marketplace">(
+    marketplaceSlug ? "marketplace" : "installed",
+  );
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [form, setForm] = useState(defaultForm);
   const [createOpen, setCreateOpen] = useState(false);
@@ -543,24 +550,47 @@ const Routines = () => {
               New routine
             </Button>
             <Button
-              variant="outline"
+              variant={activeView === "installed" ? "default" : "outline"}
               size="sm"
               className="h-7 px-2.5 text-[12px]"
-              onClick={() => void fetchRoutines()}
-              disabled={loading}
+              onClick={() => setActiveView("installed")}
             >
-              <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-              Refresh
+              Installed
             </Button>
             <Button
+              variant={activeView === "marketplace" ? "default" : "outline"}
               size="sm"
               className="h-7 px-2.5 text-[12px]"
-              onClick={() => void runDue()}
-              disabled={actionKey !== null}
+              onClick={() => setActiveView("marketplace")}
             >
-              <Play className="h-3 w-3" />
-              Run due
+              <Store className="h-3 w-3" />
+              Marketplace
             </Button>
+            {activeView === "installed" ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2.5 text-[12px]"
+                  onClick={() => void fetchRoutines()}
+                  disabled={loading}
+                >
+                  <RefreshCw
+                    className={`h-3 w-3 ${loading ? "animate-spin" : ""}`}
+                  />
+                  Refresh
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7 px-2.5 text-[12px]"
+                  onClick={() => void runDue()}
+                  disabled={actionKey !== null}
+                >
+                  <Play className="h-3 w-3" />
+                  Run due
+                </Button>
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -579,7 +609,21 @@ const Routines = () => {
           onSubmit={(event) => void createRoutine(event)}
         />
 
-        {error ? (
+        {activeView === "marketplace" ? (
+          <MarketplaceTab
+            initialSlug={marketplaceSlug}
+            onInstalled={() => {
+              if (marketplaceSlug) {
+                const next = new URLSearchParams(searchParams);
+                next.delete("marketplace");
+                setSearchParams(next, { replace: true });
+              }
+              return fetchRoutines();
+            }}
+          />
+        ) : (
+          <>
+            {error ? (
           <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
             {error}
           </div>
@@ -712,6 +756,8 @@ const Routines = () => {
               </div>
             ))}
           </div>
+        )}
+          </>
         )}
       </div>
     </DashboardLayout>

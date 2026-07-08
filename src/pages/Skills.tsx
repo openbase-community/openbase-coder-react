@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import OfficialCatalogTab from "@/pages/skills/OfficialCatalogTab";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,7 +10,6 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronRight,
-  Download,
   Link2,
   Loader2,
   Plus,
@@ -19,7 +19,7 @@ import {
   Trash2,
   Zap,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -57,61 +57,12 @@ interface AutoLinkSettings {
   sync: AutoLinkSyncResult | null;
 }
 
-interface PrintingPressCategory {
-  name: string;
-  count: number;
-}
-
-interface PrintingPressEntry {
-  name: string;
-  skill_name: string;
-  category: string;
-  api: string;
-  description: string;
-  path: string;
-  release: {
-    cli_name: string;
-    version: string;
-    released_at: string;
-  };
-  printer: string;
-  printer_name: string;
-  creator: {
-    handle: string;
-    name: string;
-  };
-  installed_targets: Record<string, boolean>;
-  mcp?: {
-    binary: string;
-    transports: string[];
-    tool_count: number;
-    public_tool_count: number;
-    auth_type: string;
-    env_vars: string[];
-    mcp_ready: string;
-    spec_format: string;
-  };
-}
-
-interface PrintingPressCatalog {
-  schema_version: number;
-  source_url: string;
-  categories: PrintingPressCategory[];
-  entries: PrintingPressEntry[];
-}
-
-const printingPressTargets = [
-  { key: "home", label: "Personal" },
-  { key: "openbase_codex", label: "Openbase Codex" },
-  { key: "openbase_claude", label: "Openbase Claude" },
-];
-
 const Skills = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const projectPath = searchParams.get("path") || "";
   const editingSkill = searchParams.get("skill") || "";
   const editingScope = searchParams.get("scope") || "home";
-  const [activeView, setActiveView] = useState<"installed" | "printing-press">(
+  const [activeView, setActiveView] = useState<"installed" | "official">(
     "installed",
   );
 
@@ -138,16 +89,6 @@ const Skills = () => {
   const [saving, setSaving] = useState(false);
   const [editorLoading, setEditorLoading] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
-  const [printingPressCatalog, setPrintingPressCatalog] =
-    useState<PrintingPressCatalog | null>(null);
-  const [printingPressLoading, setPrintingPressLoading] = useState(false);
-  const [printingPressQuery, setPrintingPressQuery] = useState("");
-  const [printingPressCategory, setPrintingPressCategory] = useState("");
-  const [selectedPrintingPressName, setSelectedPrintingPressName] = useState("");
-  const [selectedPrintingPressTargets, setSelectedPrintingPressTargets] =
-    useState(["home", "openbase_codex", "openbase_claude"]);
-  const [installingPrintingPressSkill, setInstallingPrintingPressSkill] =
-    useState("");
 
   const listApiParams = projectPath
     ? `?path=${encodeURIComponent(projectPath)}`
@@ -185,45 +126,6 @@ const Skills = () => {
   useEffect(() => {
     void fetchSkills();
   }, [fetchSkills]);
-
-  const fetchPrintingPressCatalog = useCallback(async () => {
-    setPrintingPressLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (printingPressQuery.trim()) params.set("q", printingPressQuery.trim());
-      if (printingPressCategory) params.set("category", printingPressCategory);
-      const suffix = params.toString() ? `?${params.toString()}` : "";
-      const res = await apiFetch(`/api/skills/printing-press/catalog/${suffix}`);
-      if (!res.ok) {
-        throw new Error(
-          await extractErrorMessage(res, "Failed to load Printing Press catalog"),
-        );
-      }
-      const data: PrintingPressCatalog = await res.json();
-      setPrintingPressCatalog(data);
-      setSelectedPrintingPressName((current) => {
-        if (current && data.entries.some((entry) => entry.name === current)) {
-          return current;
-        }
-        return data.entries[0]?.name ?? "";
-      });
-    } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "Failed to load Printing Press catalog",
-      );
-    }
-    setPrintingPressLoading(false);
-  }, [printingPressCategory, printingPressQuery]);
-
-  useEffect(() => {
-    if (activeView !== "printing-press") return;
-    const timer = window.setTimeout(() => {
-      fetchPrintingPressCatalog();
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [activeView, fetchPrintingPressCatalog]);
 
   useEffect(() => {
     if (!editingSkill) return;
@@ -466,59 +368,6 @@ const Skills = () => {
           : scopeName(scope);
   const skillDirForComparison = (skill: SkillEntry) =>
     skill.source_dir_path || skill.dir_path || skill.path.replace(/\/SKILL\.md$/, "");
-  const selectedPrintingPressEntry = useMemo(
-    () =>
-      printingPressCatalog?.entries.find(
-        (entry) => entry.name === selectedPrintingPressName,
-      ) ?? null,
-    [printingPressCatalog?.entries, selectedPrintingPressName],
-  );
-
-  const togglePrintingPressTarget = (target: string) => {
-    setSelectedPrintingPressTargets((current) =>
-      current.includes(target)
-        ? current.filter((item) => item !== target)
-        : [...current, target],
-    );
-  };
-
-  const installPrintingPressSkill = async (entry: PrintingPressEntry) => {
-    setInstallingPrintingPressSkill(entry.name);
-    try {
-      const res = await apiFetch("/api/skills/printing-press/install/", {
-        method: "POST",
-        body: JSON.stringify({
-          name: entry.name,
-          targets: selectedPrintingPressTargets,
-        }),
-      });
-      if (!res.ok) {
-        throw new Error(
-          await extractErrorMessage(
-            res,
-            `Failed to install /${entry.skill_name}`,
-          ),
-        );
-      }
-      const data = await res.json().catch(() => ({}));
-      await fetchPrintingPressCatalog();
-      const installed = Array.isArray(data.results)
-        ? data.results.filter((result: { status: string }) => result.status === "installed").length
-        : 0;
-      toast.success(
-        installed > 0
-          ? `Installed /${entry.skill_name}`
-          : `/${entry.skill_name} was already installed`,
-      );
-    } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : `Failed to install /${entry.skill_name}`,
-      );
-    }
-    setInstallingPrintingPressSkill("");
-  };
 
   if (editingSkill) {
     return (
@@ -625,12 +474,12 @@ const Skills = () => {
             </Button>
             {!projectPath ? (
               <Button
-                variant={activeView === "printing-press" ? "default" : "outline"}
+                variant={activeView === "official" ? "default" : "outline"}
                 size="sm"
                 className="h-7 px-2.5 text-[12px]"
-                onClick={() => setActiveView("printing-press")}
+                onClick={() => setActiveView("official")}
               >
-                Printing Press
+                Official catalog
               </Button>
             ) : null}
             <Button
@@ -649,204 +498,8 @@ const Skills = () => {
           </div>
         </div>
 
-        {activeView === "printing-press" && !projectPath ? (
-          <div className="grid gap-3 lg:grid-cols-[13rem_minmax(0,1fr)_18rem]">
-            <div className="overflow-hidden rounded border border-border bg-surface">
-              <button
-                type="button"
-                onClick={() => setPrintingPressCategory("")}
-                className={`flex w-full items-center justify-between border-b border-border px-3 py-2 text-left text-[12px] ${
-                  !printingPressCategory ? "bg-surface-muted text-foreground" : "text-muted-foreground hover:bg-surface-muted"
-                }`}
-              >
-                <span>All categories</span>
-                <span>{printingPressCatalog?.categories.reduce((count, category) => count + category.count, 0) ?? 0}</span>
-              </button>
-              <div className="max-h-[30rem] overflow-auto">
-                {(printingPressCatalog?.categories ?? []).map((category) => (
-                  <button
-                    key={category.name}
-                    type="button"
-                    onClick={() => setPrintingPressCategory(category.name)}
-                    className={`flex w-full items-center justify-between border-b border-border px-3 py-2 text-left font-mono text-[11.5px] last:border-b-0 ${
-                      printingPressCategory === category.name
-                        ? "bg-surface-muted text-foreground"
-                        : "text-muted-foreground hover:bg-surface-muted"
-                    }`}
-                  >
-                    <span className="truncate">{category.name}</span>
-                    <span className="ml-2 text-[10px]">{category.count}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={printingPressQuery}
-                  onChange={(event) => setPrintingPressQuery(event.target.value)}
-                  placeholder="Search Printing Press skills"
-                  className="h-8 pl-7 text-[12.5px]"
-                />
-              </div>
-              <div className="overflow-hidden rounded border border-border bg-surface">
-                {printingPressLoading ? (
-                  <div className="flex h-40 items-center justify-center gap-2 text-[12px] text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading catalog…
-                  </div>
-                ) : (printingPressCatalog?.entries.length ?? 0) === 0 ? (
-                  <div className="px-4 py-8 text-center text-[12px] text-muted-foreground">
-                    No matching skills.
-                  </div>
-                ) : (
-                  <div className="max-h-[32rem] overflow-auto">
-                    {printingPressCatalog?.entries.map((entry, idx) => (
-                      <button
-                        key={entry.name}
-                        type="button"
-                        onClick={() => setSelectedPrintingPressName(entry.name)}
-                        className={`grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-muted ${
-                          idx > 0 ? "border-t border-border" : ""
-                        } ${
-                          selectedPrintingPressName === entry.name
-                            ? "bg-surface-muted"
-                            : ""
-                        }`}
-                      >
-                        <span className="min-w-0">
-                          <span className="flex items-center gap-2">
-                            <Zap className="h-3 w-3 shrink-0 text-muted-foreground" />
-                            <span className="truncate font-mono text-[12.5px] font-medium text-foreground">
-                              /{entry.skill_name}
-                            </span>
-                            <span className="truncate text-[10.5px] text-muted-foreground">
-                              {entry.category}
-                            </span>
-                          </span>
-                          <span className="mt-0.5 line-clamp-2 block text-[11.5px] leading-snug text-muted-foreground">
-                            {entry.description}
-                          </span>
-                        </span>
-                        <span className="flex items-center gap-1">
-                          {Object.values(entry.installed_targets).some(Boolean) ? (
-                            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                              installed
-                            </Badge>
-                          ) : null}
-                          {entry.mcp ? (
-                            <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-                              MCP
-                            </Badge>
-                          ) : null}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="overflow-hidden rounded border border-border bg-surface">
-              {selectedPrintingPressEntry ? (
-                <div className="space-y-3 p-3">
-                  <div>
-                    <div className="font-mono text-[13px] font-medium text-foreground">
-                      /{selectedPrintingPressEntry.skill_name}
-                    </div>
-                    <div className="mt-1 text-[12px] font-medium text-foreground">
-                      {selectedPrintingPressEntry.api}
-                    </div>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">
-                      {selectedPrintingPressEntry.description}
-                    </p>
-                  </div>
-                  <div className="space-y-1.5 text-[11px] text-muted-foreground">
-                    <div className="flex justify-between gap-2">
-                      <span>CLI</span>
-                      <span className="truncate font-mono">
-                        {selectedPrintingPressEntry.release.cli_name}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <span>Version</span>
-                      <span className="font-mono">
-                        {selectedPrintingPressEntry.release.version || "unknown"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <span>Printer</span>
-                      <span className="truncate">
-                        {selectedPrintingPressEntry.printer_name ||
-                          selectedPrintingPressEntry.printer}
-                      </span>
-                    </div>
-                    {selectedPrintingPressEntry.mcp ? (
-                      <div className="flex justify-between gap-2">
-                        <span>MCP auth</span>
-                        <span className="truncate font-mono">
-                          {selectedPrintingPressEntry.mcp.auth_type || "none"}
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="border-t border-border pt-3">
-                    <div className="mb-2 text-[10px] uppercase tracking-wide text-muted-foreground">
-                      Install targets
-                    </div>
-                    <div className="space-y-2">
-                      {printingPressTargets.map((target) => {
-                        const installed =
-                          selectedPrintingPressEntry.installed_targets[target.key];
-                        return (
-                          <label
-                            key={target.key}
-                            className="flex items-center gap-2 text-[12px] text-foreground"
-                          >
-                            <Checkbox
-                              checked={selectedPrintingPressTargets.includes(target.key)}
-                              onCheckedChange={() =>
-                                togglePrintingPressTarget(target.key)
-                              }
-                            />
-                            <span className="flex-1">{target.label}</span>
-                            {installed ? (
-                              <span className="rounded bg-success/10 px-1.5 py-0.5 text-[10px] font-medium text-success">
-                                installed
-                              </span>
-                            ) : null}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8 w-full text-[12px]"
-                    disabled={
-                      selectedPrintingPressTargets.length === 0 ||
-                      installingPrintingPressSkill === selectedPrintingPressEntry.name
-                    }
-                    onClick={() => installPrintingPressSkill(selectedPrintingPressEntry)}
-                  >
-                    {installingPrintingPressSkill === selectedPrintingPressEntry.name ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5" />
-                    )}
-                    Install
-                  </Button>
-                </div>
-              ) : (
-                <div className="px-4 py-8 text-center text-[12px] text-muted-foreground">
-                  Select a skill.
-                </div>
-              )}
-            </div>
-          </div>
+        {activeView === "official" && !projectPath ? (
+          <OfficialCatalogTab />
         ) : (
           <>
             <form
