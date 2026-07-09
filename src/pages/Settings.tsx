@@ -43,11 +43,11 @@ const Settings: React.FC = () => {
           onRestartScheduled={openbaseServices.applyRestartResponse}
         />
         <IgnoredLaunchctlSettings />
-        <AuthenticationSettings />
         <AgentsGenerationSettings />
         <DangerousConfirmationSettings />
         <SidebarItemsSettings />
         <EnvSettings />
+        <AuthenticationSettings />
       </div>
     </DashboardLayout>
   );

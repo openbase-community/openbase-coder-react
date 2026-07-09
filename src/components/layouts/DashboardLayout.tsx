@@ -26,9 +26,8 @@ import {
   type SidebarItem,
 } from "@/lib/sidebar-preferences";
 import { openExternalUrl } from "@/lib/external-links";
-import { getBackendBaseUrl } from "@/lib/runtime-config";
 import { useCliVersions } from "@/lib/useCliVersions";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface DashboardLayoutProps {
@@ -43,14 +42,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const { pluginConsolePages } = usePluginRegistry();
   const navigate = useNavigate();
   const location = useLocation();
-  const backendHost = useMemo(() => {
-    const baseUrl = getBackendBaseUrl();
-    try {
-      return new URL(baseUrl).host;
-    } catch {
-      return baseUrl;
-    }
-  }, []);
   const [hiddenSidebarItems, setHiddenSidebarItems] = useState<string[]>(() =>
     readHiddenSidebarItems(),
   );
@@ -204,10 +195,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           <header className="sticky top-0 z-10 flex h-9 shrink-0 items-center justify-between border-b border-border bg-background/90 px-3 backdrop-blur md:px-4">
             <div className="flex min-w-0 items-center gap-2">
               <SidebarTrigger className="md:hidden" />
-              <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
-                <span className="truncate font-mono">{backendHost}</span>
-              </div>
             </div>
             <UserProfile />
           </header>

@@ -25,6 +25,16 @@ const newEntry = (): EditableEnvEntry => ({
 const isSecretKey = (key: string) =>
   ["KEY", "SECRET", "TOKEN", "PASSWORD"].some((part) => key.includes(part));
 
+const MANAGED_ENV_KEYS = new Set([
+  "OPENBASE_CODING_BACKEND",
+  "CODEX_MODEL",
+  "OPENBASE_CLOUD_CODEX_MODEL",
+  "CODEX_MODEL_REASONING_EFFORT",
+  "CODEX_SERVICE_TIER",
+  "DISPATCHER_SERVICE_TIER",
+  "SUPER_AGENTS_SERVICE_TIER",
+]);
+
 export const EnvSettings: React.FC = () => {
   const [settings, setSettings] = useState<EnvSettingsResponse | null>(null);
   const [entries, setEntries] = useState<EditableEnvEntry[]>([]);
@@ -73,7 +83,10 @@ export const EnvSettings: React.FC = () => {
     [entries],
   );
   const availableCommonKeys = (settings?.common_keys ?? []).filter(
-    (key) => !existingKeys.has(key),
+    (key) => !MANAGED_ENV_KEYS.has(key) && !existingKeys.has(key),
+  );
+  const visibleEntries = entries.filter(
+    (entry) => !MANAGED_ENV_KEYS.has(entry.originalKey.trim().toUpperCase()),
   );
 
   const updateEntry = (id: string, patch: Partial<EditableEnvEntry>) => {
@@ -159,7 +172,7 @@ export const EnvSettings: React.FC = () => {
             Environment variables
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Edit active runtime values loaded by the local Openbase services.
+            Edit advanced runtime values loaded by the local Openbase services.
           </p>
           {message ? <p className="mt-1 text-[12px] text-success">{message}</p> : null}
           {error ? <p className="mt-1 text-[12px] text-destructive">{error}</p> : null}
@@ -192,8 +205,8 @@ export const EnvSettings: React.FC = () => {
       <div className="space-y-2 px-3 py-2.5">
         {loading ? (
           <p className="text-[12px] text-muted-foreground">Loading…</p>
-        ) : entries.length ? (
-          entries.map((entry) => {
+        ) : visibleEntries.length ? (
+          visibleEntries.map((entry) => {
             const secretVisible = visibleSecrets.has(entry.id);
             return (
               <div
@@ -258,7 +271,7 @@ export const EnvSettings: React.FC = () => {
           })
         ) : (
           <p className="text-[12px] text-muted-foreground">
-            No active variables are set yet.
+            No advanced variables are set yet.
           </p>
         )}
         <datalist id="openbase-env-common-keys">
