@@ -14,6 +14,7 @@ import { OpenbaseServicesSettings } from "./settings/OpenbaseServicesSettings";
 import { ReasoningSettings } from "./settings/ReasoningSettings";
 import { ServiceTierSettings } from "./settings/ServiceTierSettings";
 import { SidebarItemsSettings } from "./settings/SidebarItemsSettings";
+import { VoiceDispatchSettings } from "./settings/VoiceDispatchSettings";
 import { useOpenbaseServices } from "./settings/useOpenbaseServices";
 
 const Settings: React.FC = () => {
@@ -39,6 +40,7 @@ const Settings: React.FC = () => {
 
         {getRuntimeShell() === "electron" ? <LiveKitCompanionSettings /> : null}
 
+        <VoiceDispatchSettings />
         <DispatcherVoiceSettings
           onRestartScheduled={openbaseServices.applyRestartResponse}
         />

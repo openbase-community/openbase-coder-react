@@ -126,6 +126,30 @@ export type ServiceTierSettingsResponse = {
   restart_hint: string;
 };
 
+export type VoiceDispatchProvider = "livekit" | "vocalbridge";
+
+export type VoiceDispatchProviderOption = {
+  id: VoiceDispatchProvider;
+  label: string;
+  summary: string;
+  description: string;
+};
+
+export type VoiceDispatchSettingsResponse = {
+  provider: VoiceDispatchProvider;
+  default_provider: VoiceDispatchProvider;
+  providers: VoiceDispatchProviderOption[];
+  vocalbridge: {
+    api_key_configured: boolean;
+    agent_id: string | null;
+    api_url: string;
+    default_api_url: string;
+  };
+  changed: boolean;
+  restart_required: boolean;
+  restart_hint: string;
+};
+
 export type TTSProvider = {
   id: string;
   name: string;
