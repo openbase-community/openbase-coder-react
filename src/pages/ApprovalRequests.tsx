@@ -6,7 +6,9 @@ import {
   ResourcePageHeader,
 } from "@/components/resource/ResourcePage";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth";
 import { apiFetch } from "@/lib/api";
+import { getBackendWebSocketUrl } from "@/lib/runtime-config";
 import { Check, ExternalLink, ShieldAlert, X } from "lucide-react";
 import type { ApprovalDecision, ApprovalRequest } from "open-approvals-react";
 import {
@@ -15,12 +17,20 @@ import {
   requestLabel,
   useApprovalRequests,
 } from "open-approvals-react";
+import { useCallback } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 const ApprovalRequests = () => {
-  const { requests, loading, error, actingKey, refresh, answer } =
-    useApprovalRequests({ fetchFn: apiFetch });
+  const { token } = useAuth();
+  const createSocket = useCallback(() => {
+    if (!token) return null;
+    return new WebSocket(
+      `${getBackendWebSocketUrl("/ws/approval-requests/")}?token=${token}`,
+    );
+  }, [token]);
+  const { requests, loading, error, live, actingKey, refresh, answer } =
+    useApprovalRequests({ fetchFn: apiFetch, createSocket });
 
   const answerRequest = async (
     request: ApprovalRequest,
@@ -43,7 +53,7 @@ const ApprovalRequests = () => {
           title="Approval requests"
           loading={loading}
           onRefresh={() => void refresh()}
-          subtitle={`${pendingCount} pending · auto-refresh 5s`}
+          subtitle={`${pendingCount} pending · ${live ? "live updates" : "auto-refresh 5s"}`}
         />
 
         <ResourceError message={error} />
