@@ -2,6 +2,20 @@ export type IgnoredLaunchctlLabelsResponse = {
   ignored_labels: string[];
 };
 
+export type OpenbaseHooksBackendStatus = {
+  installed: boolean;
+  script_path: string;
+};
+
+export type OpenbaseHooksResponse = {
+  installed: boolean;
+  backends: {
+    claude: OpenbaseHooksBackendStatus;
+    codex: OpenbaseHooksBackendStatus;
+  };
+  changed?: boolean;
+};
+
 export type DangerousConfirmationSettingsResponse = {
   dangerous_confirmation_phrase: string;
   default_dangerous_confirmation_phrase: string;

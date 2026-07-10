@@ -10,6 +10,7 @@ import { DispatcherVoiceSettings } from "./settings/DispatcherVoiceSettings";
 import { EnvSettings } from "./settings/EnvSettings";
 import { IgnoredLaunchctlSettings } from "./settings/IgnoredLaunchctlSettings";
 import { LiveKitCompanionSettings } from "./settings/LiveKitCompanionSettings";
+import { OpenbaseHooksSettings } from "./settings/OpenbaseHooksSettings";
 import { OpenbaseServicesSettings } from "./settings/OpenbaseServicesSettings";
 import { ReasoningSettings } from "./settings/ReasoningSettings";
 import { ServiceTierSettings } from "./settings/ServiceTierSettings";
@@ -45,6 +46,7 @@ const Settings: React.FC = () => {
         <IgnoredLaunchctlSettings />
         <AgentsGenerationSettings />
         <DangerousConfirmationSettings />
+        <OpenbaseHooksSettings />
         <SidebarItemsSettings />
         <EnvSettings />
         <AuthenticationSettings />
