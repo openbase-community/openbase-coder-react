@@ -56,12 +56,6 @@ const EXPECTED_TARGETS: Array<
       "Affects Claude Code sessions that use Openbase's managed CLAUDE_CONFIG_DIR.",
   },
   {
-    id: "direct_livekit",
-    label: "Direct voice session instructions",
-    description:
-      "Affects agent threads that are directly connected to a LiveKit voice session after a voice transfer.",
-  },
-  {
     id: "super_agent",
     label: "Super Agent instructions",
     description:
@@ -84,9 +78,6 @@ const fallbackPathForTarget = (
   }
   if (target === "claude") {
     return "~/.openbase/claude_config/CLAUDE.md";
-  }
-  if (target === "direct_livekit") {
-    return `${codexHome}/direct-livekit-target-instructions.md`;
   }
   if (target === "super_agent") {
     return `${codexHome}/super-agent-instructions.md`;
