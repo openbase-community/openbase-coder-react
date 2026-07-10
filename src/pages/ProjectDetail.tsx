@@ -26,6 +26,7 @@ import { setThreadFavorite } from "@/lib/thread-favorites";
 import {
   groupThreadsByDay,
   shouldDeemphasizeThread,
+  threadRoutePath,
   threadVoiceLabel,
 } from "@/lib/thread-display";
 import { useReportBrowser } from "@/lib/useReportBrowser";
@@ -697,7 +698,7 @@ const ProjectDetail = () => {
                         tabIndex={0}
                         onClick={() =>
                           navigate(
-                            `/dashboard/threads/${thread.thread_id}?fromProject=${encodeURIComponent(projectPath)}`,
+                            threadRoutePath(thread, { fromProject: projectPath }),
                           )
                         }
                         onKeyDown={(event) => {
@@ -706,7 +707,7 @@ const ProjectDetail = () => {
                           }
                           event.preventDefault();
                           navigate(
-                            `/dashboard/threads/${thread.thread_id}?fromProject=${encodeURIComponent(projectPath)}`,
+                            threadRoutePath(thread, { fromProject: projectPath }),
                           );
                         }}
                         className={cn(

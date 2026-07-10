@@ -21,6 +21,7 @@ import {
   threadAgentVoiceName,
   threadDisplayName,
   threadProjectLabel,
+  threadRoutePath,
 } from "@/lib/thread-display";
 import {
   Archive,
@@ -38,6 +39,7 @@ import { toast } from "sonner";
 
 interface SessionDetailProps {
   threadIdOverride?: string;
+  allowDispatcherThread?: boolean;
 }
 
 const scrollToBottomInstantly = (target: HTMLElement | null) => {
@@ -66,14 +68,28 @@ const findScrollContainer = (target: HTMLElement | null) => {
     : document.documentElement;
 };
 
-const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
+const SessionDetail = ({
+  threadIdOverride,
+  allowDispatcherThread = false,
+}: SessionDetailProps = {}) => {
   const { threadId: routeThreadId } = useParams<{ threadId: string }>();
   const threadId = threadIdOverride ?? routeThreadId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { thread, isConnected, loadError, startTurn, interruptTurn, refreshThread } =
-    useThreadWebSocket(threadId);
+  const {
+    thread,
+    isConnected,
+    loadError,
+    startTurn,
+    queueTurn,
+    steerTurn,
+    interruptTurn,
+    refreshThread,
+  } = useThreadWebSocket(threadId);
   const [prompt, setPrompt] = useState("");
+  const [activePromptMode, setActivePromptMode] = useState<"steer" | "queue">(
+    "steer",
+  );
   const hasConnectedRef = useRef(false);
   if (isConnected) {
     hasConnectedRef.current = true;
@@ -102,6 +118,14 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
     }
   }, [currentTurnOutput]);
 
+  useEffect(() => {
+    if (!thread || allowDispatcherThread) return;
+    const routePath = threadRoutePath(thread);
+    if (routePath === "/dashboard/dispatch") {
+      navigate(routePath, { replace: true });
+    }
+  }, [allowDispatcherThread, navigate, thread]);
+
   useLayoutEffect(() => {
     scrollToBottomInstantly(threadEndRef.current);
   }, [
@@ -116,7 +140,12 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
   const handleStartTurn = () => {
     const trimmed = prompt.trim();
     if (!trimmed) return;
-    if (startTurn(trimmed)) {
+    const sent = hasActiveCurrentTurn
+      ? activePromptMode === "steer"
+        ? steerTurn(trimmed)
+        : queueTurn(trimmed)
+      : startTurn(trimmed);
+    if (sent) {
       setPrompt("");
     }
   };
@@ -128,7 +157,6 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
     }
   };
 
-  const isRunning = thread?.status === "running";
   const hasActiveCurrentTurn =
     thread?.current_turn?.status === "running" ||
     thread?.current_turn?.status === "waiting";
@@ -361,15 +389,47 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
 
         <div ref={threadEndRef} aria-hidden="true" />
 
-        {thread && !isRunning ? (
+        {thread ? (
           <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-2.5 backdrop-blur md:left-[13rem]">
-            <div className="mx-auto flex max-w-3xl gap-1.5">
+            <div className="mx-auto flex max-w-3xl items-end gap-1.5">
+              {hasActiveCurrentTurn ? (
+                <div className="grid w-24 shrink-0 grid-cols-1 overflow-hidden rounded border border-border bg-surface text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setActivePromptMode("steer")}
+                    className={`px-2 py-1 text-left ${
+                      activePromptMode === "steer"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-surface-muted"
+                    }`}
+                  >
+                    Steer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivePromptMode("queue")}
+                    className={`border-t border-border px-2 py-1 text-left ${
+                      activePromptMode === "queue"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-surface-muted"
+                    }`}
+                  >
+                    Queue
+                  </button>
+                </div>
+              ) : null}
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
                 aria-label="Codex turn prompt"
-                placeholder="Start a Codex turn…"
+                placeholder={
+                  hasActiveCurrentTurn
+                    ? activePromptMode === "steer"
+                      ? "Steer the active turn…"
+                      : "Queue a follow-up turn…"
+                    : "Start a Codex turn…"
+                }
                 className="flex-1 resize-none rounded border border-border bg-surface p-2 text-[12.5px] text-foreground focus:border-ring focus:outline-none"
                 rows={1}
               />
@@ -377,8 +437,22 @@ const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
                 onClick={handleStartTurn}
                 disabled={!isConnected || !prompt.trim()}
                 size="sm"
-                aria-label="Start Codex turn"
-                title={isConnected ? "Start Codex turn" : "Thread disconnected"}
+                aria-label={
+                  hasActiveCurrentTurn
+                    ? activePromptMode === "steer"
+                      ? "Steer active turn"
+                      : "Queue follow-up turn"
+                    : "Start Codex turn"
+                }
+                title={
+                  isConnected
+                    ? hasActiveCurrentTurn
+                      ? activePromptMode === "steer"
+                        ? "Steer active turn"
+                        : "Queue follow-up turn"
+                      : "Start Codex turn"
+                    : "Thread disconnected"
+                }
               >
                 <Send className="h-3 w-3" />
               </Button>

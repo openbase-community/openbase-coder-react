@@ -24,7 +24,11 @@ import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { projectName } from "@/lib/project-display";
 import { setThreadFavorite } from "@/lib/thread-favorites";
-import { groupThreadsByDay, threadListDisplayNames } from "@/lib/thread-display";
+import {
+  groupThreadsByDay,
+  threadListDisplayNames,
+  threadRoutePath,
+} from "@/lib/thread-display";
 import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
 import { AlertTriangle, Archive, FolderOpen, Plus, Terminal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -261,9 +265,7 @@ const Sessions = () => {
                           thread={thread}
                           displayName={displayNames.get(thread.thread_id)}
                           showTopBorder={idx > 0}
-                          onClick={() =>
-                            navigate(`/dashboard/threads/${thread.thread_id}`)
-                          }
+                          onClick={() => navigate(threadRoutePath(thread))}
                           onToggleFavorite={(item) =>
                             void toggleThreadFavorite(
                               item.thread_id,

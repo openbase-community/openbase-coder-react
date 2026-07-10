@@ -109,6 +109,16 @@ export function useThreadWebSocket(threadId: string | undefined) {
           setThread(msg.data);
           break;
 
+        case "turn_queued":
+          toast.success(msg.data?.queued ? "Turn queued" : "Turn started");
+          void refreshThread();
+          break;
+
+        case "turn_steered":
+          toast.success("Steering sent");
+          void refreshThread();
+          break;
+
         case "error": {
           const message = msg.data?.message ?? "Server error";
           toast.error(message);
@@ -158,6 +168,26 @@ export function useThreadWebSocket(threadId: string | undefined) {
     return true;
   }, []);
 
+  const queueTurn = useCallback((prompt: string) => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) {
+      toast.error("Thread is not connected yet");
+      return false;
+    }
+
+    wsRef.current.send(JSON.stringify({ action: "queue_turn", prompt }));
+    return true;
+  }, []);
+
+  const steerTurn = useCallback((prompt: string) => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) {
+      toast.error("Thread is not connected yet");
+      return false;
+    }
+
+    wsRef.current.send(JSON.stringify({ action: "steer_turn", prompt }));
+    return true;
+  }, []);
+
   const interruptTurn = useCallback(() => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) {
       toast.error("Thread is not connected yet");
@@ -166,5 +196,14 @@ export function useThreadWebSocket(threadId: string | undefined) {
     wsRef.current.send(JSON.stringify({ action: "interrupt_turn" }));
   }, []);
 
-  return { thread, isConnected, loadError, startTurn, interruptTurn, refreshThread };
+  return {
+    thread,
+    isConnected,
+    loadError,
+    startTurn,
+    queueTurn,
+    steerTurn,
+    interruptTurn,
+    refreshThread,
+  };
 }
