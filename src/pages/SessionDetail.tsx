@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { RunDetail } from "@/components/RunDetail";
 import { StatusBadge } from "@/components/StatusBadge";
+import { TurnBody, UserInputBlock } from "@/components/TurnBody";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -132,6 +133,8 @@ const SessionDetail = ({
     thread?.thread_id,
     thread?.turn_history.length,
     thread?.current_turn?.turn_id,
+    thread?.current_turn?.steers?.length,
+    thread?.queued_turns?.length,
     currentTurnOutput,
     currentTurnStderr,
     thread?.status,
@@ -362,27 +365,26 @@ const SessionDetail = ({
               ) : null}
             </div>
             <div className="space-y-2 p-3">
-              <div className="rounded border border-border bg-surface-muted px-2.5 py-1.5">
-                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                  prompt
-                </p>
-                <pre className="mt-0.5 whitespace-pre-wrap break-words font-sans text-[12.5px] text-foreground">
-                  {thread.current_turn.prompt}
-                </pre>
-              </div>
-              {thread.current_turn.accumulated_output ? (
-                <pre
-                  ref={outputRef}
-                  className="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-foreground p-2.5 font-mono text-[11.5px] text-background"
-                >
-                  {thread.current_turn.accumulated_output}
-                </pre>
-              ) : null}
-              {thread.current_turn.accumulated_stderr ? (
-                <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded bg-destructive/95 p-2.5 font-mono text-[11.5px] text-destructive-foreground">
-                  {thread.current_turn.accumulated_stderr}
-                </pre>
-              ) : null}
+              <TurnBody turn={thread.current_turn} outputRef={outputRef} />
+            </div>
+          </section>
+        ) : null}
+
+        {thread?.queued_turns?.length ? (
+          <section className="overflow-hidden rounded border border-border bg-surface">
+            <div className="border-b border-border bg-surface-muted px-3 py-1.5">
+              <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
+                queued turns
+              </p>
+            </div>
+            <div className="space-y-2 p-3">
+              {thread.queued_turns.map((queued, index) => (
+                <UserInputBlock
+                  key={queued.queue_id ?? index}
+                  label="queued"
+                  text={queued.prompt}
+                />
+              ))}
             </div>
           </section>
         ) : null}

@@ -1,5 +1,16 @@
 export type ThreadStatus = "idle" | "waiting" | "running" | "completed" | "error";
 
+export interface TurnSteer {
+  text: string;
+  created_at?: string | null;
+}
+
+export interface QueuedTurn {
+  queue_id?: string | null;
+  prompt: string;
+  queued_at?: string | null;
+}
+
 export interface TurnInfo {
   turn_id: string;
   started_at: string;
@@ -10,6 +21,7 @@ export interface TurnInfo {
   return_code: number | null;
   prompt: string;
   reasoning_effort?: string | null;
+  steers?: TurnSteer[];
 }
 
 export interface ThreadInfo {
@@ -29,6 +41,7 @@ export interface ThreadInfo {
   updated_at: string;
   current_turn: TurnInfo | null;
   turn_history: TurnInfo[];
+  queued_turns?: QueuedTurn[];
   status: ThreadStatus;
   voice_route?: {
     role: "none" | "dispatcher" | "active_target";

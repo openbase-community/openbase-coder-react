@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/auth";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { getBackendWebSocketUrl } from "@/lib/runtime-config";
+import { reconcileThreadSnapshot } from "@/lib/thread-reconcile";
 import type { ThreadInfo } from "@/types/session";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -27,7 +28,8 @@ export function useThreadWebSocket(threadId: string | undefined) {
         );
         return;
       }
-      setThread(await res.json());
+      const snapshot: ThreadInfo = await res.json();
+      setThread((prev) => reconcileThreadSnapshot(prev, snapshot));
       setLoadError(null);
     } catch {
       setLoadError("Unable to reach the local API.");
@@ -73,12 +75,13 @@ export function useThreadWebSocket(threadId: string | undefined) {
 
       switch (msg.type) {
         case "thread_state":
-          setThread(msg.data);
+          setThread((prev) => reconcileThreadSnapshot(prev, msg.data));
           break;
 
         case "turn_started":
           setThread((prev) => {
             if (!prev) return prev;
+            if (prev.current_turn?.turn_id === msg.data.turn_id) return prev;
             return {
               ...prev,
               current_turn: msg.data,
@@ -90,6 +93,14 @@ export function useThreadWebSocket(threadId: string | undefined) {
         case "output_update":
           setThread((prev) => {
             if (!prev?.current_turn) return prev;
+            if (
+              msg.data.turn_id &&
+              msg.data.turn_id !== prev.current_turn.turn_id
+            ) {
+              // Stale delta from a previous turn; never render it under the
+              // current turn.
+              return prev;
+            }
             const field =
               msg.data.stream === "stderr"
                 ? "accumulated_stderr"
@@ -106,7 +117,7 @@ export function useThreadWebSocket(threadId: string | undefined) {
           break;
 
         case "turn_completed":
-          setThread(msg.data);
+          setThread((prev) => reconcileThreadSnapshot(prev, msg.data));
           break;
 
         case "turn_queued":

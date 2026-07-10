@@ -1,4 +1,5 @@
 import { StatusBadge } from "@/components/StatusBadge";
+import { TurnBody } from "@/components/TurnBody";
 import {
   Collapsible,
   CollapsibleContent,
@@ -44,24 +45,7 @@ export function RunDetail({
           {run.completed_at && <span>Completed: {new Date(run.completed_at).toLocaleString()}</span>}
           {run.reasoning_effort && <span>Reasoning: {run.reasoning_effort}</span>}
         </div>
-        <div className="rounded border border-border bg-surface-muted px-2.5 py-1.5">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            prompt
-          </p>
-          <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-[12.5px] text-foreground">
-            {run.prompt}
-          </pre>
-        </div>
-        {run.accumulated_output && (
-          <pre className="text-xs bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
-            {run.accumulated_output}
-          </pre>
-        )}
-        {run.accumulated_stderr && (
-          <pre className="text-xs bg-red-950 text-red-200 p-3 rounded-lg overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap">
-            {run.accumulated_stderr}
-          </pre>
-        )}
+        <TurnBody turn={run} />
       </CollapsibleContent>
     </Collapsible>
   );
