@@ -3,6 +3,11 @@ import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { getBackendWebSocketUrl } from "@/lib/runtime-config";
 import { reconcileThreadSnapshot } from "@/lib/thread-reconcile";
+import {
+  type ThreadTurnAction,
+  threadTurnActionMessage,
+  threadTurnActionPath,
+} from "@/lib/thread-turn-actions";
 import type { ThreadInfo } from "@/types/session";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -121,12 +126,12 @@ export function useThreadWebSocket(threadId: string | undefined) {
           break;
 
         case "turn_queued":
-          toast.success(msg.data?.queued ? "Turn queued" : "Turn started");
+          toast.success(threadTurnActionMessage("queue", msg.data ?? {}));
           void refreshThread();
           break;
 
         case "turn_steered":
-          toast.success("Steering sent");
+          toast.success(threadTurnActionMessage("steer", msg.data ?? {}));
           void refreshThread();
           break;
 
@@ -169,35 +174,47 @@ export function useThreadWebSocket(threadId: string | undefined) {
     };
   }, [connect, refreshThread]);
 
-  const startTurn = useCallback((prompt: string) => {
-    if (wsRef.current?.readyState !== WebSocket.OPEN) {
-      toast.error("Thread is not connected yet");
-      return false;
-    }
+  const submitTurn = useCallback(
+    async (action: ThreadTurnAction, prompt: string) => {
+      if (!threadId) return false;
+      try {
+        const res = await apiFetch(threadTurnActionPath(threadId, action), {
+          method: "POST",
+          body: JSON.stringify({ prompt }),
+        });
+        if (!res.ok) {
+          toast.error(
+            await extractErrorMessage(
+              res,
+              `Unable to ${action} turn (HTTP ${res.status}).`,
+            ),
+          );
+          return false;
+        }
+        const result = (await res.json()) as Record<string, unknown>;
+        toast.success(threadTurnActionMessage(action, result));
+        await refreshThread();
+        return true;
+      } catch {
+        toast.error("Unable to reach the local API.");
+        return false;
+      }
+    },
+    [refreshThread, threadId],
+  );
 
-    wsRef.current.send(JSON.stringify({ action: "start_turn", prompt }));
-    return true;
-  }, []);
-
-  const queueTurn = useCallback((prompt: string) => {
-    if (wsRef.current?.readyState !== WebSocket.OPEN) {
-      toast.error("Thread is not connected yet");
-      return false;
-    }
-
-    wsRef.current.send(JSON.stringify({ action: "queue_turn", prompt }));
-    return true;
-  }, []);
-
-  const steerTurn = useCallback((prompt: string) => {
-    if (wsRef.current?.readyState !== WebSocket.OPEN) {
-      toast.error("Thread is not connected yet");
-      return false;
-    }
-
-    wsRef.current.send(JSON.stringify({ action: "steer_turn", prompt }));
-    return true;
-  }, []);
+  const startTurn = useCallback(
+    (prompt: string) => submitTurn("start", prompt),
+    [submitTurn],
+  );
+  const queueTurn = useCallback(
+    (prompt: string) => submitTurn("queue", prompt),
+    [submitTurn],
+  );
+  const steerTurn = useCallback(
+    (prompt: string) => submitTurn("steer", prompt),
+    [submitTurn],
+  );
 
   const interruptTurn = useCallback(() => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) {

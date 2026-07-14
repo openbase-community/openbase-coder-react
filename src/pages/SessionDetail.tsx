@@ -24,6 +24,7 @@ import {
   threadProjectLabel,
   threadRoutePath,
 } from "@/lib/thread-display";
+import { promptAfterThreadTurnSubmission } from "@/lib/thread-turn-actions";
 import {
   Archive,
   ArrowLeft,
@@ -88,6 +89,7 @@ const SessionDetail = ({
     refreshThread,
   } = useThreadWebSocket(threadId);
   const [prompt, setPrompt] = useState("");
+  const [isSubmittingPrompt, setIsSubmittingPrompt] = useState(false);
   const [activePromptMode, setActivePromptMode] = useState<"steer" | "queue">(
     "steer",
   );
@@ -140,23 +142,30 @@ const SessionDetail = ({
     thread?.status,
   ]);
 
-  const handleStartTurn = () => {
+  const handleStartTurn = async () => {
     const trimmed = prompt.trim();
-    if (!trimmed) return;
-    const sent = hasActiveCurrentTurn
-      ? activePromptMode === "steer"
-        ? steerTurn(trimmed)
-        : queueTurn(trimmed)
-      : startTurn(trimmed);
-    if (sent) {
-      setPrompt("");
+    if (!trimmed || isSubmittingPrompt) return;
+    setIsSubmittingPrompt(true);
+    try {
+      const accepted = await (hasActiveCurrentTurn
+        ? activePromptMode === "steer"
+          ? steerTurn(trimmed)
+          : queueTurn(trimmed)
+        : startTurn(trimmed));
+      if (accepted) {
+        setPrompt((current) =>
+          promptAfterThreadTurnSubmission(current, trimmed, accepted),
+        );
+      }
+    } finally {
+      setIsSubmittingPrompt(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleStartTurn();
+      void handleStartTurn();
     }
   };
 
@@ -436,8 +445,9 @@ const SessionDetail = ({
                 rows={1}
               />
               <Button
-                onClick={handleStartTurn}
-                disabled={!isConnected || !prompt.trim()}
+                onClick={() => void handleStartTurn()}
+                disabled={!isConnected || !prompt.trim() || isSubmittingPrompt}
+                aria-busy={isSubmittingPrompt}
                 size="sm"
                 aria-label={
                   hasActiveCurrentTurn

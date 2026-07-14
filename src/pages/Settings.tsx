@@ -32,7 +32,9 @@ const Settings: React.FC = () => {
         </div>
 
         <OpenbaseServicesSettings controller={openbaseServices} />
-        <CodingBackendSettings />
+        <CodingBackendSettings
+          onRestartScheduled={openbaseServices.applyRestartResponse}
+        />
         <BackendModelSettings />
         <ServiceTierSettings />
         <ReasoningSettings />
