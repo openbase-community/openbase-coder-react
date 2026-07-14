@@ -49,17 +49,28 @@ export type SyncStatusResponse = {
 };
 
 export type SyncConflictType = "repo-divergence" | "file-conflict";
+export type SyncConflictKind = "branch" | "file";
 
 export type SyncConflict = {
   id: string;
   folder_id: string;
-  repo_relpath: string;
-  branch: string;
-  type: SyncConflictType;
+  folder_relpath?: string;
+  kind?: SyncConflictKind;
+  repo_relpath?: string;
+  path?: string;
+  containing_folder?: string | null;
+  original_path?: string;
+  conflict_device_hint?: string;
+  conflict_copy_exists?: boolean;
+  original_exists?: boolean;
+  ignored_containing_folder?: boolean;
+  branch?: string;
+  type?: SyncConflictType;
   local_sha?: string;
   remote_sha?: string;
   files?: string[];
   detected_at: string;
+  resolved?: boolean;
 };
 
 export type SyncConflictsResponse = {
