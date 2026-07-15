@@ -33,9 +33,13 @@ const Settings: React.FC = () => {
         </div>
 
         <OpenbaseServicesSettings controller={openbaseServices} />
-        <CodingBackendSettings />
+        <CodingBackendSettings
+          onRestartScheduled={openbaseServices.applyRestartResponse}
+        />
         <BackendModelSettings />
-        <ServiceTierSettings />
+        <ServiceTierSettings
+          onRestartScheduled={openbaseServices.applyRestartResponse}
+        />
         <ReasoningSettings />
 
         {getRuntimeShell() === "electron" ? <LiveKitCompanionSettings /> : null}

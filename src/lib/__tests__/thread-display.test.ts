@@ -5,6 +5,7 @@ import {
   threadAgentVoiceName,
   threadDisplayName,
   threadListDisplayNames,
+  threadRoutePath,
   threadVoiceLabel,
 } from "../thread-display";
 import type { ThreadInfo, ThreadStatus } from "../../types/session";
@@ -183,5 +184,26 @@ describe("threadVoiceLabel", () => {
 
     expect(hasHistoricalVoice(historicalThread)).toBe(true);
     expect(threadVoiceLabel(historicalThread)).toBe("Alice");
+  });
+});
+
+describe("threadRoutePath", () => {
+  it("routes dispatcher threads to the dispatcher page", () => {
+    expect(
+      threadRoutePath(
+        thread("idle", {
+          thread_id: "dispatcher-thread-id",
+          voice_route: { role: "dispatcher", active: true },
+        }),
+      ),
+    ).toBe("/dashboard/dispatch");
+  });
+
+  it("routes normal threads to encoded thread detail paths", () => {
+    expect(
+      threadRoutePath(thread("idle", { thread_id: "thread/with/slash" }), {
+        fromProject: "/tmp/project",
+      }),
+    ).toBe("/dashboard/threads/thread%2Fwith%2Fslash?fromProject=%2Ftmp%2Fproject");
   });
 });
