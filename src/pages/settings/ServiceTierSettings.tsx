@@ -11,9 +11,11 @@ import { RefreshCw, Save } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   extractErrorMessage,
+  type OpenbaseServicesResponse,
   type ServiceTier,
   type ServiceTierSettingsResponse,
 } from "./settingsApi";
+import { ServiceTierChangeDialog } from "./ServiceTierChangeDialog";
 
 const SCOPES = [
   {
@@ -31,7 +33,13 @@ const SCOPES = [
 
 type ScopeKey = (typeof SCOPES)[number]["key"];
 
-export const ServiceTierSettings: React.FC = () => {
+type Props = {
+  onRestartScheduled: (data: OpenbaseServicesResponse, delayMs: number) => void;
+};
+
+export const ServiceTierSettings: React.FC<Props> = ({
+  onRestartScheduled,
+}) => {
   const [settings, setSettings] = useState<ServiceTierSettingsResponse | null>(
     null,
   );
@@ -41,6 +49,7 @@ export const ServiceTierSettings: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,6 +92,7 @@ export const ServiceTierSettings: React.FC = () => {
     setSaving(true);
     setMessage(null);
     setError(null);
+    let tiersSaved = false;
     try {
       const res = await apiFetch("/api/settings/service-tier/", {
         method: "PUT",
@@ -104,12 +114,37 @@ export const ServiceTierSettings: React.FC = () => {
         dispatcher_service_tier: data.dispatcher_service_tier,
         super_agents_service_tier: data.super_agents_service_tier,
       });
-      setMessage(data.restart_required ? data.restart_hint : null);
+      tiersSaved = true;
+
+      if (data.restart_required) {
+        const restartRes = await apiFetch("/api/settings/restart/", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        if (!restartRes.ok) {
+          setError(
+            `Service tiers saved, but the automatic restart failed: ${await extractErrorMessage(
+              restartRes,
+              `restart request returned ${restartRes.status}`,
+            )}. Restart Openbase services before starting a new voice call or coding turn.`,
+          );
+          setSaving(false);
+          return;
+        }
+        const restartData =
+          (await restartRes.json()) as OpenbaseServicesResponse;
+        onRestartScheduled(restartData, 4000);
+        setMessage("Service tiers saved. Restarting Openbase services.");
+      }
     } catch {
-      setError("Unable to reach the local API.");
+      setError(
+        tiersSaved
+          ? "Service tiers saved, but the automatic restart could not be scheduled. Restart Openbase services before starting a new voice call or coding turn."
+          : "Unable to reach the local API.",
+      );
     }
     setSaving(false);
-  }, [tiers]);
+  }, [onRestartScheduled, tiers]);
 
   const dirty =
     Boolean(settings) &&
@@ -162,7 +197,7 @@ export const ServiceTierSettings: React.FC = () => {
               size="sm"
               className="h-8 px-2.5 text-[12px]"
               onClick={() => {
-                void saveSettings();
+                setConfirmationOpen(true);
               }}
               disabled={!canSave}
             >
@@ -212,6 +247,20 @@ export const ServiceTierSettings: React.FC = () => {
           </div>
         ))}
       </div>
+
+      <ServiceTierChangeDialog
+        open={confirmationOpen}
+        currentDispatcherTier={settings?.dispatcher_service_tier ?? ""}
+        selectedDispatcherTier={tiers.dispatcher_service_tier}
+        currentSuperAgentsTier={settings?.super_agents_service_tier ?? ""}
+        selectedSuperAgentsTier={tiers.super_agents_service_tier}
+        saving={saving}
+        canConfirm={canSave}
+        onOpenChange={setConfirmationOpen}
+        onConfirm={() => {
+          void saveSettings();
+        }}
+      />
     </div>
   );
 };
