@@ -56,7 +56,7 @@ export function HealthWarningsBanner() {
           className={
             warning.severity === "critical"
               ? "flex items-start gap-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-[12px] text-destructive"
-              : "flex items-start gap-2 rounded border border-warning/40 bg-warning/10 px-3 py-1.5 text-[12px] text-warning-foreground"
+              : "flex items-start gap-2 rounded border border-warning/40 bg-warning/10 px-3 py-1.5 text-[12px] text-warning"
           }
         >
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
