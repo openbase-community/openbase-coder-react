@@ -66,6 +66,12 @@ type RoutinesResponse = {
   routines: Routine[];
 };
 
+type RoutineRunResponse = {
+  count?: number;
+  failureCount?: number;
+  results?: Array<{ name?: string; ran?: boolean; error?: string }>;
+};
+
 type RoutineForm = {
   name: string;
   kind: "agent" | "command";
@@ -401,8 +407,8 @@ const Routines = () => {
   const [actionKey, setActionKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchRoutines = useCallback(async () => {
-    setLoading(true);
+  const fetchRoutines = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const res = await apiFetch("/api/routines/");
       if (!res.ok) {
@@ -414,11 +420,13 @@ const Routines = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to reach the local API.");
     }
-    setLoading(false);
+    if (showLoading) setLoading(false);
   }, []);
 
   useEffect(() => {
     void fetchRoutines();
+    const interval = window.setInterval(() => void fetchRoutines(false), 30_000);
+    return () => window.clearInterval(interval);
   }, [fetchRoutines]);
 
   const sortedRoutines = useMemo(
@@ -499,8 +507,20 @@ const Routines = () => {
       if (!res.ok) {
         throw new Error(await extractError(res, "Unable to run routines."));
       }
-      const data = await res.json();
-      toast.success(`Ran ${data.count ?? 0} routine${data.count === 1 ? "" : "s"}`);
+      const data = (await res.json()) as RoutineRunResponse;
+      const failures = (data.results ?? []).filter(
+        (result) => result.ran === false || Boolean(result.error),
+      );
+      if ((data.failureCount ?? failures.length) > 0) {
+        const first = failures[0];
+        toast.error(
+          first?.error
+            ? `${first.name ?? "Routine"}: ${first.error}`
+            : `${data.failureCount ?? failures.length} routine run failed.`,
+        );
+      } else {
+        toast.success(`Ran ${data.count ?? 0} routine${data.count === 1 ? "" : "s"}`);
+      }
       void fetchRoutines();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unable to run routines.");
@@ -537,7 +557,7 @@ const Routines = () => {
               Routines
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              {routines.length} configured · local Super Agents state
+              {routines.length} configured · local Openbase state
             </p>
           </div>
           <div className="flex items-center gap-2">
