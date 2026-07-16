@@ -124,7 +124,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 <Terminal className="h-3 w-3" strokeWidth={2.25} />
               </div>
               <span className="text-[12px] font-medium text-white">
-                Openbase Coder
+                Openbase
               </span>
             </div>
           </SidebarHeader>
