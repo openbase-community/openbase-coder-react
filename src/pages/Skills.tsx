@@ -53,7 +53,9 @@ interface AutoLinkSyncResult {
 interface AutoLinkSettings {
   auto_link_personal_skills: boolean;
   personal_skills_dir: string;
+  normal_claude_skills_dir?: string;
   openbase_codex_skills_dir: string;
+  openbase_claude_skills_dir?: string;
   sync: AutoLinkSyncResult | null;
 }
 
@@ -455,15 +457,19 @@ const Skills = () => {
       ? "Personal"
       : scope === "openbase_codex"
         ? "Openbase Codex"
-        : scope);
+        : scope === "normal_claude"
+          ? "Claude Code"
+          : scope);
   const scopeButtonLabel = (scope: string) =>
     scope === "home"
       ? "Personal"
-      : scope === "openbase_codex"
-        ? "Codex"
-        : scope === "openbase_claude"
-          ? "Claude"
-          : scopeName(scope);
+      : scope === "normal_claude"
+        ? "Claude Code"
+        : scope === "openbase_codex"
+          ? "Codex"
+          : scope === "openbase_claude"
+            ? "Claude"
+            : scopeName(scope);
   const skillDirForComparison = (skill: SkillEntry) =>
     skill.source_dir_path || skill.dir_path || skill.path.replace(/\/SKILL\.md$/, "");
   const selectedPrintingPressEntry = useMemo(
@@ -536,9 +542,7 @@ const Skills = () => {
             </h1>
             {!projectPath && editingScope !== "home" ? (
               <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                {editingScope === "openbase_claude"
-                  ? "openbase claude"
-                  : "openbase codex"}
+                {scopeName(editingScope).toLowerCase()}
               </span>
             ) : null}
             <span className="font-mono text-[11px] text-muted-foreground/70">
@@ -912,8 +916,8 @@ const Skills = () => {
                             Auto-link personal skills
                           </span>
                           <span className="block truncate text-[11.5px] text-muted-foreground">
-                            Symlink personal skills into the Openbase Codex and
-                            Claude homes when this page refreshes.
+                            Symlink normal Codex and Claude Code skills into
+                            the Openbase homes when this page refreshes.
                           </span>
                         </span>
                       </label>
