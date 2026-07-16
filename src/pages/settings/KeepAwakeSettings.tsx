@@ -74,10 +74,10 @@ export const KeepAwakeSettings: React.FC = () => {
       <div className="flex items-center gap-3 px-3 py-3">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
-            Keep Mac awake
+            Mac sleep prevention
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Start caffeinate -i -d with the Openbase Coder server.
+            Off by default. Turn on to run caffeinate -i -d with the server.
           </p>
           {settings?.restart_required ? (
             <p className="mt-1 text-[11px] text-muted-foreground">
