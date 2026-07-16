@@ -5,6 +5,8 @@ export type IgnoredLaunchctlLabelsResponse = {
 export type DangerousConfirmationSettingsResponse = {
   dangerous_confirmation_phrase: string;
   default_dangerous_confirmation_phrase: string;
+  user_address_name: string;
+  default_user_address_name: string;
   refreshed: boolean;
 };
 

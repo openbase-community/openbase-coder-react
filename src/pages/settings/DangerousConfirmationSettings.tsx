@@ -12,6 +12,7 @@ export const DangerousConfirmationSettings: React.FC = () => {
   const [settings, setSettings] =
     useState<DangerousConfirmationSettingsResponse | null>(null);
   const [phrase, setPhrase] = useState("");
+  const [userAddressName, setUserAddressName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export const DangerousConfirmationSettings: React.FC = () => {
       const data = (await res.json()) as DangerousConfirmationSettingsResponse;
       setSettings(data);
       setPhrase(data.dangerous_confirmation_phrase);
+      setUserAddressName(data.user_address_name);
       setError(null);
     } catch {
       setError("Unable to reach the local API.");
@@ -45,11 +47,13 @@ export const DangerousConfirmationSettings: React.FC = () => {
   }, [fetchSettings]);
 
   const normalizedPhrase = phrase.trim();
+  const normalizedUserAddressName = userAddressName.trim();
   const changed = useMemo(
     () =>
       Boolean(settings) &&
-      normalizedPhrase !== settings?.dangerous_confirmation_phrase,
-    [normalizedPhrase, settings],
+      (normalizedPhrase !== settings?.dangerous_confirmation_phrase ||
+        normalizedUserAddressName !== settings?.user_address_name),
+    [normalizedPhrase, normalizedUserAddressName, settings],
   );
 
   const saveSettings = useCallback(async () => {
@@ -59,6 +63,7 @@ export const DangerousConfirmationSettings: React.FC = () => {
         method: "PATCH",
         body: JSON.stringify({
           dangerous_confirmation_phrase: normalizedPhrase,
+          user_address_name: normalizedUserAddressName,
         }),
       });
       if (!res.ok) {
@@ -74,18 +79,20 @@ export const DangerousConfirmationSettings: React.FC = () => {
       const data = (await res.json()) as DangerousConfirmationSettingsResponse;
       setSettings(data);
       setPhrase(data.dangerous_confirmation_phrase);
+      setUserAddressName(data.user_address_name);
       setError(null);
     } catch {
       setError("Unable to reach the local API.");
     }
     setSaving(false);
-  }, [normalizedPhrase]);
+  }, [normalizedPhrase, normalizedUserAddressName]);
 
   const resetToDefault = useCallback(() => {
     if (!settings) {
       return;
     }
     setPhrase(settings.default_dangerous_confirmation_phrase);
+    setUserAddressName(settings.default_user_address_name);
   }, [settings]);
 
   return (
@@ -95,18 +102,34 @@ export const DangerousConfirmationSettings: React.FC = () => {
           Risky action confirmation
         </p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Exact phrase agents require before destructive or public publishing actions.
+          Template values used in installed agent instructions.
         </p>
       </div>
       <div className="space-y-2 px-3 py-3">
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
-          <Input
-            className="h-8 min-w-0 flex-1 px-2.5 text-[12px]"
-            value={phrase}
-            onChange={(event) => setPhrase(event.target.value)}
-            disabled={loading || saving}
-          />
-          <div className="flex shrink-0 gap-2">
+        <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <label className="min-w-0 space-y-1">
+            <span className="block text-[11px] font-medium text-muted-foreground">
+              Confirmation phrase
+            </span>
+            <Input
+              className="h-8 min-w-0 px-2.5 text-[12px]"
+              value={phrase}
+              onChange={(event) => setPhrase(event.target.value)}
+              disabled={loading || saving}
+            />
+          </label>
+          <label className="min-w-0 space-y-1">
+            <span className="block text-[11px] font-medium text-muted-foreground">
+              User address
+            </span>
+            <Input
+              className="h-8 min-w-0 px-2.5 text-[12px]"
+              value={userAddressName}
+              onChange={(event) => setUserAddressName(event.target.value)}
+              disabled={loading || saving}
+            />
+          </label>
+          <div className="flex shrink-0 items-end gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -123,7 +146,13 @@ export const DangerousConfirmationSettings: React.FC = () => {
               onClick={() => {
                 void saveSettings();
               }}
-              disabled={loading || saving || !changed || normalizedPhrase.length === 0}
+              disabled={
+                loading ||
+                saving ||
+                !changed ||
+                normalizedPhrase.length === 0 ||
+                normalizedUserAddressName.length === 0
+              }
             >
               <Save className="h-3 w-3" />
               {saving ? "Saving…" : "Save"}
