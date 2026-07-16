@@ -9,7 +9,6 @@ import { DangerousConfirmationSettings } from "./settings/DangerousConfirmationS
 import { DispatcherVoiceSettings } from "./settings/DispatcherVoiceSettings";
 import { EnvSettings } from "./settings/EnvSettings";
 import { IgnoredLaunchctlSettings } from "./settings/IgnoredLaunchctlSettings";
-import { KeepAwakeSettings } from "./settings/KeepAwakeSettings";
 import { LiveKitCompanionSettings } from "./settings/LiveKitCompanionSettings";
 import { OpenbaseServicesSettings } from "./settings/OpenbaseServicesSettings";
 import { ReasoningSettings } from "./settings/ReasoningSettings";
@@ -48,7 +47,6 @@ const Settings: React.FC = () => {
           onRestartScheduled={openbaseServices.applyRestartResponse}
         />
         <IgnoredLaunchctlSettings />
-        <KeepAwakeSettings />
         <AgentsGenerationSettings />
         <DangerousConfirmationSettings />
         <SidebarItemsSettings />
