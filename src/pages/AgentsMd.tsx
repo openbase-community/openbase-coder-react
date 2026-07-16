@@ -41,7 +41,7 @@ const EXPECTED_TARGETS: Array<
     id: "voice",
     label: "Voice Codex home instructions",
     description:
-      "Affects the Openbase voice Codex home environment and its general voice-coding behavior.",
+      "Affects the Openbase Coder voice Codex home environment and its general voice-coding behavior.",
   },
   {
     id: "normal",
@@ -59,7 +59,7 @@ const EXPECTED_TARGETS: Array<
     id: "super_agent",
     label: "Super Agent instructions",
     description:
-      "Affects normal non-dispatch Super Agent threads started or resumed by Openbase.",
+      "Affects normal non-dispatch Super Agent threads started or resumed by Openbase Coder.",
   },
   {
     id: "dispatcher",

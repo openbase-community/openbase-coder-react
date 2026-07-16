@@ -237,7 +237,7 @@ const OfficialCatalogTab = () => {
                   </p>
                 ) : (
                   <p className="text-[11.5px] text-muted-foreground">
-                    This entry is installed outside of Openbase.
+                    This entry is installed outside of Openbase Coder.
                   </p>
                 )}
               </div>

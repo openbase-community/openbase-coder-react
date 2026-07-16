@@ -85,7 +85,7 @@ const Devices = () => {
           <ResourceLoading>Scanning tailnet…</ResourceLoading>
         ) : openbaseDevices.length === 0 ? (
           <ResourceEmptyState icon={Monitor}>
-            No Openbase hosts found on the tailnet.
+            No Openbase Coder hosts found on the tailnet.
           </ResourceEmptyState>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
