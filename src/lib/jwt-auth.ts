@@ -110,6 +110,12 @@ async function getNativeAccessToken() {
     }
 
     const expiresAt = getTokenExpiryMs(token);
+    if (expiresAt && Date.now() + REFRESH_SKEW_MS >= expiresAt) {
+      // The bridge handed back an expired (or nearly expired) token. Fall
+      // through to the local refresh endpoint instead of looping 401/403s
+      // on a token we already know is dead.
+      return null;
+    }
     updateStoredAuth(token, expiresAt);
     return token;
   } catch {

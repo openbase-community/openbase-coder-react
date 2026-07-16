@@ -1,6 +1,7 @@
 import { useAuth } from "@/contexts/auth";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
+import { getValidAccessToken } from "@/lib/jwt-auth";
 import { getBackendWebSocketUrl } from "@/lib/runtime-config";
 import { reconcileThreadSnapshot } from "@/lib/thread-reconcile";
 import {
@@ -20,6 +21,7 @@ export function useThreadWebSocket(threadId: string | undefined) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const reconnectDelayRef = useRef(1000);
+  const connectAttemptRef = useRef(0);
 
   const refreshThread = useCallback(async () => {
     if (!threadId) return;
@@ -41,11 +43,18 @@ export function useThreadWebSocket(threadId: string | undefined) {
     }
   }, [threadId]);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (!threadId || !token) return;
 
+    // A token captured at mount goes stale across long sessions; every
+    // (re)connect attempt must authenticate with a currently valid token or
+    // the server rejects the socket forever once the old one expires.
+    const attempt = ++connectAttemptRef.current;
+    const freshToken = (await getValidAccessToken()) ?? token;
+    if (attempt !== connectAttemptRef.current) return;
+
     const baseUrl = getBackendWebSocketUrl(`/ws/threads/${threadId}/`);
-    const url = `${baseUrl}?token=${token}`;
+    const url = `${baseUrl}?token=${freshToken}`;
 
     const ws = new WebSocket(url);
     wsRef.current = ws;
@@ -65,7 +74,7 @@ export function useThreadWebSocket(threadId: string | undefined) {
           reconnectDelayRef.current * 2,
           30000
         );
-        connect();
+        void connect();
       }, reconnectDelayRef.current);
     };
 
@@ -145,7 +154,7 @@ export function useThreadWebSocket(threadId: string | undefined) {
   }, [threadId, token, refreshThread]);
 
   useEffect(() => {
-    connect();
+    void connect();
 
     const interval = window.setInterval(refreshThread, 5000);
     const handleFocus = () => {
@@ -164,6 +173,7 @@ export function useThreadWebSocket(threadId: string | undefined) {
       window.clearInterval(interval);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      connectAttemptRef.current++;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
