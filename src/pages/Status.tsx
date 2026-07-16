@@ -103,8 +103,17 @@ const Status = () => {
                   {svc.name}
                 </span>
                 <span className="font-mono text-[11px] text-muted-foreground/70">
-                  {locationLabel(svc)}
+                  {svc.command ?? locationLabel(svc)}
                 </span>
+                {svc.assertions?.map((assertion) => (
+                  <span
+                    key={assertion.flag}
+                    className="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                    title={assertion.label}
+                  >
+                    {assertion.flag}
+                  </span>
+                ))}
                 <span
                   className={`ml-auto font-mono text-[10.5px] ${
                     svc.running

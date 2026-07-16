@@ -110,4 +110,9 @@ export interface ServiceStatus {
   url?: string | null;
   running: boolean;
   optional?: boolean;
+  command?: string;
+  assertions?: Array<{
+    flag: string;
+    label: string;
+  }>;
 }
