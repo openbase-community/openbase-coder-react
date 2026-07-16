@@ -51,11 +51,22 @@ export type CodingBackendOption = {
   description: string;
 };
 
+export type ClaudeAuthSettingsResponse = {
+  command: string;
+  logged_in: boolean;
+  raw_output: string;
+  returncode: number;
+  state_updated: boolean;
+  keychain_copied: boolean;
+  message: string | null;
+};
+
 export type CodingBackendSettingsResponse = {
   backend: string;
   configured_backend?: string;
   codex_provider?: string;
   backend_note?: string | null;
+  claude_auth?: ClaudeAuthSettingsResponse;
   default_backend: string;
   supported_backends: CodingBackendOption[];
   env_file_exists: boolean;

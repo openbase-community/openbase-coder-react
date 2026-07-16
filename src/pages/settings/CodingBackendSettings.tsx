@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, Save } from "lucide-react";
+import { KeyRound, RefreshCw, Save } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   extractErrorMessage,
@@ -29,6 +29,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
   const [selectedBackend, setSelectedBackend] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncingClaudeAuth, setSyncingClaudeAuth] = useState(false);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -135,11 +136,45 @@ export const CodingBackendSettings: React.FC<Props> = ({
     setSaving(false);
   }, [onRestartScheduled, selectedBackend]);
 
+  const syncClaudeAuth = useCallback(async () => {
+    setSyncingClaudeAuth(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await apiFetch("/api/settings/coding-backend/claude-auth/", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        setError(
+          await extractErrorMessage(
+            res,
+            `Unable to sync Claude auth: ${res.status}`,
+          ),
+        );
+        setSyncingClaudeAuth(false);
+        return;
+      }
+      const claudeAuth = await res.json();
+      setSettings((current) =>
+        current ? { ...current, claude_auth: claudeAuth } : current,
+      );
+      setMessage(
+        claudeAuth.logged_in
+          ? "Claude auth synced. Openbase Claude Code auth is ready."
+          : "Claude auth synced, but Openbase Claude Code is still not logged in.",
+      );
+    } catch {
+      setError("Unable to reach the local API.");
+    }
+    setSyncingClaudeAuth(false);
+  }, []);
+
   const currentOption = settings?.supported_backends.find(
     (option) => option.id === settings.backend,
   );
   const configuredBackend =
     settings?.configured_backend ?? settings?.backend ?? "";
+  const showClaudeAuth = configuredBackend === "claude_code";
   const canSave =
     Boolean(selectedBackend) &&
     Boolean(settings) &&
@@ -171,6 +206,18 @@ export const CodingBackendSettings: React.FC<Props> = ({
             <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
               {selectedOption.summary} {selectedOption.description}
             </p>
+          ) : null}
+          {showClaudeAuth ? (
+            <div className="mt-1 space-y-0.5 font-mono text-[11px] text-muted-foreground">
+              <p>
+                Claude auth loggedIn:{" "}
+                {settings?.claude_auth?.logged_in ? "true" : "false"}
+              </p>
+              <p>
+                {settings?.claude_auth?.command ??
+                  "openbase-coder claude sync-state"}
+              </p>
+            </div>
           ) : null}
           {message ? (
             <p className="mt-1 text-[12px] text-success">{message}</p>
@@ -227,6 +274,25 @@ export const CodingBackendSettings: React.FC<Props> = ({
             <Save className="h-3 w-3" />
             {saving ? "Changing…" : "Save backend"}
           </Button>
+          {showClaudeAuth ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2.5 text-[12px]"
+              onClick={() => {
+                void syncClaudeAuth();
+              }}
+              disabled={loading || saving || syncingClaudeAuth}
+              title={
+                settings?.claude_auth?.command ?? "openbase-coder claude sync-state"
+              }
+            >
+              <KeyRound
+                className={`h-3 w-3 ${syncingClaudeAuth ? "animate-pulse" : ""}`}
+              />
+              {syncingClaudeAuth ? "Syncing…" : "Sync Claude auth"}
+            </Button>
+          ) : null}
         </div>
       </div>
 
