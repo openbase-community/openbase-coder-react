@@ -17,13 +17,13 @@ import { Button } from "@/components/ui/button";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
-import { setThreadFavorite } from "@/lib/thread-favorites";
 import {
   threadAgentVoiceName,
   threadDisplayName,
   threadProjectLabel,
   threadRoutePath,
 } from "@/lib/thread-display";
+import { setThreadFavorite } from "@/lib/thread-favorites";
 import { promptAfterThreadTurnSubmission } from "@/lib/thread-turn-actions";
 import {
   Archive,
@@ -191,12 +191,16 @@ const SessionDetail = ({
         method: "DELETE",
       });
       if (!res.ok) {
-        throw new Error(await extractErrorMessage(res, "Failed to archive thread"));
+        throw new Error(
+          await extractErrorMessage(res, "Failed to archive thread"),
+        );
       }
       toast.success("Thread archived");
       navigate("/dashboard/threads");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to archive thread");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to archive thread",
+      );
     }
   };
 
@@ -287,8 +291,9 @@ const SessionDetail = ({
                       <AlertDialogHeader>
                         <AlertDialogTitle>Archive thread?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This hides the thread from active thread lists. If it is
-                          running, the current turn will be interrupted first.
+                          This hides the thread from active thread lists. If it
+                          is running, the current turn will be interrupted
+                          first.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -439,7 +444,7 @@ const SessionDetail = ({
                     ? activePromptMode === "steer"
                       ? "Steer the active turn…"
                       : "Queue a follow-up turn…"
-                    : "Start a Codex turn…"
+                    : "Start a turn…"
                 }
                 className="flex-1 resize-none rounded border border-border bg-surface p-2 text-[12.5px] text-foreground focus:border-ring focus:outline-none"
                 rows={1}
