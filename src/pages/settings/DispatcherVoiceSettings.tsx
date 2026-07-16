@@ -12,51 +12,35 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   extractErrorMessage,
   type DispatcherVoice,
-  type OpenbaseServicesResponse,
   type STTSettingsResponse,
   type TTSSettingsResponse,
   type TTSVoice,
+  type OpenbaseServicesResponse,
 } from "./settingsApi";
 
 type Props = {
   onRestartScheduled: (data: OpenbaseServicesResponse, delayMs: number) => void;
 };
 
-export const DispatcherVoiceSettings: React.FC<Props> = ({
-  onRestartScheduled,
-}) => {
-  const [ttsSettings, setTtsSettings] = useState<TTSSettingsResponse | null>(
-    null,
-  );
-  const [sttSettings, setSttSettings] = useState<STTSettingsResponse | null>(
-    null,
-  );
+export const DispatcherVoiceSettings: React.FC<Props> = ({ onRestartScheduled }) => {
+  const [ttsSettings, setTtsSettings] = useState<TTSSettingsResponse | null>(null);
+  const [sttSettings, setSttSettings] = useState<STTSettingsResponse | null>(null);
   const [voices, setVoices] = useState<TTSVoice[]>([]);
-  const [dispatcherVoice, setDispatcherVoice] =
-    useState<DispatcherVoice | null>(null);
+  const [dispatcherVoice, setDispatcherVoice] = useState<DispatcherVoice | null>(null);
   const [selectedProvider, setSelectedProvider] = useState("");
-  const [selectedDispatcherVoiceId, setSelectedDispatcherVoiceId] =
-    useState("");
+  const [selectedDispatcherVoiceId, setSelectedDispatcherVoiceId] = useState("");
   const [loadingDispatcherVoices, setLoadingDispatcherVoices] = useState(true);
   const [savingDispatcherVoice, setSavingDispatcherVoice] = useState(false);
   const [savingSttProvider, setSavingSttProvider] = useState(false);
   const [downloadingKokoro, setDownloadingKokoro] = useState(false);
   const [downloadingLocalStt, setDownloadingLocalStt] = useState(false);
-  const [dispatcherVoiceError, setDispatcherVoiceError] = useState<
-    string | null
-  >(null);
-  const [dispatcherVoiceMessage, setDispatcherVoiceMessage] = useState<
-    string | null
-  >(null);
+  const [dispatcherVoiceError, setDispatcherVoiceError] = useState<string | null>(null);
+  const [dispatcherVoiceMessage, setDispatcherVoiceMessage] = useState<string | null>(null);
   const [sttError, setSttError] = useState<string | null>(null);
   const [sttMessage, setSttMessage] = useState<string | null>(null);
   const [recreatingLiveKitThread, setRecreatingLiveKitThread] = useState(false);
-  const [liveKitThreadError, setLiveKitThreadError] = useState<string | null>(
-    null,
-  );
-  const [liveKitThreadMessage, setLiveKitThreadMessage] = useState<
-    string | null
-  >(null);
+  const [liveKitThreadError, setLiveKitThreadError] = useState<string | null>(null);
+  const [liveKitThreadMessage, setLiveKitThreadMessage] = useState<string | null>(null);
 
   const fetchDispatcherVoices = useCallback(async () => {
     setLoadingDispatcherVoices(true);
@@ -95,10 +79,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
       const res = await apiFetch("/api/settings/stt/");
       if (!res.ok) {
         setSttError(
-          await extractErrorMessage(
-            res,
-            `Unable to load STT settings: ${res.status}`,
-          ),
+          await extractErrorMessage(res, `Unable to load STT settings: ${res.status}`),
         );
         return;
       }
@@ -199,10 +180,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
 
   const handleSttProviderChange = useCallback(
     async (provider: string) => {
-      if (
-        provider === "local_mlx_whisper" &&
-        !sttSettings?.local_download.ready
-      ) {
+      if (provider === "local_mlx_whisper" && !sttSettings?.local_download.ready) {
         setSttError("Download Local MLX Whisper before enabling local STT.");
         return;
       }
@@ -227,9 +205,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
         }
         const data = (await res.json()) as STTSettingsResponse;
         setSttSettings(data);
-        setSttMessage(
-          "Saved. Recreate the dispatcher thread to apply STT changes.",
-        );
+        setSttMessage("Saved. Recreate the dispatcher thread to apply STT changes.");
       } catch {
         setSttError("Unable to reach the local API.");
       }
@@ -285,8 +261,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
     (provider) => provider.id === dispatcherVoice?.provider,
   );
   const kokoroReady = Boolean(ttsSettings?.local_download.ready);
-  const selectedProviderNeedsDownload =
-    selectedProvider === "kokoro" && !kokoroReady;
+  const selectedProviderNeedsDownload = selectedProvider === "kokoro" && !kokoroReady;
   const localSttReady = Boolean(sttSettings?.local_download.ready);
   const selectedSttProvider = sttSettings?.provider ?? "";
   const selectedSttNeedsDownload =
@@ -299,8 +274,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
     (providerId: string) => {
       setSelectedProvider(providerId);
       const nextProvider =
-        ttsSettings?.providers.find((provider) => provider.id === providerId) ??
-        null;
+        ttsSettings?.providers.find((provider) => provider.id === providerId) ?? null;
       const nextVoices = ttsSettings?.voices_by_provider[providerId] ?? [];
       setVoices(nextVoices);
       setSelectedDispatcherVoiceId(nextVoices[0]?.id ?? "");
@@ -322,14 +296,14 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
             Text-to-speech provider
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Select the provider and voice used by the dispatcher and Super
-            Agents. Recreate the dispatcher thread to apply a saved change.
+            Select the provider and voice used by the dispatcher and Super Agents.
+            Recreate the dispatcher thread to apply a saved change.
           </p>
           {dispatcherVoice ? (
             <p className="mt-1 truncate text-[11px] text-muted-foreground">
               Current:{" "}
-              {currentProviderEntry?.name ?? dispatcherVoice.provider ?? "TTS"}{" "}
-              · {dispatcherVoice.name}
+              {currentProviderEntry?.name ?? dispatcherVoice.provider ?? "TTS"} ·{" "}
+              {dispatcherVoice.name}
             </p>
           ) : null}
           {selectedDispatcherVoice ? (
@@ -433,8 +407,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
             Speech-to-text provider
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Select cloud transcription, Openbase Cloud, or the local MLX Whisper
-            model.
+            Select cloud transcription, Openbase Cloud, or the local MLX Whisper model.
           </p>
           {sttSettings ? (
             <p className="mt-1 truncate text-[11px] text-muted-foreground">
@@ -491,7 +464,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
       <div className="flex items-center gap-3 border-t border-border px-3 py-2.5">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
-            Dispatcher thread
+            LiveKit dispatcher thread
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             Create a fresh dispatcher thread and restart the LiveKit agent.

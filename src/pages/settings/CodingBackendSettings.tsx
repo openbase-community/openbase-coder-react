@@ -12,24 +12,15 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   extractErrorMessage,
   type CodingBackendSettingsResponse,
-  type OpenbaseServicesResponse,
 } from "./settingsApi";
-import { CodingBackendChangeDialog } from "./CodingBackendChangeDialog";
 
-type Props = {
-  onRestartScheduled: (data: OpenbaseServicesResponse, delayMs: number) => void;
-};
-
-export const CodingBackendSettings: React.FC<Props> = ({
-  onRestartScheduled,
-}) => {
+export const CodingBackendSettings: React.FC = () => {
   const [settings, setSettings] = useState<CodingBackendSettingsResponse | null>(
     null,
   );
   const [selectedBackend, setSelectedBackend] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,7 +73,6 @@ export const CodingBackendSettings: React.FC<Props> = ({
     setSaving(true);
     setMessage(null);
     setError(null);
-    let backendSaved = false;
     try {
       const res = await apiFetch("/api/settings/coding-backend/", {
         method: "PUT",
@@ -101,49 +91,22 @@ export const CodingBackendSettings: React.FC<Props> = ({
       const data = (await res.json()) as CodingBackendSettingsResponse;
       setSettings(data);
       setSelectedBackend(data.backend);
-      backendSaved = true;
-
-      if (data.restart_required) {
-        const restartRes = await apiFetch("/api/settings/restart/", {
-          method: "POST",
-          body: JSON.stringify({ recreate_dispatcher: true }),
-        });
-        if (!restartRes.ok) {
-          setError(
-            `Backend saved, but the automatic restart failed: ${await extractErrorMessage(
-              restartRes,
-              `restart request returned ${restartRes.status}`,
-            )}. Restart Openbase services and recreate the dispatcher before starting new work.`,
-          );
-          setSaving(false);
-          return;
-        }
-        const restartData =
-          (await restartRes.json()) as OpenbaseServicesResponse;
-        onRestartScheduled(restartData, 4000);
-        setMessage(
-          "Backend saved. Restarting Openbase services and recreating the dispatcher.",
-        );
-      }
-    } catch {
-      setError(
-        backendSaved
-          ? "Backend saved, but the automatic restart could not be scheduled. Restart Openbase services and recreate the dispatcher before starting new work."
-          : "Unable to reach the local API.",
+      setMessage(
+        data.restart_required ? `Backend saved. ${data.restart_hint}` : null,
       );
+    } catch {
+      setError("Unable to reach the local API.");
     }
     setSaving(false);
-  }, [onRestartScheduled, selectedBackend]);
+  }, [selectedBackend]);
 
   const currentOption = settings?.supported_backends.find(
     (option) => option.id === settings.backend,
   );
-  const configuredBackend =
-    settings?.configured_backend ?? settings?.backend ?? "";
   const canSave =
     Boolean(selectedBackend) &&
     Boolean(settings) &&
-    selectedBackend !== configuredBackend &&
+    selectedBackend !== (settings?.configured_backend ?? settings?.backend) &&
     !loading &&
     !saving;
 
@@ -220,27 +183,15 @@ export const CodingBackendSettings: React.FC<Props> = ({
             size="sm"
             className="h-8 px-2.5 text-[12px]"
             onClick={() => {
-              setConfirmationOpen(true);
+              void saveBackend();
             }}
             disabled={!canSave}
           >
             <Save className="h-3 w-3" />
-            {saving ? "Changing…" : "Save backend"}
+            {saving ? "Saving…" : "Save backend"}
           </Button>
         </div>
       </div>
-
-      <CodingBackendChangeDialog
-        open={confirmationOpen}
-        currentLabel={currentOption?.label ?? configuredBackend}
-        selectedLabel={selectedOption?.label ?? selectedBackend}
-        saving={saving}
-        canConfirm={canSave}
-        onOpenChange={setConfirmationOpen}
-        onConfirm={() => {
-          void saveBackend();
-        }}
-      />
     </div>
   );
 };

@@ -52,12 +52,7 @@ const DispatchChat = () => {
   }, [fetchDispatchThread]);
 
   if (dispatchThread) {
-    return (
-      <SessionDetail
-        threadIdOverride={dispatchThread.thread_id}
-        allowDispatcherThread
-      />
-    );
+    return <SessionDetail threadIdOverride={dispatchThread.thread_id} />;
   }
 
   return (

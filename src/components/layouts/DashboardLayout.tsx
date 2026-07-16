@@ -12,7 +12,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import HealthWarningsBanner from "@/components/HealthWarningsBanner";
 import UserProfile from "@/components/UserProfile";
 import { usePluginRegistry } from "@/plugin-registry";
 import {
@@ -199,7 +198,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </div>
             <UserProfile />
           </header>
-          <HealthWarningsBanner />
           <main
             className={
               noPadding

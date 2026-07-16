@@ -1,7 +1,6 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { RunDetail } from "@/components/RunDetail";
 import { StatusBadge } from "@/components/StatusBadge";
-import { TurnBody, UserInputBlock } from "@/components/TurnBody";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,9 +21,7 @@ import {
   threadAgentVoiceName,
   threadDisplayName,
   threadProjectLabel,
-  threadRoutePath,
 } from "@/lib/thread-display";
-import { promptAfterThreadTurnSubmission } from "@/lib/thread-turn-actions";
 import {
   Archive,
   ArrowLeft,
@@ -41,7 +38,6 @@ import { toast } from "sonner";
 
 interface SessionDetailProps {
   threadIdOverride?: string;
-  allowDispatcherThread?: boolean;
 }
 
 const scrollToBottomInstantly = (target: HTMLElement | null) => {
@@ -70,29 +66,14 @@ const findScrollContainer = (target: HTMLElement | null) => {
     : document.documentElement;
 };
 
-const SessionDetail = ({
-  threadIdOverride,
-  allowDispatcherThread = false,
-}: SessionDetailProps = {}) => {
+const SessionDetail = ({ threadIdOverride }: SessionDetailProps = {}) => {
   const { threadId: routeThreadId } = useParams<{ threadId: string }>();
   const threadId = threadIdOverride ?? routeThreadId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const {
-    thread,
-    isConnected,
-    loadError,
-    startTurn,
-    queueTurn,
-    steerTurn,
-    interruptTurn,
-    refreshThread,
-  } = useThreadWebSocket(threadId);
+  const { thread, isConnected, loadError, startTurn, interruptTurn, refreshThread } =
+    useThreadWebSocket(threadId);
   const [prompt, setPrompt] = useState("");
-  const [isSubmittingPrompt, setIsSubmittingPrompt] = useState(false);
-  const [activePromptMode, setActivePromptMode] = useState<"steer" | "queue">(
-    "steer",
-  );
   const hasConnectedRef = useRef(false);
   if (isConnected) {
     hasConnectedRef.current = true;
@@ -121,54 +102,33 @@ const SessionDetail = ({
     }
   }, [currentTurnOutput]);
 
-  useEffect(() => {
-    if (!thread || allowDispatcherThread) return;
-    const routePath = threadRoutePath(thread);
-    if (routePath === "/dashboard/dispatch") {
-      navigate(routePath, { replace: true });
-    }
-  }, [allowDispatcherThread, navigate, thread]);
-
   useLayoutEffect(() => {
     scrollToBottomInstantly(threadEndRef.current);
   }, [
     thread?.thread_id,
     thread?.turn_history.length,
     thread?.current_turn?.turn_id,
-    thread?.current_turn?.steers?.length,
-    thread?.queued_turns?.length,
     currentTurnOutput,
     currentTurnStderr,
     thread?.status,
   ]);
 
-  const handleStartTurn = async () => {
+  const handleStartTurn = () => {
     const trimmed = prompt.trim();
-    if (!trimmed || isSubmittingPrompt) return;
-    setIsSubmittingPrompt(true);
-    try {
-      const accepted = await (hasActiveCurrentTurn
-        ? activePromptMode === "steer"
-          ? steerTurn(trimmed)
-          : queueTurn(trimmed)
-        : startTurn(trimmed));
-      if (accepted) {
-        setPrompt((current) =>
-          promptAfterThreadTurnSubmission(current, trimmed, accepted),
-        );
-      }
-    } finally {
-      setIsSubmittingPrompt(false);
+    if (!trimmed) return;
+    if (startTurn(trimmed)) {
+      setPrompt("");
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      void handleStartTurn();
+      handleStartTurn();
     }
   };
 
+  const isRunning = thread?.status === "running";
   const hasActiveCurrentTurn =
     thread?.current_turn?.status === "running" ||
     thread?.current_turn?.status === "waiting";
@@ -374,97 +334,51 @@ const SessionDetail = ({
               ) : null}
             </div>
             <div className="space-y-2 p-3">
-              <TurnBody turn={thread.current_turn} outputRef={outputRef} />
-            </div>
-          </section>
-        ) : null}
-
-        {thread?.queued_turns?.length ? (
-          <section className="overflow-hidden rounded border border-border bg-surface">
-            <div className="border-b border-border bg-surface-muted px-3 py-1.5">
-              <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
-                queued turns
-              </p>
-            </div>
-            <div className="space-y-2 p-3">
-              {thread.queued_turns.map((queued, index) => (
-                <UserInputBlock
-                  key={queued.queue_id ?? index}
-                  label="queued"
-                  text={queued.prompt}
-                />
-              ))}
+              <div className="rounded border border-border bg-surface-muted px-2.5 py-1.5">
+                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  prompt
+                </p>
+                <pre className="mt-0.5 whitespace-pre-wrap break-words font-sans text-[12.5px] text-foreground">
+                  {thread.current_turn.prompt}
+                </pre>
+              </div>
+              {thread.current_turn.accumulated_output ? (
+                <pre
+                  ref={outputRef}
+                  className="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-foreground p-2.5 font-mono text-[11.5px] text-background"
+                >
+                  {thread.current_turn.accumulated_output}
+                </pre>
+              ) : null}
+              {thread.current_turn.accumulated_stderr ? (
+                <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded bg-destructive/95 p-2.5 font-mono text-[11.5px] text-destructive-foreground">
+                  {thread.current_turn.accumulated_stderr}
+                </pre>
+              ) : null}
             </div>
           </section>
         ) : null}
 
         <div ref={threadEndRef} aria-hidden="true" />
 
-        {thread ? (
+        {thread && !isRunning ? (
           <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-2.5 backdrop-blur md:left-[13rem]">
-            <div className="mx-auto flex max-w-3xl items-end gap-1.5">
-              {hasActiveCurrentTurn ? (
-                <div className="grid w-24 shrink-0 grid-cols-1 overflow-hidden rounded border border-border bg-surface text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => setActivePromptMode("steer")}
-                    className={`px-2 py-1 text-left ${
-                      activePromptMode === "steer"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-surface-muted"
-                    }`}
-                  >
-                    Steer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActivePromptMode("queue")}
-                    className={`border-t border-border px-2 py-1 text-left ${
-                      activePromptMode === "queue"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-surface-muted"
-                    }`}
-                  >
-                    Queue
-                  </button>
-                </div>
-              ) : null}
+            <div className="mx-auto flex max-w-3xl gap-1.5">
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
                 aria-label="Codex turn prompt"
-                placeholder={
-                  hasActiveCurrentTurn
-                    ? activePromptMode === "steer"
-                      ? "Steer the active turn…"
-                      : "Queue a follow-up turn…"
-                    : "Start a Codex turn…"
-                }
+                placeholder="Start a Codex turn…"
                 className="flex-1 resize-none rounded border border-border bg-surface p-2 text-[12.5px] text-foreground focus:border-ring focus:outline-none"
                 rows={1}
               />
               <Button
-                onClick={() => void handleStartTurn()}
-                disabled={!isConnected || !prompt.trim() || isSubmittingPrompt}
-                aria-busy={isSubmittingPrompt}
+                onClick={handleStartTurn}
+                disabled={!isConnected || !prompt.trim()}
                 size="sm"
-                aria-label={
-                  hasActiveCurrentTurn
-                    ? activePromptMode === "steer"
-                      ? "Steer active turn"
-                      : "Queue follow-up turn"
-                    : "Start Codex turn"
-                }
-                title={
-                  isConnected
-                    ? hasActiveCurrentTurn
-                      ? activePromptMode === "steer"
-                        ? "Steer active turn"
-                        : "Queue follow-up turn"
-                      : "Start Codex turn"
-                    : "Thread disconnected"
-                }
+                aria-label="Start Codex turn"
+                title={isConnected ? "Start Codex turn" : "Thread disconnected"}
               >
                 <Send className="h-3 w-3" />
               </Button>

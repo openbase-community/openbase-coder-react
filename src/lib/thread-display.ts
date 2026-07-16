@@ -13,19 +13,6 @@ const firstPresent = (...values: Array<string | null | undefined>) =>
 export const isDispatcherThread = (thread: ThreadInfo) =>
   thread.voice_route?.role === "dispatcher";
 
-export const threadRoutePath = (
-  thread: ThreadInfo,
-  options: { fromProject?: string | null } = {},
-) => {
-  if (isDispatcherThread(thread)) {
-    return "/dashboard/dispatch";
-  }
-  const path = `/dashboard/threads/${encodeURIComponent(thread.thread_id)}`;
-  return options.fromProject
-    ? `${path}?fromProject=${encodeURIComponent(options.fromProject)}`
-    : path;
-};
-
 export const threadDisplayName = (thread: ThreadInfo) =>
   firstPresent(thread.display_name, thread.name, thread.title, thread.preview) ||
   basename(thread.directory) ||

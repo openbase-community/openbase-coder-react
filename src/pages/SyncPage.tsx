@@ -24,13 +24,6 @@ import {
 
 const STATUS_POLL_MS = 5000;
 
-type SyncConflictIgnoreFolderResponse = {
-  ignore_pattern: string;
-  added: boolean;
-  resolved_count: number;
-  apply_warning?: string;
-};
-
 const formatReconcileTime = (value: string | null) => {
   if (!value) return null;
   const parsed = Date.parse(value);
@@ -46,7 +39,6 @@ const SyncPage = () => {
   const [saving, setSaving] = useState(false);
   const [purging, setPurging] = useState(false);
   const [resolving, setResolving] = useState<string | null>(null);
-  const [ignoring, setIgnoring] = useState<string | null>(null);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -242,43 +234,6 @@ const SyncPage = () => {
     [fetchStatus],
   );
 
-  const ignoreContainingFolder = useCallback(
-    async (id: string) => {
-      setIgnoring(id);
-      try {
-        const res = await apiFetch(
-          "/api/sync/conflicts/ignore-containing-folder/",
-          {
-            method: "POST",
-            body: JSON.stringify({ id }),
-          },
-        );
-        if (!res.ok) {
-          throw new Error(
-            await extractErrorMessage(res, "Unable to ignore conflict folder."),
-          );
-        }
-        const data = (await res.json()) as SyncConflictIgnoreFolderResponse;
-        toast.success(
-          `Ignoring ${data.ignore_pattern}; cleared ${data.resolved_count} conflict${
-            data.resolved_count === 1 ? "" : "s"
-          }`,
-        );
-        if (data.apply_warning) toast.warning(data.apply_warning);
-        await fetchSettings();
-        await fetchStatus();
-      } catch (err) {
-        toast.error(
-          err instanceof Error
-            ? err.message
-            : "Unable to ignore conflict folder.",
-        );
-      }
-      setIgnoring(null);
-    },
-    [fetchSettings, fetchStatus],
-  );
-
   const refresh = useCallback(() => {
     void fetchSettings();
     if (enabled) void fetchStatus();
@@ -352,6 +307,14 @@ const SyncPage = () => {
               </div>
             </div>
 
+            {conflicts.length > 0 ? (
+              <SyncConflictsCard
+                conflicts={conflicts}
+                resolving={resolving}
+                onResolve={(id, action) => void resolveConflict(id, action)}
+              />
+            ) : null}
+
             <SyncFoldersCard
               folders={settings.folders}
               statusFolders={status?.folders ?? []}
@@ -371,18 +334,6 @@ const SyncPage = () => {
               purging={purging}
               onPurge={() => void purgeHistory()}
             />
-
-            {conflicts.length > 0 ? (
-              <SyncConflictsCard
-                conflicts={conflicts}
-                resolving={resolving}
-                ignoring={ignoring}
-                onResolve={(id, action) => void resolveConflict(id, action)}
-                onIgnoreContainingFolder={(id) =>
-                  void ignoreContainingFolder(id)
-                }
-              />
-            ) : null}
           </>
         )}
       </div>

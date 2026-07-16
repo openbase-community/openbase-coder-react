@@ -10,7 +10,6 @@ import {
   projectName,
 } from "@/lib/project-display";
 import { setThreadFavorite } from "@/lib/thread-favorites";
-import { threadRoutePath } from "@/lib/thread-display";
 import type { Project, ServiceStatus, ThreadInfo } from "@/types/session";
 import { AlertTriangle, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -223,7 +222,9 @@ const Dashboard = () => {
                   key={thread.thread_id}
                   thread={thread}
                   showTopBorder={idx > 0}
-                  onClick={() => navigate(threadRoutePath(thread))}
+                  onClick={() =>
+                    navigate(`/dashboard/threads/${thread.thread_id}`)
+                  }
                   onToggleFavorite={(item) => void toggleThreadFavorite(item)}
                 />
               ))}
