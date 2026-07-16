@@ -40,7 +40,7 @@ const ApprovalRequests = () => {
     if (result.ok) {
       toast.success(decision === "accept" ? "Approved" : "Denied");
     } else {
-      toast.error(result.error);
+      toast.error("error" in result ? result.error : "Unable to answer request");
     }
   };
 

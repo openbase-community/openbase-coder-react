@@ -3,7 +3,7 @@ import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
 
 /**
- * Shared Tailwind preset for Openbase Coder hosts (console, desktop).
+ * Shared Tailwind preset for Openbase hosts (console, desktop).
  *
  * Hosts should keep only their `content` globs and reference this preset:
  *
