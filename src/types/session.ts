@@ -110,6 +110,7 @@ export interface ServiceStatus {
   url?: string | null;
   running: boolean;
   optional?: boolean;
+  enabled?: boolean;
   command?: string;
   assertions?: Array<{
     flag: string;

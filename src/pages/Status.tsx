@@ -43,7 +43,7 @@ const Status = () => {
   };
 
   const entries = Object.entries(services);
-  const requiredEntries = entries.filter(([, s]) => !s.optional);
+  const requiredEntries = entries.filter(([, s]) => !s.optional && s.enabled !== false);
   const runningCount = requiredEntries.filter(([, s]) => s.running).length;
 
   return (
@@ -83,50 +83,61 @@ const Status = () => {
           </div>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
-            {entries.map(([key, svc], idx) => (
-              <div
-                key={key}
-                className={`flex items-center gap-2.5 px-3 py-1.5 ${
-                  idx > 0 ? "border-t border-border" : ""
-                }`}
-              >
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${
-                    svc.running
-                      ? "bg-success"
-                      : svc.optional
-                        ? "bg-muted-foreground/40"
-                        : "bg-destructive"
-                  }`}
-                />
-                <span className="text-[12.5px] font-medium text-foreground">
-                  {svc.name}
-                </span>
-                <span className="font-mono text-[11px] text-muted-foreground/70">
-                  {svc.command ?? locationLabel(svc)}
-                </span>
-                {svc.assertions?.map((assertion) => (
-                  <span
-                    key={assertion.flag}
-                    className="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
-                    title={assertion.label}
-                  >
-                    {assertion.flag}
-                  </span>
-                ))}
-                <span
-                  className={`ml-auto font-mono text-[10.5px] ${
-                    svc.running
-                      ? "text-success"
-                      : svc.optional
-                        ? "text-muted-foreground"
-                        : "text-destructive"
+            {entries.map(([key, svc], idx) => {
+              const disabled = svc.enabled === false;
+              const statusLabel = disabled
+                ? "disabled"
+                : svc.running
+                  ? "running"
+                  : svc.optional
+                    ? "optional"
+                    : "stopped";
+              const muted = disabled || svc.optional;
+              return (
+                <div
+                  key={key}
+                  className={`flex items-center gap-2.5 px-3 py-1.5 ${
+                    idx > 0 ? "border-t border-border" : ""
                   }`}
                 >
-                  {svc.running ? "running" : svc.optional ? "optional" : "stopped"}
-                </span>
-              </div>
-            ))}
+                  <span
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      svc.running
+                        ? "bg-success"
+                        : muted
+                          ? "bg-muted-foreground/40"
+                          : "bg-destructive"
+                    }`}
+                  />
+                  <span className="text-[12.5px] font-medium text-foreground">
+                    {svc.name}
+                  </span>
+                  <span className="font-mono text-[11px] text-muted-foreground/70">
+                    {svc.command ?? locationLabel(svc)}
+                  </span>
+                  {svc.assertions?.map((assertion) => (
+                    <span
+                      key={assertion.flag}
+                      className="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                      title={assertion.label}
+                    >
+                      {assertion.flag}
+                    </span>
+                  ))}
+                  <span
+                    className={`ml-auto font-mono text-[10.5px] ${
+                      svc.running
+                        ? "text-success"
+                        : muted
+                          ? "text-muted-foreground"
+                          : "text-destructive"
+                    }`}
+                  >
+                    {statusLabel}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

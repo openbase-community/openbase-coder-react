@@ -14,6 +14,13 @@ export type AgentsGenerationSettingsResponse = {
   refreshed: boolean;
 };
 
+export type KeepAwakeSettingsResponse = {
+  keep_system_awake: boolean;
+  default_keep_system_awake: boolean;
+  restart_required: boolean;
+  restart_hint: string;
+};
+
 export type OpenbaseService = {
   name: string;
   label: string;
