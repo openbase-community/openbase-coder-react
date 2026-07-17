@@ -1,4 +1,14 @@
 import { apiFetch } from "@/lib/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -7,11 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { KeyRound, RefreshCw, Save } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { KeyRound, PlugZap, RefreshCw, Save, TriangleAlert } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   extractErrorMessage,
   type CodingBackendSettingsResponse,
+  type CodexPluginSettingsResponse,
   type OpenbaseServicesResponse,
 } from "./settingsApi";
 import { CodingBackendChangeDialog } from "./CodingBackendChangeDialog";
@@ -31,6 +43,14 @@ export const CodingBackendSettings: React.FC<Props> = ({
   const [saving, setSaving] = useState(false);
   const [syncingClaudeAuth, setSyncingClaudeAuth] = useState(false);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [codexPlugins, setCodexPlugins] =
+    useState<CodexPluginSettingsResponse | null>(null);
+  const [loadingCodexPlugins, setLoadingCodexPlugins] = useState(false);
+  const [togglingCodexPlugin, setTogglingCodexPlugin] = useState<string | null>(
+    null,
+  );
+  const [codexPluginRestartOpen, setCodexPluginRestartOpen] = useState(false);
+  const [schedulingPluginRestart, setSchedulingPluginRestart] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +87,27 @@ export const CodingBackendSettings: React.FC<Props> = ({
   useEffect(() => {
     void fetchSettings();
   }, [fetchSettings]);
+
+  const fetchCodexPlugins = useCallback(async () => {
+    setLoadingCodexPlugins(true);
+    try {
+      const res = await apiFetch("/api/settings/coding-backend/codex-plugins/");
+      if (!res.ok) {
+        setError(
+          await extractErrorMessage(
+            res,
+            `Unable to load Codex plugins: ${res.status}`,
+          ),
+        );
+        setLoadingCodexPlugins(false);
+        return;
+      }
+      setCodexPlugins((await res.json()) as CodexPluginSettingsResponse);
+    } catch {
+      setError("Unable to reach the local API.");
+    }
+    setLoadingCodexPlugins(false);
+  }, []);
 
   const selectedOption = useMemo(
     () =>
@@ -169,18 +210,96 @@ export const CodingBackendSettings: React.FC<Props> = ({
     setSyncingClaudeAuth(false);
   }, []);
 
+  const toggleCodexPlugin = useCallback(
+    async (plugin: string, enabled: boolean) => {
+      setTogglingCodexPlugin(plugin);
+      setMessage(null);
+      setError(null);
+      try {
+        const res = await apiFetch("/api/settings/coding-backend/codex-plugins/", {
+          method: "PUT",
+          body: JSON.stringify({ plugin, enabled }),
+        });
+        if (!res.ok) {
+          setError(
+            await extractErrorMessage(
+              res,
+              `Unable to update Codex plugin: ${res.status}`,
+            ),
+          );
+          setTogglingCodexPlugin(null);
+          return;
+        }
+        const data = (await res.json()) as CodexPluginSettingsResponse;
+        setCodexPlugins(data);
+        if (data.restart_required) {
+          setCodexPluginRestartOpen(true);
+        }
+        const changed = data.plugins.find((item) => item.id === plugin);
+        setMessage(
+          changed
+            ? `${changed.label} plugin ${enabled ? "enabled" : "removed"}.`
+            : "Codex plugin setting updated.",
+        );
+      } catch {
+        setError("Unable to reach the local API.");
+      }
+      setTogglingCodexPlugin(null);
+    },
+    [],
+  );
+
+  const recreateDispatcherForPlugins = useCallback(async () => {
+    setSchedulingPluginRestart(true);
+    setError(null);
+    try {
+      const restartRes = await apiFetch("/api/settings/restart/", {
+        method: "POST",
+        body: JSON.stringify({ recreate_dispatcher: true }),
+      });
+      if (!restartRes.ok) {
+        setError(
+          `Plugin setting changed, but the automatic restart failed: ${await extractErrorMessage(
+            restartRes,
+            `restart request returned ${restartRes.status}`,
+          )}. Recreate the dispatcher before starting new work.`,
+        );
+        setSchedulingPluginRestart(false);
+        return;
+      }
+      const restartData = (await restartRes.json()) as OpenbaseServicesResponse;
+      onRestartScheduled(restartData, 4000);
+      setCodexPluginRestartOpen(false);
+      setMessage(
+        "Recreating the dispatcher so Codex can reload plugin skills and tools.",
+      );
+    } catch {
+      setError(
+        "Plugin setting changed, but the automatic restart could not be scheduled. Recreate the dispatcher before starting new work.",
+      );
+    }
+    setSchedulingPluginRestart(false);
+  }, [onRestartScheduled]);
+
   const currentOption = settings?.supported_backends.find(
     (option) => option.id === settings.backend,
   );
   const configuredBackend =
     settings?.configured_backend ?? settings?.backend ?? "";
   const showClaudeAuth = configuredBackend === "claude_code";
+  const showCodexPlugins = selectedBackend === "codex";
   const canSave =
     Boolean(selectedBackend) &&
     Boolean(settings) &&
     selectedBackend !== configuredBackend &&
     !loading &&
     !saving;
+
+  useEffect(() => {
+    if (showCodexPlugins) {
+      void fetchCodexPlugins();
+    }
+  }, [fetchCodexPlugins, showCodexPlugins]);
 
   return (
     <div className="overflow-hidden rounded border border-border bg-surface">
@@ -219,6 +338,50 @@ export const CodingBackendSettings: React.FC<Props> = ({
               </p>
             </div>
           ) : null}
+          {showCodexPlugins ? (
+            <div className="mt-2 grid gap-1.5 sm:max-w-xl sm:grid-cols-2">
+              {(codexPlugins?.plugins ?? []).map((plugin) => (
+                <div
+                  key={plugin.id}
+                  className="flex min-h-14 items-center justify-between gap-3 rounded border border-border bg-background px-2.5 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-[12px] font-medium text-foreground">
+                      {plugin.label}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-[10.5px] leading-3.5 text-muted-foreground">
+                      {plugin.plugin_id}
+                      {plugin.version ? ` · ${plugin.version}` : ""}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={plugin.enabled}
+                    onCheckedChange={(checked) => {
+                      void toggleCodexPlugin(plugin.id, checked);
+                    }}
+                    disabled={
+                      loading ||
+                      saving ||
+                      loadingCodexPlugins ||
+                      togglingCodexPlugin !== null
+                    }
+                    aria-label={`${plugin.label} plugin`}
+                  />
+                </div>
+              ))}
+              {loadingCodexPlugins && !codexPlugins ? (
+                <div className="flex min-h-14 items-center gap-2 rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  Loading Codex plugins…
+                </div>
+              ) : null}
+              {!loadingCodexPlugins && codexPlugins?.plugins.length === 0 ? (
+                <div className="rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
+                  No Codex plugin toggles available.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {message ? (
             <p className="mt-1 text-[12px] text-success">{message}</p>
           ) : null}
@@ -255,6 +418,9 @@ export const CodingBackendSettings: React.FC<Props> = ({
             className="h-8 px-2.5 text-[12px]"
             onClick={() => {
               void fetchSettings();
+              if (showCodexPlugins) {
+                void fetchCodexPlugins();
+              }
             }}
             disabled={loading || saving}
             title="Refresh coding backend"
@@ -307,6 +473,46 @@ export const CodingBackendSettings: React.FC<Props> = ({
           void saveBackend();
         }}
       />
+      <AlertDialog
+        open={codexPluginRestartOpen}
+        onOpenChange={setCodexPluginRestartOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base">
+              <TriangleAlert className="h-4 w-4 text-warning" />
+              Recreate dispatcher?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm leading-5">
+                <p>
+                  The Codex plugin setting changed. Recreate the dispatcher
+                  thread so the next voice session loads the updated plugin
+                  skills and tools.
+                </p>
+                <p>
+                  This may interrupt an active voice call. Existing Super Agent
+                  threads and project files are not deleted.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={schedulingPluginRestart}>
+              Later
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={schedulingPluginRestart}
+              onClick={() => {
+                void recreateDispatcherForPlugins();
+              }}
+            >
+              <PlugZap className="h-3 w-3" />
+              Recreate dispatcher
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

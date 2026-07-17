@@ -77,6 +77,26 @@ export type CodingBackendSettingsResponse = {
   restart_hint: string;
 };
 
+export type CodexPluginSetting = {
+  id: string;
+  plugin_id: string;
+  label: string;
+  description: string;
+  installed: boolean;
+  enabled: boolean;
+  version: string | null;
+};
+
+export type CodexPluginSettingsResponse = {
+  backend: string;
+  codex_home: string;
+  plugins: CodexPluginSetting[];
+  changed: boolean;
+  changed_plugin: string | null;
+  restart_required: boolean;
+  restart_hint: string;
+};
+
 export type BackendModelOption = {
   id: string;
   label: string;
