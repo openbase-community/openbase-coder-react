@@ -22,6 +22,7 @@ import { KeyRound, PlugZap, RefreshCw, Save, TriangleAlert } from "lucide-react"
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   extractErrorMessage,
+  type ClaudePluginSettingsResponse,
   type CodingBackendSettingsResponse,
   type CodexPluginSettingsResponse,
   type OpenbaseServicesResponse,
@@ -49,7 +50,13 @@ export const CodingBackendSettings: React.FC<Props> = ({
   const [togglingCodexPlugin, setTogglingCodexPlugin] = useState<string | null>(
     null,
   );
-  const [codexPluginRestartOpen, setCodexPluginRestartOpen] = useState(false);
+  const [claudePlugins, setClaudePlugins] =
+    useState<ClaudePluginSettingsResponse | null>(null);
+  const [loadingClaudePlugins, setLoadingClaudePlugins] = useState(false);
+  const [togglingClaudePlugin, setTogglingClaudePlugin] = useState<
+    string | null
+  >(null);
+  const [pluginRestartOpen, setPluginRestartOpen] = useState(false);
   const [schedulingPluginRestart, setSchedulingPluginRestart] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +114,29 @@ export const CodingBackendSettings: React.FC<Props> = ({
       setError("Unable to reach the local API.");
     }
     setLoadingCodexPlugins(false);
+  }, []);
+
+  const fetchClaudePlugins = useCallback(async () => {
+    setLoadingClaudePlugins(true);
+    try {
+      const res = await apiFetch(
+        "/api/settings/coding-backend/claude-plugins/",
+      );
+      if (!res.ok) {
+        setError(
+          await extractErrorMessage(
+            res,
+            `Unable to load Claude Code plugins: ${res.status}`,
+          ),
+        );
+        setLoadingClaudePlugins(false);
+        return;
+      }
+      setClaudePlugins((await res.json()) as ClaudePluginSettingsResponse);
+    } catch {
+      setError("Unable to reach the local API.");
+    }
+    setLoadingClaudePlugins(false);
   }, []);
 
   const selectedOption = useMemo(
@@ -233,7 +263,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
         const data = (await res.json()) as CodexPluginSettingsResponse;
         setCodexPlugins(data);
         if (data.restart_required) {
-          setCodexPluginRestartOpen(true);
+          setPluginRestartOpen(true);
         }
         const changed = data.plugins.find((item) => item.id === plugin);
         setMessage(
@@ -245,6 +275,48 @@ export const CodingBackendSettings: React.FC<Props> = ({
         setError("Unable to reach the local API.");
       }
       setTogglingCodexPlugin(null);
+    },
+    [],
+  );
+
+  const toggleClaudePlugin = useCallback(
+    async (plugin: string, enabled: boolean) => {
+      setTogglingClaudePlugin(plugin);
+      setMessage(null);
+      setError(null);
+      try {
+        const res = await apiFetch(
+          "/api/settings/coding-backend/claude-plugins/",
+          {
+            method: "PUT",
+            body: JSON.stringify({ plugin, enabled }),
+          },
+        );
+        if (!res.ok) {
+          setError(
+            await extractErrorMessage(
+              res,
+              `Unable to update Claude Code plugin: ${res.status}`,
+            ),
+          );
+          setTogglingClaudePlugin(null);
+          return;
+        }
+        const data = (await res.json()) as ClaudePluginSettingsResponse;
+        setClaudePlugins(data);
+        if (data.restart_required) {
+          setPluginRestartOpen(true);
+        }
+        const changed = data.plugins.find((item) => item.id === plugin);
+        setMessage(
+          changed
+            ? `${changed.label} plugin ${enabled ? "enabled" : "removed"}.`
+            : "Claude Code plugin setting updated.",
+        );
+      } catch {
+        setError("Unable to reach the local API.");
+      }
+      setTogglingClaudePlugin(null);
     },
     [],
   );
@@ -269,9 +341,9 @@ export const CodingBackendSettings: React.FC<Props> = ({
       }
       const restartData = (await restartRes.json()) as OpenbaseServicesResponse;
       onRestartScheduled(restartData, 4000);
-      setCodexPluginRestartOpen(false);
+      setPluginRestartOpen(false);
       setMessage(
-        "Recreating the dispatcher so Codex can reload plugin skills and tools.",
+        "Recreating the dispatcher so the backend reloads plugin skills and tools.",
       );
     } catch {
       setError(
@@ -288,6 +360,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
     settings?.configured_backend ?? settings?.backend ?? "";
   const showClaudeAuth = configuredBackend === "claude_code";
   const showCodexPlugins = selectedBackend === "codex";
+  const showClaudePlugins = selectedBackend === "claude_code";
   const canSave =
     Boolean(selectedBackend) &&
     Boolean(settings) &&
@@ -300,6 +373,12 @@ export const CodingBackendSettings: React.FC<Props> = ({
       void fetchCodexPlugins();
     }
   }, [fetchCodexPlugins, showCodexPlugins]);
+
+  useEffect(() => {
+    if (showClaudePlugins) {
+      void fetchClaudePlugins();
+    }
+  }, [fetchClaudePlugins, showClaudePlugins]);
 
   return (
     <div className="overflow-hidden rounded border border-border bg-surface">
@@ -382,6 +461,50 @@ export const CodingBackendSettings: React.FC<Props> = ({
               ) : null}
             </div>
           ) : null}
+          {showClaudePlugins ? (
+            <div className="mt-2 grid gap-1.5 sm:max-w-xl sm:grid-cols-2">
+              {(claudePlugins?.plugins ?? []).map((plugin) => (
+                <div
+                  key={plugin.id}
+                  className="flex min-h-14 items-center justify-between gap-3 rounded border border-border bg-background px-2.5 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-[12px] font-medium text-foreground">
+                      {plugin.label}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-[10.5px] leading-3.5 text-muted-foreground">
+                      {plugin.plugin_id}
+                      {plugin.version ? ` · ${plugin.version}` : ""}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={plugin.enabled}
+                    onCheckedChange={(checked) => {
+                      void toggleClaudePlugin(plugin.id, checked);
+                    }}
+                    disabled={
+                      loading ||
+                      saving ||
+                      loadingClaudePlugins ||
+                      togglingClaudePlugin !== null
+                    }
+                    aria-label={`${plugin.label} plugin`}
+                  />
+                </div>
+              ))}
+              {loadingClaudePlugins && !claudePlugins ? (
+                <div className="flex min-h-14 items-center gap-2 rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  Loading Claude Code plugins…
+                </div>
+              ) : null}
+              {!loadingClaudePlugins && claudePlugins?.plugins.length === 0 ? (
+                <div className="rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
+                  No Claude Code plugin toggles available.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {message ? (
             <p className="mt-1 text-[12px] text-success">{message}</p>
           ) : null}
@@ -420,6 +543,9 @@ export const CodingBackendSettings: React.FC<Props> = ({
               void fetchSettings();
               if (showCodexPlugins) {
                 void fetchCodexPlugins();
+              }
+              if (showClaudePlugins) {
+                void fetchClaudePlugins();
               }
             }}
             disabled={loading || saving}
@@ -473,10 +599,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
           void saveBackend();
         }}
       />
-      <AlertDialog
-        open={codexPluginRestartOpen}
-        onOpenChange={setCodexPluginRestartOpen}
-      >
+      <AlertDialog open={pluginRestartOpen} onOpenChange={setPluginRestartOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-base">
@@ -486,9 +609,9 @@ export const CodingBackendSettings: React.FC<Props> = ({
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-sm leading-5">
                 <p>
-                  The Codex plugin setting changed. Recreate the dispatcher
-                  thread so the next voice session loads the updated plugin
-                  skills and tools.
+                  The plugin setting changed. Recreate the dispatcher thread so
+                  the next voice session loads the updated plugin skills and
+                  tools.
                 </p>
                 <p>
                   This may interrupt an active voice call. Existing Super Agent

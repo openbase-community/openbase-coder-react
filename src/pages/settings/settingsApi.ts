@@ -97,6 +97,16 @@ export type CodexPluginSettingsResponse = {
   restart_hint: string;
 };
 
+export type ClaudePluginSettingsResponse = {
+  backend: string;
+  claude_config_dir: string;
+  plugins: CodexPluginSetting[];
+  changed: boolean;
+  changed_plugin: string | null;
+  restart_required: boolean;
+  restart_hint: string;
+};
+
 export type BackendModelOption = {
   id: string;
   label: string;
