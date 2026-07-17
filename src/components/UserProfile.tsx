@@ -104,7 +104,7 @@ const UserProfile = () => {
           </span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" sideOffset={6} className="w-72 text-[13px]">
+      <DropdownMenuContent align="end" sideOffset={6} className="w-72 text-[13px]">
         <DropdownMenuLabel className="px-2 py-1.5 text-[12px]">
           Mac sleep prevention
         </DropdownMenuLabel>
