@@ -37,19 +37,21 @@ export const SyncExplainerCard: React.FC<{
         <FolderSync className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0">
           <p className="text-[12.5px] font-medium text-foreground">
-            Code sync
+            Filesystem sync
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Keeps the same directories identical across your computers — Macs
-            and cloud workspaces — so you can pick up work anywhere.
+            Keeps the directories you choose identical across your computers
+            and cloud workspaces, from code projects to documents, assets, and
+            other working folders.
           </p>
         </div>
       </div>
 
       <div className="flex flex-col gap-2 border-t border-border pt-2.5">
         <Bullet icon={<ShieldCheck className="h-3.5 w-3.5" />}>
-          Syncs files, including uncommitted changes and .env secrets, between
-          your devices only — traffic never leaves your tailnet.
+          Syncs files from selected directories, including uncommitted changes,
+          documents, assets, and .env secrets, between your devices only —
+          traffic never leaves your tailnet.
         </Bullet>
         <Bullet icon={<GitBranch className="h-3.5 w-3.5" />}>
           <span className="inline-flex items-center gap-1">
@@ -61,7 +63,7 @@ export const SyncExplainerCard: React.FC<{
                 </TooltipTrigger>
                 <TooltipContent className="max-w-[260px] text-[11px]">
                   Git history moves between your devices via git itself,
-                  automatically. Only the working files are synced.
+                  automatically. Folder contents outside .git are synced.
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -72,7 +74,8 @@ export const SyncExplainerCard: React.FC<{
           arrived from another device.
         </Bullet>
         <Bullet icon={<Smartphone className="h-3.5 w-3.5" />}>
-          Phones can view your code but never sync it.
+          Phones can view synced files and status but never participate in
+          sync.
         </Bullet>
       </div>
 

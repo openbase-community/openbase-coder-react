@@ -51,11 +51,11 @@ export const SyncNudgeCard: React.FC = () => {
         className="min-w-0 flex-1 text-left"
       >
         <p className="text-[12.5px] font-medium text-foreground">
-          You have more than one computer — keep their files in sync
+          You have more than one computer — keep your filesystem in sync
         </p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Sync selected folders between your machines over your tailnet,
-          including uncommitted work. Set it up in a minute.
+          Sync selected directories between your machines over your tailnet,
+          from code projects to documents and assets. Set it up in a minute.
         </p>
       </button>
       <button

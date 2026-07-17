@@ -127,9 +127,12 @@ export const SyncFoldersCard: React.FC<{
   return (
     <div className="overflow-hidden rounded border border-border bg-surface">
       <div className="border-b border-border px-3 py-2.5">
-        <p className="text-[12.5px] font-medium text-foreground">Folders</p>
+        <p className="text-[12.5px] font-medium text-foreground">
+          Synced directories
+        </p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Directories kept identical on every synced computer.
+          Pick any folder under your home directory to keep identical on every
+          synced computer.
         </p>
       </div>
       {folders.length === 0 ? (
@@ -154,7 +157,7 @@ export const SyncFoldersCard: React.FC<{
         <div className="flex gap-2">
           <Input
             value={pathInput}
-            placeholder="~/Projects/my-app"
+            placeholder="~/Documents"
             className="h-8 font-mono text-[12px]"
             disabled={busy || adding}
             onChange={(event) => setPathInput(event.target.value)}
@@ -177,7 +180,8 @@ export const SyncFoldersCard: React.FC<{
           <p className="mt-1 text-[11px] text-destructive">{validationError}</p>
         ) : (
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Enter a path under your home directory, like ~/Projects/my-app.
+            Enter a path under your home directory, like ~/Documents or
+            ~/Projects/my-app.
           </p>
         )}
       </div>

@@ -81,7 +81,7 @@ export type SyncPurgeResponse = {
   freed_bytes: number;
 };
 
-/** Kinds of devices that only view synced code and never participate in sync. */
+/** Kinds of devices that only view synced files and never participate in sync. */
 const PHONE_KINDS = new Set(["phone", "iphone", "ipad", "ios", "android"]);
 
 export const isPhonePeer = (peer: SyncPeer) =>
@@ -124,7 +124,7 @@ export const parseHomeRelativePath = (
   }
   if (rest.startsWith("/")) {
     return {
-      error: "Use a path under your home directory, like ~/Projects/my-app.",
+      error: "Use a path under your home directory, like ~/Documents.",
     };
   }
   const segments = rest.split("/").filter((segment) => segment.length > 0);

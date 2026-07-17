@@ -295,7 +295,8 @@ const SyncPage = () => {
               Sync
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Keep your code identical across your computers.
+              Keep selected directories from your filesystem in sync across
+              your computers.
             </p>
           </div>
           <Button
