@@ -1,3 +1,4 @@
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,14 +12,16 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/auth";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
+import { getRuntimeShell } from "@/lib/runtime-config";
 import type { KeepAwakeSettingsResponse } from "@/pages/settings/settingsApi";
-import { Coffee, LogOut, Moon, Settings } from "lucide-react";
+import { Coffee, LogOut, Moon, Settings, UserRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const UserProfile = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const isDesktop = getRuntimeShell() === "electron";
   const [settings, setSettings] = useState<KeepAwakeSettingsResponse | null>(
     null,
   );
@@ -57,9 +60,7 @@ const UserProfile = () => {
     try {
       const res = await apiFetch("/api/settings/keep-awake/", {
         method: "PATCH",
-        body: JSON.stringify({
-          keep_system_awake: checked,
-        }),
+        body: JSON.stringify({ keep_system_awake: checked }),
       });
       if (!res.ok) {
         setError(
@@ -87,24 +88,42 @@ const UserProfile = () => {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={`h-7 gap-1.5 rounded px-2 text-[12px] ${
-            keepAwakeEnabled
-              ? "bg-success/10 text-success hover:bg-success/15 hover:text-success"
-              : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
-          }`}
+          className={
+            isDesktop
+              ? "relative h-9 w-9 rounded-xl border border-border/60 bg-white/65 p-0 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,.85)] hover:bg-white hover:ring-0"
+              : `h-7 gap-1.5 rounded px-2 text-[12px] ${
+                  keepAwakeEnabled
+                    ? "bg-success/10 text-success hover:bg-success/15 hover:text-success"
+                    : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+                }`
+          }
           title={
             keepAwakeEnabled
               ? "Mac sleep prevention is on"
               : "Mac sleep is allowed"
           }
         >
-          <KeepAwakeIcon className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">
-            {keepAwakeEnabled ? "Keep awake" : "Sleep allowed"}
-          </span>
+          {isDesktop ? (
+            <Avatar className="h-8 w-8 rounded-[10px]">
+              <AvatarFallback className="rounded-[10px] bg-primary/[0.08] text-primary">
+                <UserRound className="h-4 w-4" strokeWidth={1.8} />
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <>
+              <KeepAwakeIcon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">
+                {keepAwakeEnabled ? "Keep awake" : "Sleep allowed"}
+              </span>
+            </>
+          )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" sideOffset={6} className="w-72 text-[13px]">
+      <DropdownMenuContent
+        align={isDesktop ? "end" : "start"}
+        sideOffset={6}
+        className="w-72 text-[13px]"
+      >
         <DropdownMenuLabel className="px-2 py-1.5 text-[12px]">
           Mac sleep prevention
         </DropdownMenuLabel>
@@ -121,10 +140,8 @@ const UserProfile = () => {
           <Switch
             checked={keepAwakeEnabled}
             disabled={loading || saving || !settings}
-            onCheckedChange={(value) => {
-              void saveSettings(value);
-            }}
-            aria-label="Run caffeinate with the Openbase Coder server"
+            onCheckedChange={(value) => void saveSettings(value)}
+            aria-label="Run caffeinate with the Openbase server"
           />
         </div>
         {error ? (
