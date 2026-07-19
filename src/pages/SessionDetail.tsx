@@ -14,9 +14,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
+import { cliResumeCommand } from "@/lib/cli-resume";
 import {
   threadAgentVoiceName,
   threadDisplayName,
@@ -28,10 +34,13 @@ import { promptAfterThreadTurnSubmission } from "@/lib/thread-turn-actions";
 import {
   Archive,
   ArrowLeft,
+  Check,
+  Copy,
   FolderOpen,
   Send,
   Square,
   Star,
+  Terminal,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -43,6 +52,72 @@ interface SessionDetailProps {
   threadIdOverride?: string;
   allowDispatcherThread?: boolean;
 }
+
+const ResumeFromCliButton = ({
+  directory,
+  backendSessionId,
+}: {
+  directory: string;
+  backendSessionId: string;
+}) => {
+  const [copied, setCopied] = useState(false);
+  const command = cliResumeCommand(directory, backendSessionId);
+
+  const copyCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy command");
+    }
+  };
+
+  return (
+    <Popover onOpenChange={() => setCopied(false)}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+        >
+          <Terminal className="h-3 w-3" />
+          Resume from CLI
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto max-w-[28rem] p-3">
+        <div className="space-y-2">
+          <p className="text-[11px] text-muted-foreground">
+            Open this thread's conversation in Claude Code:
+          </p>
+          <div className="flex items-center gap-1.5">
+            <code className="max-w-[22rem] overflow-x-auto whitespace-nowrap rounded bg-muted px-2 py-1.5 font-mono text-[11px]">
+              {command}
+            </code>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={copyCommand}
+              className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+              title="Copy command"
+              aria-label="Copy command"
+            >
+              {copied ? (
+                <Check className="h-3 w-3 text-success" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+            </Button>
+          </div>
+          <p className="text-[10.5px] text-muted-foreground">
+            Avoid steering this agent (voice or console) while the CLI session
+            is open — two writers can fork the conversation.
+          </p>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 const scrollToBottomInstantly = (target: HTMLElement | null) => {
   const scrollRoot = findScrollContainer(target);
@@ -275,6 +350,12 @@ const SessionDetail = ({
                   <FolderOpen className="h-3 w-3" />
                   Project
                 </Button>
+                {thread.backend_session_id && thread.directory ? (
+                  <ResumeFromCliButton
+                    directory={thread.directory}
+                    backendSessionId={thread.backend_session_id}
+                  />
+                ) : null}
                 {!isDispatchThread ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>

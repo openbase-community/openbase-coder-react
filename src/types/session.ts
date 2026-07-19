@@ -34,6 +34,8 @@ export interface ThreadInfo {
   preview?: string | null;
   is_likely_stale?: boolean;
   status_warning?: string | null;
+  /** Backend-native conversation id (e.g. the Claude Code session id). */
+  backend_session_id?: string | null;
   is_favorite?: boolean;
   favorited_at?: string | null;
   tags?: string[];
