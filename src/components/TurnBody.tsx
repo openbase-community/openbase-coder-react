@@ -46,7 +46,7 @@ export function TurnBody({
       {turn.accumulated_output ? (
         <pre
           ref={outputRef}
-          className="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-foreground p-2.5 font-mono text-[11.5px] text-background"
+          className="ob-turn-output max-h-96 overflow-auto whitespace-pre-wrap rounded bg-foreground p-2.5 font-mono text-[11.5px] text-background"
         >
           {turn.accumulated_output}
         </pre>

@@ -290,12 +290,12 @@ const SessionDetail = ({
   };
 
   return (
-    <DashboardLayout>
-      <div className="flex flex-col gap-3 pb-24">
+    <DashboardLayout noPadding>
+      <div className="ob-thread-workbench flex h-full min-h-0 flex-col">
         {thread ? (
-          <div className="sticky top-9 z-[5] -mx-5 border-b border-border bg-background/95 px-5 py-3 backdrop-blur">
+          <header className="ob-thread-toolbar shrink-0 border-b border-border/70 bg-white/70 px-4 py-4 backdrop-blur-2xl sm:px-7">
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                 {fromProjectPath ? (
                   <Button
                     variant="ghost"
@@ -386,7 +386,7 @@ const SessionDetail = ({
                     </AlertDialogContent>
                   </AlertDialog>
                 ) : null}
-                <span className="ml-auto flex items-center gap-1 font-mono text-[10.5px]">
+                <span className="ml-auto flex items-center gap-1 rounded-lg bg-white/60 px-2 py-1 font-mono text-[10.5px]">
                   {isConnected ? (
                     <>
                       <Wifi className="h-3 w-3 text-success" />
@@ -407,8 +407,10 @@ const SessionDetail = ({
                 {thread.thread_id}
               </p>
             </div>
-          </div>
+          </header>
         ) : null}
+
+        <div className="ob-thread-scroll min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-7 sm:py-6">
 
         {thread && (connectionLost || loadError) ? (
           <div className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-[12px] text-warning">
@@ -419,7 +421,7 @@ const SessionDetail = ({
         ) : null}
 
         {thread && thread.turn_history.length > 0 ? (
-          <section className="overflow-hidden rounded border border-border bg-surface">
+          <section className="ob-thread-history overflow-hidden rounded border border-border bg-surface">
             <div className="border-b border-border bg-surface-muted px-3 py-1.5">
               <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
                 turn history
@@ -434,7 +436,7 @@ const SessionDetail = ({
         ) : null}
 
         {thread?.current_turn ? (
-          <section className="overflow-hidden rounded border border-border bg-surface">
+          <section className="ob-thread-current overflow-hidden rounded border border-border bg-surface">
             <div className="flex items-center justify-between border-b border-border bg-surface-muted px-3 py-1.5">
               <div className="flex min-w-0 items-center gap-2">
                 <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
@@ -466,7 +468,7 @@ const SessionDetail = ({
         ) : null}
 
         {thread?.queued_turns?.length ? (
-          <section className="overflow-hidden rounded border border-border bg-surface">
+          <section className="ob-thread-queued overflow-hidden rounded border border-border bg-surface">
             <div className="border-b border-border bg-surface-muted px-3 py-1.5">
               <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
                 queued turns
@@ -486,9 +488,45 @@ const SessionDetail = ({
 
         <div ref={threadEndRef} aria-hidden="true" />
 
+        {!thread ? (
+          loadError ? (
+            <section className="mx-auto mt-[12vh] w-full max-w-lg rounded-[18px] border border-primary/[0.09] bg-white/78 px-7 py-7 shadow-[0_20px_60px_-44px_rgba(24,73,139,.55)]">
+              <h1 className="text-lg font-semibold tracking-[-0.025em] text-foreground">
+                Thread unavailable
+              </h1>
+              <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                {loadError}
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Button
+                  className="rounded-xl"
+                  onClick={() => navigate("/dashboard/threads")}
+                  size="sm"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Back to threads
+                </Button>
+                <Button
+                  className="rounded-xl"
+                  onClick={() => void refreshThread()}
+                  size="sm"
+                  variant="outline"
+                >
+                  Try again
+                </Button>
+              </div>
+            </section>
+          ) : (
+            <div className="py-12 text-center text-[12px] text-muted-foreground">
+              {isConnected ? "Loading…" : "Connecting…"}
+            </div>
+          )
+        ) : null}
+        </div>
+
         {thread ? (
-          <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-2.5 backdrop-blur md:left-[13rem]">
-            <div className="mx-auto flex max-w-3xl items-end gap-1.5">
+          <div className="ob-thread-composer shrink-0 border-t border-border/70 bg-white/75 px-3 py-3 backdrop-blur-2xl sm:px-7 sm:py-3.5">
+            <div className="flex w-full items-end gap-2">
               {hasActiveCurrentTurn ? (
                 <div className="grid w-24 shrink-0 grid-cols-1 overflow-hidden rounded border border-border bg-surface text-[11px]">
                   <button
@@ -558,17 +596,6 @@ const SessionDetail = ({
           </div>
         ) : null}
 
-        {!thread ? (
-          loadError ? (
-            <div className="mx-auto mt-12 max-w-md rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-[12px] text-destructive">
-              {loadError}
-            </div>
-          ) : (
-            <div className="py-12 text-center text-[12px] text-muted-foreground">
-              {isConnected ? "Loading…" : "Connecting…"}
-            </div>
-          )
-        ) : null}
       </div>
     </DashboardLayout>
   );

@@ -1,3 +1,4 @@
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,7 +13,7 @@ import { useAuth } from "@/contexts/auth";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import type { KeepAwakeSettingsResponse } from "@/pages/settings/settingsApi";
-import { Coffee, LogOut, Moon, Settings } from "lucide-react";
+import { LogOut, Settings, UserRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -57,9 +58,7 @@ const UserProfile = () => {
     try {
       const res = await apiFetch("/api/settings/keep-awake/", {
         method: "PATCH",
-        body: JSON.stringify({
-          keep_system_awake: checked,
-        }),
+        body: JSON.stringify({ keep_system_awake: checked }),
       });
       if (!res.ok) {
         setError(
@@ -80,28 +79,26 @@ const UserProfile = () => {
   }, []);
 
   const keepAwakeEnabled = settings?.keep_system_awake ?? false;
-  const KeepAwakeIcon = keepAwakeEnabled ? Coffee : Moon;
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={`h-7 gap-1.5 rounded px-2 text-[12px] ${
-            keepAwakeEnabled
-              ? "bg-success/10 text-success hover:bg-success/15 hover:text-success"
-              : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
-          }`}
+          className="relative h-9 w-9 rounded-xl border border-border/60 bg-white/70 p-0 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,.85)] hover:bg-white hover:ring-0"
           title={
             keepAwakeEnabled
               ? "Mac sleep prevention is on"
               : "Mac sleep is allowed"
           }
         >
-          <KeepAwakeIcon className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">
-            {keepAwakeEnabled ? "Keep awake" : "Sleep allowed"}
-          </span>
+          <Avatar className="h-8 w-8 rounded-[10px]">
+            <AvatarFallback className="rounded-[10px] bg-primary/[0.08] text-primary">
+              <UserRound className="h-4 w-4" strokeWidth={1.8} />
+            </AvatarFallback>
+          </Avatar>
+          {keepAwakeEnabled ? (
+            <span className="absolute bottom-0.5 right-0.5 h-2 w-2 rounded-full border-2 border-white bg-success" />
+          ) : null}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={6} className="w-72 text-[13px]">
@@ -121,10 +118,8 @@ const UserProfile = () => {
           <Switch
             checked={keepAwakeEnabled}
             disabled={loading || saving || !settings}
-            onCheckedChange={(value) => {
-              void saveSettings(value);
-            }}
-            aria-label="Run caffeinate with the Openbase Coder server"
+            onCheckedChange={(value) => void saveSettings(value)}
+            aria-label="Run caffeinate with the Openbase server"
           />
         </div>
         {error ? (
