@@ -22,7 +22,7 @@ import {
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
-import { cliResumeCommand } from "@/lib/cli-resume";
+import { cliResumeCommands, type CliResumeCommand } from "@/lib/cli-resume";
 import {
   threadAgentVoiceName,
   threadDisplayName,
@@ -54,18 +54,15 @@ interface SessionDetailProps {
 }
 
 const ResumeFromCliButton = ({
-  directory,
-  backendSessionId,
+  resumeCommand,
 }: {
-  directory: string;
-  backendSessionId: string;
+  resumeCommand: CliResumeCommand;
 }) => {
   const [copied, setCopied] = useState(false);
-  const command = cliResumeCommand(directory, backendSessionId);
 
   const copyCommand = async () => {
     try {
-      await navigator.clipboard.writeText(command);
+      await navigator.clipboard.writeText(resumeCommand.command);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -82,17 +79,17 @@ const ResumeFromCliButton = ({
           className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
         >
           <Terminal className="h-3 w-3" />
-          Resume from CLI
+          {resumeCommand.label}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto max-w-[28rem] p-3">
         <div className="space-y-2">
           <p className="text-[11px] text-muted-foreground">
-            Open this thread's conversation in Claude Code:
+            {resumeCommand.description}
           </p>
           <div className="flex items-center gap-1.5">
             <code className="max-w-[22rem] overflow-x-auto whitespace-nowrap rounded bg-muted px-2 py-1.5 font-mono text-[11px]">
-              {command}
+              {resumeCommand.command}
             </code>
             <Button
               variant="ghost"
@@ -258,6 +255,15 @@ const SessionDetail = ({
   };
   const isDispatchThread = thread?.voice_route?.role === "dispatcher";
   const agentVoiceName = thread ? threadAgentVoiceName(thread) : undefined;
+  const resumeCommands =
+    thread && thread.directory
+      ? cliResumeCommands({
+          backend: thread.backend,
+          backendSessionId: thread.backend_session_id,
+          directory: thread.directory,
+          threadId: thread.thread_id,
+        })
+      : [];
 
   const archiveThread = async () => {
     if (!thread) return;
@@ -350,12 +356,12 @@ const SessionDetail = ({
                   <FolderOpen className="h-3 w-3" />
                   Project
                 </Button>
-                {thread.backend_session_id && thread.directory ? (
+                {resumeCommands.map((resumeCommand) => (
                   <ResumeFromCliButton
-                    directory={thread.directory}
-                    backendSessionId={thread.backend_session_id}
+                    key={resumeCommand.target}
+                    resumeCommand={resumeCommand}
                   />
-                ) : null}
+                ))}
                 {!isDispatchThread ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
