@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
+import { getRuntimeShell } from "@/lib/runtime-config";
 import { ChevronDown, RefreshCw, Save } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -99,6 +100,7 @@ const fallbackPathForTarget = (
 
 const mergeExpectedDocuments = (
   data: AgentsMdResponse,
+  desktopBranding = false,
 ): Array<AgentsMdDocumentResponse & { existenceKnown: boolean }> => {
   const apiDocuments = data.documents ?? [];
   const apiByTarget = new Map(
@@ -110,6 +112,9 @@ const mergeExpectedDocuments = (
     "~/.openbase/codex_home";
   const expectedDocuments = EXPECTED_TARGETS.map((target) => ({
     ...target,
+    description: desktopBranding
+      ? target.description.split("Openbase Coder").join("Openbase")
+      : target.description,
     content: "",
     path: fallbackPathForTarget(target.id, codexHome),
     codex_home:
@@ -138,6 +143,7 @@ const toDocumentState = (
 });
 
 const AgentsMd = () => {
+  const isDesktop = getRuntimeShell() === "electron";
   const [documents, setDocuments] = useState<AgentsMdDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingTarget, setSavingTarget] = useState<AgentsMdTarget | null>(null);
@@ -155,7 +161,7 @@ const AgentsMd = () => {
       if (!res.ok) {
         throw new Error(data.error || "Unable to load instructions.");
       }
-      const nextDocuments = mergeExpectedDocuments(data).map(toDocumentState);
+      const nextDocuments = mergeExpectedDocuments(data, isDesktop).map(toDocumentState);
       setDocuments(nextDocuments);
       setOpenTargets((current) => {
         const next = { ...current };
@@ -171,7 +177,7 @@ const AgentsMd = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isDesktop]);
 
   useEffect(() => {
     void loadAgentsMd();

@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     "./App": "./src/App.tsx",
+    "./brand": "./src/components/OpenbaseWordmark.tsx",
     "./plugin-registry": "./src/plugin-registry.tsx",
     "./index.css": "./src/index.css",
     "./tailwind-preset": "./tailwind-preset.ts"

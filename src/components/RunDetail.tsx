@@ -19,8 +19,8 @@ export function RunDetail({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="flex items-center gap-2 w-full text-left p-3 hover:bg-gray-50 rounded-lg">
+    <Collapsible className="ob-run-detail" open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg p-3 text-left hover:bg-gray-50">
         <ChevronRight
           className={`h-4 w-4 transition-transform ${open ? "rotate-90" : ""}`}
         />
@@ -39,7 +39,7 @@ export function RunDetail({
           </span>
         )}
       </CollapsibleTrigger>
-      <CollapsibleContent className="pl-9 pr-3 pb-3 space-y-2">
+      <CollapsibleContent className="space-y-2 pb-3 pl-9 pr-3">
         <div className="text-xs text-gray-500 space-x-4">
           {run.started_at && <span>Started: {new Date(run.started_at).toLocaleString()}</span>}
           {run.completed_at && <span>Completed: {new Date(run.completed_at).toLocaleString()}</span>}

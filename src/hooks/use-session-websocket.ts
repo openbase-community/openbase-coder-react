@@ -132,7 +132,14 @@ export function useThreadWebSocket(threadId: string | undefined) {
 
         case "error": {
           const message = msg.data?.message ?? "Server error";
-          toast.error(message);
+          if (
+            msg.data?.code === "thread_state_unavailable" ||
+            msg.data?.code === "thread_version_unavailable"
+          ) {
+            setLoadError(message);
+          } else {
+            toast.error(message);
+          }
           break;
         }
       }

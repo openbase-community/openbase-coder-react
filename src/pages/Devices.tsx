@@ -6,6 +6,7 @@ import {
   ResourcePageHeader,
 } from "@/components/resource/ResourcePage";
 import { apiFetch } from "@/lib/api";
+import { getRuntimeShell } from "@/lib/runtime-config";
 import { Monitor } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -29,6 +30,7 @@ type DevicesPayload = {
 };
 
 const Devices = () => {
+  const isDesktop = getRuntimeShell() === "electron";
   const [payload, setPayload] = useState<DevicesPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,7 +87,7 @@ const Devices = () => {
           <ResourceLoading>Scanning tailnet…</ResourceLoading>
         ) : openbaseDevices.length === 0 ? (
           <ResourceEmptyState icon={Monitor}>
-            No Openbase Coder hosts found on the tailnet.
+            No {isDesktop ? "Openbase" : "Openbase Coder"} hosts found on the tailnet.
           </ResourceEmptyState>
         ) : (
           <div className="overflow-hidden rounded border border-border bg-surface">
