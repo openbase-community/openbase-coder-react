@@ -13,6 +13,7 @@ import {
   Route,
   BrowserRouter as Router,
   Routes,
+  useParams,
   useSearchParams,
 } from "react-router-dom";
 import AgentsMd from "./pages/AgentsMd";
@@ -27,7 +28,7 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import ProjectDetail from "./pages/ProjectDetail";
 import Projects from "./pages/Projects";
-import Routines from "./pages/Routines";
+import Routines, { RoutineDetail } from "./pages/Routines";
 import SessionDetail from "./pages/SessionDetail";
 import Sessions from "./pages/Sessions";
 import Settings from "./pages/Settings";
@@ -51,6 +52,16 @@ function AnonymousRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) return null;
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
+}
+
+function LegacyRoutineDetailRedirect() {
+  const { loopName } = useParams();
+  return (
+    <Navigate
+      to={`/dashboard/loops/${encodeURIComponent(loopName ?? "")}`}
+      replace
+    />
+  );
 }
 
 function PluginConsoleRoute({
@@ -166,9 +177,25 @@ function AppRoutes() {
       />
       <Route
         path="/dashboard/routines"
+        element={<Navigate to="/dashboard/loops" replace />}
+      />
+      <Route
+        path="/dashboard/routines/:loopName"
+        element={<LegacyRoutineDetailRedirect />}
+      />
+      <Route
+        path="/dashboard/loops"
         element={
           <ProtectedRoute>
             <Routines />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/loops/:loopName"
+        element={
+          <ProtectedRoute>
+            <RoutineDetail />
           </ProtectedRoute>
         }
       />

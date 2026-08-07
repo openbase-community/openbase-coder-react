@@ -1,4 +1,5 @@
 export type SyncPeer = {
+  device_id: string;
   name: string;
   kind: string;
   tailscale_magic_dns: string;

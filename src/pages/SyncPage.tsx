@@ -16,6 +16,7 @@ import {
   type SyncConflict,
   type SyncConflictsResponse,
   type SyncFolderSettings,
+  type SyncPeer,
   type SyncPurgeResponse,
   type SyncSettingsResponse,
   type SyncSettingsUpdate,
@@ -47,6 +48,7 @@ const SyncPage = () => {
   const [purging, setPurging] = useState(false);
   const [resolving, setResolving] = useState<string | null>(null);
   const [ignoring, setIgnoring] = useState<string | null>(null);
+  const [removingPeer, setRemovingPeer] = useState<string | null>(null);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -191,6 +193,31 @@ const SyncPage = () => {
       if (ok) toast.success(`Stopped syncing ~/${folder.relpath}`);
     },
     [settings, updateSettings],
+  );
+
+  const removePeer = useCallback(
+    async (peer: SyncPeer) => {
+      setRemovingPeer(peer.device_id);
+      try {
+        const res = await apiFetch("/api/sync/peers/remove/", {
+          method: "POST",
+          body: JSON.stringify({ device_id: peer.device_id }),
+        });
+        if (!res.ok) {
+          throw new Error(
+            await extractErrorMessage(res, "Unable to remove sync peer."),
+          );
+        }
+        setSettings((await res.json()) as SyncSettingsResponse);
+        toast.success(`Removed ${peer.name} from sync`);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Unable to remove sync peer.",
+        );
+      }
+      setRemovingPeer(null);
+    },
+    [],
   );
 
   const purgeHistory = useCallback(async () => {
@@ -365,6 +392,8 @@ const SyncPage = () => {
             <SyncPeersCard
               peers={settings.peers}
               statusFolders={status?.folders ?? []}
+              removingDeviceId={removingPeer}
+              onRemovePeer={(peer) => void removePeer(peer)}
             />
 
             <SyncHistoryCard

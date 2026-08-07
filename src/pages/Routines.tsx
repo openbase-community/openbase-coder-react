@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
 import {
+  ArrowLeft,
   CalendarClock,
   CheckCircle2,
   Play,
@@ -21,13 +22,14 @@ import {
 import {
   type Dispatch,
   type FormEvent,
+  type ReactNode,
   type SetStateAction,
   useCallback,
   useEffect,
   useMemo,
   useState,
 } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 type Routine = {
@@ -62,6 +64,10 @@ type Routine = {
 type RoutinesResponse = {
   count: number;
   routines: Routine[];
+};
+
+type RoutineResponse = {
+  routine: Routine;
 };
 
 type RoutineForm = {
@@ -127,9 +133,36 @@ function formatDateTime(value?: string | null): string {
   });
 }
 
+function scheduleLabel(routine: Routine): string {
+  return routine.scheduleType === "interval"
+    ? `every ${routine.intervalSeconds ?? 60}s`
+    : `${routine.time} ${routine.timezone ?? ""}`.trim();
+}
+
+function loopBodyText(routine: Routine): string {
+  return routine.kind === "command" ? routine.command || "" : routine.prompt;
+}
+
 async function extractError(res: Response, fallback: string): Promise<string> {
   const body = await res.json().catch(() => ({}));
   return body.error || body.detail || fallback;
+}
+
+function DetailField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="min-w-0 border-t border-border px-3 py-2 first:border-t-0">
+      <div className={fieldLabelClass}>{label}</div>
+      <div className="mt-1 min-w-0 break-words font-mono text-[12px] text-foreground">
+        {children || <span className="text-muted-foreground">not set</span>}
+      </div>
+    </div>
+  );
 }
 
 const CreateRoutineDialog = ({
@@ -143,7 +176,7 @@ const CreateRoutineDialog = ({
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="max-h-[88vh] !w-[calc(100vw-2rem)] !max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:!max-w-[680px]">
       <DialogHeader className="border-b border-border px-5 py-4">
-        <DialogTitle className="text-base">New routine</DialogTitle>
+        <DialogTitle className="text-base">New loop</DialogTitle>
         <DialogDescription className="text-[12px]">
           Schedule an agent prompt or local command.
         </DialogDescription>
@@ -377,7 +410,7 @@ const CreateRoutineDialog = ({
             disabled={submitting}
           >
             <Plus className="h-3 w-3" />
-            Save routine
+            Save loop
           </Button>
         </DialogFooter>
       </form>
@@ -399,7 +432,7 @@ const Routines = () => {
     try {
       const res = await apiFetch("/api/routines/");
       if (!res.ok) {
-        throw new Error(await extractError(res, "Unable to load routines."));
+        throw new Error(await extractError(res, "Unable to load loops."));
       }
       const data = (await res.json()) as RoutinesResponse;
       setRoutines(Array.isArray(data.routines) ? data.routines : []);
@@ -449,14 +482,14 @@ const Routines = () => {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        throw new Error(await extractError(res, "Unable to create routine."));
+        throw new Error(await extractError(res, "Unable to create loop."));
       }
       setForm(defaultForm);
       setCreateOpen(false);
-      toast.success("Routine saved");
+      toast.success("Loop saved");
       void fetchRoutines();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to create routine.");
+      toast.error(err instanceof Error ? err.message : "Unable to create loop.");
     } finally {
       setSubmitting(false);
     }
@@ -471,11 +504,11 @@ const Routines = () => {
         body: JSON.stringify(patch),
       });
       if (!res.ok) {
-        throw new Error(await extractError(res, "Unable to update routine."));
+        throw new Error(await extractError(res, "Unable to update loop."));
       }
       void fetchRoutines();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to update routine.");
+      toast.error(err instanceof Error ? err.message : "Unable to update loop.");
     } finally {
       setActionKey(null);
     }
@@ -490,13 +523,13 @@ const Routines = () => {
         body: JSON.stringify({ name, force }),
       });
       if (!res.ok) {
-        throw new Error(await extractError(res, "Unable to run routines."));
+        throw new Error(await extractError(res, "Unable to run loops."));
       }
       const data = await res.json();
-      toast.success(`Ran ${data.count ?? 0} routine${data.count === 1 ? "" : "s"}`);
+      toast.success(`Ran ${data.count ?? 0} loop${data.count === 1 ? "" : "s"}`);
       void fetchRoutines();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to run routines.");
+      toast.error(err instanceof Error ? err.message : "Unable to run loops.");
     } finally {
       setActionKey(null);
     }
@@ -510,12 +543,12 @@ const Routines = () => {
         method: "DELETE",
       });
       if (!res.ok) {
-        throw new Error(await extractError(res, "Unable to delete routine."));
+        throw new Error(await extractError(res, "Unable to delete loop."));
       }
       setRoutines((prev) => prev.filter((item) => item.name !== routine.name));
-      toast.success("Routine deleted");
+      toast.success("Loop deleted");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to delete routine.");
+      toast.error(err instanceof Error ? err.message : "Unable to delete loop.");
     } finally {
       setActionKey(null);
     }
@@ -527,7 +560,7 @@ const Routines = () => {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-base font-semibold tracking-tight text-foreground">
-              Routines
+              Loops
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
               {routines.length} configured · local Super Agents state
@@ -540,7 +573,7 @@ const Routines = () => {
               onClick={() => setCreateOpen(true)}
             >
               <Plus className="h-3 w-3" />
-              New routine
+              New loop
             </Button>
             <Button
               variant="outline"
@@ -551,15 +584,6 @@ const Routines = () => {
             >
               <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
               Refresh
-            </Button>
-            <Button
-              size="sm"
-              className="h-7 px-2.5 text-[12px]"
-              onClick={() => void runDue()}
-              disabled={actionKey !== null}
-            >
-              <Play className="h-3 w-3" />
-              Run due
             </Button>
           </div>
         </div>
@@ -591,7 +615,7 @@ const Routines = () => {
           <div className="rounded border border-dashed border-border bg-surface px-4 py-8 text-center">
             <CalendarClock className="mx-auto h-4 w-4 text-muted-foreground/40" />
             <p className="mt-2 text-[12px] text-muted-foreground">
-              No routines configured.
+              No loops configured.
             </p>
             <Button
               size="sm"
@@ -599,7 +623,7 @@ const Routines = () => {
               onClick={() => setCreateOpen(true)}
             >
               <Plus className="h-3 w-3" />
-              New routine
+              New loop
             </Button>
           </div>
         ) : (
@@ -618,9 +642,12 @@ const Routines = () => {
                     ) : (
                       <CalendarClock className="h-3.5 w-3.5 shrink-0 text-info" />
                     )}
-                    <span className="truncate text-[12.5px] font-medium text-foreground">
+                    <Link
+                      to={`/dashboard/loops/${encodeURIComponent(routine.name)}`}
+                      className="truncate text-[12.5px] font-medium text-foreground hover:text-info hover:underline"
+                    >
                       {routine.name}
-                    </span>
+                    </Link>
                     {routine.enabled ? (
                       <span className="inline-flex h-5 items-center gap-1 rounded border border-success/30 px-1.5 text-[10.5px] text-success">
                         <CheckCircle2 className="h-3 w-3" />
@@ -635,9 +662,7 @@ const Routines = () => {
                       {routine.kind ?? "agent"}
                     </span>
                     <span className="font-mono text-[10.5px] text-muted-foreground">
-                      {routine.scheduleType === "interval"
-                        ? `every ${routine.intervalSeconds ?? 60}s`
-                        : `${routine.time} ${routine.timezone ?? ""}`}
+                      {scheduleLabel(routine)}
                     </span>
                   </div>
                   <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10.5px] text-muted-foreground/75">
@@ -657,7 +682,7 @@ const Routines = () => {
                     {routine.reasoningEffort ? <span>effort {routine.reasoningEffort}</span> : null}
                   </div>
                   <p className="mt-2 line-clamp-2 font-mono text-[12px] text-muted-foreground">
-                    {routine.kind === "command" ? routine.command : routine.prompt}
+                    {loopBodyText(routine)}
                   </p>
                   {routine.lastError ? (
                     <p className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">
@@ -666,6 +691,16 @@ const Routines = () => {
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-start gap-2 lg:justify-end">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2.5 text-[12px]"
+                  >
+                    <Link to={`/dashboard/loops/${encodeURIComponent(routine.name)}`}>
+                      Details
+                    </Link>
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -713,6 +748,284 @@ const Routines = () => {
             ))}
           </div>
         )}
+      </div>
+    </DashboardLayout>
+  );
+};
+
+export const RoutineDetail = () => {
+  const { loopName } = useParams();
+  const navigate = useNavigate();
+  const name = loopName ?? "";
+  const [routine, setRoutine] = useState<Routine | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionKey, setActionKey] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchRoutine = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch(`/api/routines/${encodeURIComponent(name)}/`);
+      if (!res.ok) {
+        throw new Error(await extractError(res, "Unable to load loop."));
+      }
+      const data = (await res.json()) as RoutineResponse;
+      setRoutine(data.routine);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to reach the local API.");
+    } finally {
+      setLoading(false);
+    }
+  }, [name]);
+
+  useEffect(() => {
+    if (!name) {
+      setLoading(false);
+      setError("Loop name is missing.");
+      return;
+    }
+    void fetchRoutine();
+  }, [fetchRoutine, name]);
+
+  const patchRoutine = async (patch: Partial<Routine>) => {
+    if (!routine) return;
+    setActionKey("patch");
+    try {
+      const res = await apiFetch(`/api/routines/${encodeURIComponent(routine.name)}/`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        throw new Error(await extractError(res, "Unable to update loop."));
+      }
+      toast.success("Loop updated");
+      void fetchRoutine();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to update loop.");
+    } finally {
+      setActionKey(null);
+    }
+  };
+
+  const runRoutine = async () => {
+    if (!routine) return;
+    setActionKey("run");
+    try {
+      const res = await apiFetch("/api/routines/run-due/", {
+        method: "POST",
+        body: JSON.stringify({ name: routine.name, force: true }),
+      });
+      if (!res.ok) {
+        throw new Error(await extractError(res, "Unable to run loop."));
+      }
+      const data = await res.json();
+      toast.success(`Ran ${data.count ?? 0} loop${data.count === 1 ? "" : "s"}`);
+      void fetchRoutine();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to run loop.");
+    } finally {
+      setActionKey(null);
+    }
+  };
+
+  const deleteRoutine = async () => {
+    if (!routine) return;
+    setActionKey("delete");
+    try {
+      const res = await apiFetch(`/api/routines/${encodeURIComponent(routine.name)}/`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        throw new Error(await extractError(res, "Unable to delete loop."));
+      }
+      toast.success("Loop deleted");
+      navigate("/dashboard/loops");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to delete loop.");
+    } finally {
+      setActionKey(null);
+    }
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="-ml-2 mb-1 h-7 px-2 text-[12px]"
+            >
+              <Link to="/dashboard/loops">
+                <ArrowLeft className="h-3 w-3" />
+                Loops
+              </Link>
+            </Button>
+            <h1 className="truncate text-base font-semibold tracking-tight text-foreground">
+              {routine?.name ?? name}
+            </h1>
+            {routine ? (
+              <p className="mt-0.5 font-mono text-[12px] text-muted-foreground">
+                {routine.kind ?? "agent"} · {scheduleLabel(routine)}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2.5 text-[12px]"
+              onClick={() => void fetchRoutine()}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            {routine ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2.5 text-[12px]"
+                  disabled={actionKey !== null}
+                  onClick={() => void patchRoutine({ enabled: !routine.enabled })}
+                >
+                  {routine.enabled ? "Disable" : "Enable"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2.5 text-[12px]"
+                  disabled={actionKey !== null}
+                  onClick={() => void runRoutine()}
+                >
+                  <Play className="h-3 w-3" />
+                  Run
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2.5 text-[12px]"
+                  disabled={actionKey !== null}
+                  onClick={() => void deleteRoutine()}
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Delete
+                </Button>
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        {error ? (
+          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+            {error}
+          </div>
+        ) : null}
+
+        {loading && !routine ? (
+          <div className="text-[12px] text-muted-foreground">Loading...</div>
+        ) : routine ? (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+            <section className="min-w-0 space-y-3">
+              <div className="rounded border border-border bg-surface">
+                <div className="border-b border-border px-3 py-2">
+                  <div className={fieldLabelClass}>
+                    {routine.kind === "command" ? "Command" : "Prompt"}
+                  </div>
+                </div>
+                <pre className="max-h-[34rem] overflow-auto whitespace-pre-wrap break-words px-3 py-3 font-mono text-[12px] leading-5 text-foreground">
+                  {loopBodyText(routine) || "not set"}
+                </pre>
+              </div>
+
+              {routine.kind === "command" && routine.prompt ? (
+                <div className="rounded border border-border bg-surface">
+                  <div className="border-b border-border px-3 py-2">
+                    <div className={fieldLabelClass}>Agent handoff prompt</div>
+                  </div>
+                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words px-3 py-3 font-mono text-[12px] leading-5 text-foreground">
+                    {routine.prompt}
+                  </pre>
+                </div>
+              ) : null}
+
+              {routine.lastError ? (
+                <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+                  {routine.lastError}
+                </div>
+              ) : null}
+            </section>
+
+            <aside className="min-w-0 overflow-hidden rounded border border-border bg-surface">
+              <DetailField label="Status">
+                {routine.enabled ? "enabled" : "disabled"}
+              </DetailField>
+              <DetailField label="Kind">{routine.kind ?? "agent"}</DetailField>
+              <DetailField label="Schedule">{scheduleLabel(routine)}</DetailField>
+              <DetailField label="Next run">
+                {formatDateTime(routine.nextRunAt)}
+              </DetailField>
+              <DetailField label="Last status">
+                {routine.lastStatus ?? "never"}
+              </DetailField>
+              <DetailField label="Last started">
+                {formatDateTime(routine.lastStartedAt)}
+              </DetailField>
+              <DetailField label="Last run at">
+                {formatDateTime(routine.lastRunAt)}
+              </DetailField>
+              <DetailField label="Last run date">
+                {routine.lastRunDate ?? ""}
+              </DetailField>
+              <DetailField label="Target name">
+                {routine.targetName ?? ""}
+              </DetailField>
+              <DetailField label="Thread ID">
+                {routine.threadId ? (
+                  <Link
+                    to={`/dashboard/threads/${encodeURIComponent(routine.threadId)}`}
+                    className="text-info hover:underline"
+                  >
+                    {routine.threadId}
+                  </Link>
+                ) : (
+                  ""
+                )}
+              </DetailField>
+              <DetailField label="Last thread ID">
+                {routine.lastThreadId ? (
+                  <Link
+                    to={`/dashboard/threads/${encodeURIComponent(routine.lastThreadId)}`}
+                    className="text-info hover:underline"
+                  >
+                    {routine.lastThreadId}
+                  </Link>
+                ) : (
+                  ""
+                )}
+              </DetailField>
+              <DetailField label="Last turn ID">
+                {routine.lastTurnId ?? ""}
+              </DetailField>
+              <DetailField label="Cwd">{routine.cwd ?? ""}</DetailField>
+              <DetailField label="Mode">{routine.mode ?? ""}</DetailField>
+              <DetailField label="Model">{routine.model ?? ""}</DetailField>
+              <DetailField label="Reasoning effort">
+                {routine.reasoningEffort ?? ""}
+              </DetailField>
+              <DetailField label="Fresh thread per run">
+                {routine.freshThreadPerRun ? "true" : "false"}
+              </DetailField>
+              <DetailField label="Updated">
+                {formatDateTime(routine.updatedAt)}
+              </DetailField>
+            </aside>
+          </div>
+        ) : null}
       </div>
     </DashboardLayout>
   );

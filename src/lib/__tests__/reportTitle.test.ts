@@ -11,6 +11,15 @@ const reportFile: ReportsFile = {
 };
 
 describe("report titles", () => {
+  it("uses the list payload title before loading report content", () => {
+    expect(
+      reportDisplayName({
+        ...reportFile,
+        title: "Indexed Report Title",
+      }),
+    ).toBe("Indexed Report Title");
+  });
+
   it("uses the first top-level markdown heading as the report display name", () => {
     expect(
       reportDisplayName(reportFile, {

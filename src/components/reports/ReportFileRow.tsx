@@ -12,8 +12,10 @@ import {
 import { TagPicker } from "@/components/tags/TagPicker";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { apiFetch } from "@/lib/api";
 import type { TagOption } from "@/lib/item-tags";
 import { reportDetailKeyboardAction } from "@/lib/reportDetailKeyboard";
+import { reportAssetDownloadPath } from "@/lib/reportMarkdownAssets";
 import { reportDisplayName } from "@/lib/reportTitle";
 import { cn } from "@/lib/utils";
 import type { ReportsFile } from "@/types/session";
@@ -29,7 +31,14 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ImgHTMLAttributes,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -50,6 +59,7 @@ export type ReportProvenance = {
 };
 
 type ReportFileRowProps = {
+  projectPath?: string;
   file: ReportsFile;
   expanded: boolean;
   loading: boolean;
@@ -96,6 +106,7 @@ type ReportFileListRowProps = {
 };
 
 type ReportFileDetailViewProps = {
+  projectPath?: string;
   file: ReportsFile;
   loading: boolean;
   payload?: ReportFilePayload;
@@ -204,6 +215,7 @@ export const ReportFileListRow = ({
 };
 
 export const ReportFileDetailView = ({
+  projectPath,
   file,
   loading,
   payload,
@@ -421,6 +433,7 @@ export const ReportFileDetailView = ({
       >
         <div className="mx-auto max-w-5xl">
           <ReportFilePreview
+            projectPath={projectPath}
             loading={loading}
             loadingLabel={loadingLabel}
             payload={payload}
@@ -529,6 +542,7 @@ const isInsideAlertDialog = (target: EventTarget | null) => {
 };
 
 export const ReportFileRow = ({
+  projectPath,
   file,
   expanded,
   loading,
@@ -630,6 +644,7 @@ export const ReportFileRow = ({
             </div>
           ) : null}
           <ReportFilePreview
+            projectPath={projectPath}
             loading={loading}
             loadingLabel={loadingLabel}
             payload={payload}
@@ -703,12 +718,14 @@ const ReportDeleteButton = ({
 };
 
 const ReportFilePreview = ({
+  projectPath,
   loading,
   loadingLabel,
   payload,
   saving,
   onSaveContent,
 }: {
+  projectPath?: string;
   loading: boolean;
   loadingLabel: string;
   payload?: ReportFilePayload;
@@ -720,6 +737,19 @@ const ReportFilePreview = ({
   const content = payload?.content ?? "";
   const canEdit = payload?.file.kind === "markdown" && Boolean(onSaveContent);
   const dirty = draft !== content;
+  const reportPath = payload?.file.path;
+  const markdownComponents = useMemo(
+    () => ({
+      img: (props: ReportMarkdownImageProps) => (
+        <ReportMarkdownImage
+          {...props}
+          projectPath={projectPath}
+          reportPath={reportPath}
+        />
+      ),
+    }),
+    [projectPath, reportPath],
+  );
 
   useEffect(() => {
     setDraft(content);
@@ -808,7 +838,10 @@ const ReportFilePreview = ({
             />
           ) : (
             <article className="prose prose-sm max-w-none px-4 py-4 dark:prose-invert">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={markdownComponents}
+              >
                 {draft}
               </ReactMarkdown>
             </article>
@@ -818,7 +851,7 @@ const ReportFilePreview = ({
     }
     return (
       <article className="prose prose-sm max-w-none dark:prose-invert">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
           {payload.content ?? ""}
         </ReactMarkdown>
       </article>
@@ -836,4 +869,69 @@ const ReportFilePreview = ({
       Select a file to preview.
     </div>
   );
+};
+
+type ReportMarkdownImageProps = ImgHTMLAttributes<HTMLImageElement> & {
+  node?: unknown;
+  projectPath?: string;
+  reportPath?: string;
+};
+
+const ReportMarkdownImage = ({
+  node: _node,
+  src,
+  alt,
+  projectPath,
+  reportPath,
+  ...props
+}: ReportMarkdownImageProps) => {
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const source = typeof src === "string" ? src : undefined;
+  const downloadPath = reportAssetDownloadPath(projectPath, reportPath, source);
+
+  useEffect(() => {
+    setObjectUrl(null);
+    setFailed(false);
+    if (!downloadPath) return;
+
+    let cancelled = false;
+    let nextObjectUrl: string | null = null;
+
+    const loadImage = async () => {
+      try {
+        const res = await apiFetch(downloadPath);
+        if (!res.ok) {
+          throw new Error("Unable to load report image");
+        }
+        const blob = await res.blob();
+        nextObjectUrl = URL.createObjectURL(blob);
+        if (cancelled) {
+          URL.revokeObjectURL(nextObjectUrl);
+          return;
+        }
+        setObjectUrl(nextObjectUrl);
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    };
+
+    void loadImage();
+
+    return () => {
+      cancelled = true;
+      if (nextObjectUrl) URL.revokeObjectURL(nextObjectUrl);
+    };
+  }, [downloadPath]);
+
+  if (downloadPath && !objectUrl) {
+    return (
+      <span className="block rounded border border-border bg-surface-muted px-3 py-2 text-[12px] text-muted-foreground">
+        {failed ? "Unable to load image." : "Loading image..."}
+        {alt ? ` ${alt}` : ""}
+      </span>
+    );
+  }
+
+  return <img {...props} src={objectUrl ?? source} alt={alt ?? ""} />;
 };

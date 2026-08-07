@@ -29,5 +29,5 @@ export const reportDisplayName = (
   payload?: ReportPayloadLike,
 ) => {
   if (file.kind !== "markdown") return file.name;
-  return firstMarkdownTitle(payload?.content) ?? file.name;
+  return file.title ?? firstMarkdownTitle(payload?.content) ?? file.name;
 };

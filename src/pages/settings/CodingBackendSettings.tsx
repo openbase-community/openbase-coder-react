@@ -33,6 +33,8 @@ type Props = {
   onRestartScheduled: (data: OpenbaseServicesResponse, delayMs: number) => void;
 };
 
+const VISIBLE_CODEX_PLUGIN_IDS = new Set(["computer-use"]);
+
 export const CodingBackendSettings: React.FC<Props> = ({
   onRestartScheduled,
 }) => {
@@ -367,6 +369,13 @@ export const CodingBackendSettings: React.FC<Props> = ({
     selectedBackend !== configuredBackend &&
     !loading &&
     !saving;
+  const visibleCodexPlugins = useMemo(
+    () =>
+      (codexPlugins?.plugins ?? []).filter((plugin) =>
+        VISIBLE_CODEX_PLUGIN_IDS.has(plugin.id),
+      ),
+    [codexPlugins],
+  );
 
   useEffect(() => {
     if (showCodexPlugins) {
@@ -419,7 +428,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
           ) : null}
           {showCodexPlugins ? (
             <div className="mt-2 grid gap-1.5 sm:max-w-xl sm:grid-cols-2">
-              {(codexPlugins?.plugins ?? []).map((plugin) => (
+              {visibleCodexPlugins.map((plugin) => (
                 <div
                   key={plugin.id}
                   className="flex min-h-14 items-center justify-between gap-3 rounded border border-border bg-background px-2.5 py-2"
@@ -454,7 +463,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
                   Loading Codex plugins…
                 </div>
               ) : null}
-              {!loadingCodexPlugins && codexPlugins?.plugins.length === 0 ? (
+              {!loadingCodexPlugins && visibleCodexPlugins.length === 0 ? (
                 <div className="rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
                   No Codex plugin toggles available.
                 </div>

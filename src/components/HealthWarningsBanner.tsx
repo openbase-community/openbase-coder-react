@@ -1,8 +1,14 @@
 import { apiFetch } from "@/lib/api";
 import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const POLL_MS = 30_000;
+
+const SYNC_SETTINGS_PATH = "/dashboard/sync";
+
+/** Sync-related warnings can be resolved from the sync settings page. */
+const isSyncWarning = (warning: HealthWarning) => warning.id.startsWith("sync");
 
 export interface HealthWarning {
   id: string;
@@ -19,6 +25,7 @@ export interface HealthWarning {
  */
 export function HealthWarningsBanner() {
   const [warnings, setWarnings] = useState<HealthWarning[]>([]);
+  const navigate = useNavigate();
 
   const fetchWarnings = useCallback(async () => {
     try {
@@ -50,24 +57,49 @@ export function HealthWarningsBanner() {
 
   return (
     <div className="shrink-0 space-y-1 border-b border-border px-3 py-1.5 md:px-4">
-      {warnings.map((warning) => (
-        <div
-          key={warning.id}
-          className={
-            warning.severity === "critical"
-              ? "flex items-start gap-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-[12px] text-destructive"
-              : "flex items-start gap-2 rounded border border-warning/40 bg-warning/10 px-3 py-1.5 text-[12px] text-warning"
-          }
-        >
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span className="min-w-0">
-            {warning.message}
-            {warning.action ? (
-              <span className="opacity-75"> {warning.action}</span>
-            ) : null}
-          </span>
-        </div>
-      ))}
+      {warnings.map((warning) => {
+        const clickable = isSyncWarning(warning);
+        const base =
+          warning.severity === "critical"
+            ? "flex w-full items-start gap-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-left text-[12px] text-destructive"
+            : "flex w-full items-start gap-2 rounded border border-warning/40 bg-warning/10 px-3 py-1.5 text-left text-[12px] text-warning";
+        const content = (
+          <>
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span className="min-w-0">
+              {warning.message}
+              {warning.action ? (
+                <span className="opacity-75"> {warning.action}</span>
+              ) : null}
+              {clickable ? (
+                <span className="ml-1 font-medium underline underline-offset-2">
+                  Open sync settings
+                </span>
+              ) : null}
+            </span>
+          </>
+        );
+
+        if (clickable) {
+          return (
+            <button
+              key={warning.id}
+              type="button"
+              onClick={() => navigate(SYNC_SETTINGS_PATH)}
+              title="Open sync settings to manage sync peers"
+              className={`${base} cursor-pointer transition-colors hover:brightness-110`}
+            >
+              {content}
+            </button>
+          );
+        }
+
+        return (
+          <div key={warning.id} className={base}>
+            {content}
+          </div>
+        );
+      })}
     </div>
   );
 }

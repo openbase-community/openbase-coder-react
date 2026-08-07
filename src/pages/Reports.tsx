@@ -448,6 +448,7 @@ const Reports = () => {
         )}
         {activeItem ? (
           <ReportFileDetailView
+            projectPath={activeItem.project.path}
             file={activeItem.file}
             loading={fileLoadingKey === itemKey(activeItem)}
             payload={activePayload}

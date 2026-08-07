@@ -577,6 +577,7 @@ const ProjectDetail = () => {
 
         {activeReportFile ? (
           <ReportFileDetailView
+            projectPath={projectPath}
             file={activeReportFile}
             loading={reportsFileLoadingKey === activeReportFile.path}
             payload={reportsPayloads[activeReportFile.path]}

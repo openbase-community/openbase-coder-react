@@ -102,6 +102,7 @@ export interface ReportsFile {
   path: string;
   name: string;
   kind: ReportsKind;
+  title?: string | null;
   size: number;
   updated_at: number;
   tags?: string[];

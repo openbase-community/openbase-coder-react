@@ -82,9 +82,9 @@ export const BUILT_IN_SIDEBAR_ITEMS: SidebarItem[] = [
   },
   {
     key: "routines",
-    path: "/dashboard/routines",
+    path: "/dashboard/loops",
     icon: CalendarClock,
-    title: "Routines",
+    title: "Loops",
     section: "workspace",
   },
   {

@@ -8,17 +8,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
-import { useAuth } from "@/contexts/auth";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import type { KeepAwakeSettingsResponse } from "@/pages/settings/settingsApi";
-import { Coffee, LogOut, Moon, Settings } from "lucide-react";
+import { Coffee, Moon, Settings } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const UserProfile = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
   const [settings, setSettings] = useState<KeepAwakeSettingsResponse | null>(
     null,
   );
@@ -134,11 +132,6 @@ const UserProfile = () => {
         <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
           <Settings className="mr-2 h-3.5 w-3.5" />
           Settings
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={logout}>
-          <LogOut className="mr-2 h-3.5 w-3.5" />
-          Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

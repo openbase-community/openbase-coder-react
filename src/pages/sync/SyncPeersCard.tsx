@@ -1,4 +1,15 @@
-import { Cloud, Laptop, Monitor } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Cloud, Laptop, Monitor, X } from "lucide-react";
 import React, { useMemo } from "react";
 import {
   isPhonePeer,
@@ -20,7 +31,9 @@ const kindIcon = (kind: string) => {
 export const SyncPeersCard: React.FC<{
   peers: SyncPeer[];
   statusFolders: SyncFolderStatus[];
-}> = ({ peers, statusFolders }) => {
+  removingDeviceId?: string | null;
+  onRemovePeer?: (peer: SyncPeer) => void;
+}> = ({ peers, statusFolders, removingDeviceId, onRemovePeer }) => {
   const computerPeers = peers.filter((peer) => !isPhonePeer(peer));
   const reportedDeviceIds = useMemo(() => {
     const ids = new Set<string>();
@@ -45,9 +58,10 @@ export const SyncPeersCard: React.FC<{
       <div className="flex flex-wrap gap-2 px-3 py-2.5">
         {computerPeers.map((peer) => {
           const online = reportedDeviceIds.has(peer.syncthing_device_id);
+          const removing = removingDeviceId === peer.device_id;
           return (
             <div
-              key={peer.syncthing_device_id}
+              key={peer.syncthing_device_id || peer.device_id}
               className="flex min-w-0 items-center gap-2 rounded border border-border bg-background px-2.5 py-1.5"
               title={peer.syncthing_device_id}
             >
@@ -70,6 +84,44 @@ export const SyncPeersCard: React.FC<{
                   {peer.tailscale_magic_dns}
                 </div>
               </div>
+              {onRemovePeer && peer.device_id ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={removing}
+                      aria-label={`Remove ${peer.name}`}
+                      title="Remove this sync peer"
+                      className="ml-1 grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remove this sync peer?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This forgets{" "}
+                        <span className="font-medium text-foreground">
+                          {peer.name}
+                        </span>{" "}
+                        from your device registry, so it stops appearing here
+                        and the offline warning clears. If that machine comes
+                        back online and re-registers, it will reappear.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        disabled={removing}
+                        onClick={() => onRemovePeer(peer)}
+                      >
+                        {removing ? "Removing..." : "Remove peer"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : null}
             </div>
           );
         })}
