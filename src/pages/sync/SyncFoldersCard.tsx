@@ -31,6 +31,12 @@ const FolderIgnores: React.FC<{
   const [input, setInput] = useState("");
   const [adding, setAdding] = useState(false);
 
+  // Only genuine rules are chips — comment lines (`// …`) and blanks are
+  // .stignore formatting, not removable rules, and must never render as tags.
+  const rules = folder.extra_ignores.filter(
+    (rule) => rule.trim().length > 0 && !rule.trim().startsWith("//"),
+  );
+
   const pattern = input.trim();
   const duplicate = folder.extra_ignores.includes(pattern);
   const canAdd = !busy && !adding && pattern.length > 0 && !duplicate;
@@ -45,9 +51,9 @@ const FolderIgnores: React.FC<{
 
   return (
     <div className="mt-0.5 flex flex-col gap-1.5">
-      {folder.extra_ignores.length > 0 ? (
+      {rules.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1">
-          {folder.extra_ignores.map((rule) => (
+          {rules.map((rule) => (
             <span
               key={rule}
               className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 font-mono text-[10.5px] text-muted-foreground"
