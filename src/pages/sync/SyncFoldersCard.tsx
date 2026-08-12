@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FolderPlus, X } from "lucide-react";
+import { FolderPlus, Plus, X } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import {
   displayRelpath,
@@ -22,13 +22,97 @@ const stateBadgeVariant = (
 
 const formatPercent = (value: number) => `${Math.round(value)}%`;
 
+const FolderIgnores: React.FC<{
+  folder: SyncFolderSettings;
+  busy: boolean;
+  onAddIgnore: (folder: SyncFolderSettings, pattern: string) => Promise<boolean>;
+  onRemoveIgnore: (folder: SyncFolderSettings, pattern: string) => void;
+}> = ({ folder, busy, onAddIgnore, onRemoveIgnore }) => {
+  const [input, setInput] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  const pattern = input.trim();
+  const duplicate = folder.extra_ignores.includes(pattern);
+  const canAdd = !busy && !adding && pattern.length > 0 && !duplicate;
+
+  const submit = async () => {
+    if (!canAdd) return;
+    setAdding(true);
+    const ok = await onAddIgnore(folder, pattern);
+    if (ok) setInput("");
+    setAdding(false);
+  };
+
+  return (
+    <div className="mt-0.5 flex flex-col gap-1.5">
+      {folder.extra_ignores.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1">
+          {folder.extra_ignores.map((rule) => (
+            <span
+              key={rule}
+              className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 font-mono text-[10.5px] text-muted-foreground"
+            >
+              {rule}
+              <button
+                type="button"
+                aria-label={`Remove ignore rule ${rule}`}
+                title="Remove this ignore rule"
+                className="text-muted-foreground hover:text-destructive disabled:opacity-50"
+                disabled={busy}
+                onClick={() => onRemoveIgnore(folder, rule)}
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <div className="flex gap-2">
+        <Input
+          value={input}
+          placeholder="Ignore rule, e.g. *.log or /build"
+          className="h-7 font-mono text-[11px]"
+          disabled={busy || adding}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") void submit();
+          }}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-[11px]"
+          title={
+            duplicate ? "This rule is already set." : "Add custom ignore rule"
+          }
+          disabled={!canAdd}
+          onClick={() => void submit()}
+        >
+          <Plus className="h-3 w-3" />
+          {adding ? "Adding..." : "Ignore"}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const FolderRow: React.FC<{
   folder: SyncFolderSettings;
   status: SyncFolderStatus | undefined;
   peersByDeviceId: Map<string, SyncPeer>;
   busy: boolean;
   onRemove: () => void;
-}> = ({ folder, status, peersByDeviceId, busy, onRemove }) => {
+  onAddIgnore: (folder: SyncFolderSettings, pattern: string) => Promise<boolean>;
+  onRemoveIgnore: (folder: SyncFolderSettings, pattern: string) => void;
+}> = ({
+  folder,
+  status,
+  peersByDeviceId,
+  busy,
+  onRemove,
+  onAddIgnore,
+  onRemoveIgnore,
+}) => {
   const peerEntries = Object.entries(status?.peer_completion ?? {});
   return (
     <div className="flex flex-col gap-1.5 px-3 py-2">
@@ -80,6 +164,12 @@ const FolderRow: React.FC<{
           ))}
         </div>
       ) : null}
+      <FolderIgnores
+        folder={folder}
+        busy={busy}
+        onAddIgnore={onAddIgnore}
+        onRemoveIgnore={onRemoveIgnore}
+      />
     </div>
   );
 };
@@ -91,7 +181,18 @@ export const SyncFoldersCard: React.FC<{
   busy: boolean;
   onAddFolder: (relpath: string) => Promise<boolean>;
   onRemoveFolder: (folder: SyncFolderSettings) => void;
-}> = ({ folders, statusFolders, peers, busy, onAddFolder, onRemoveFolder }) => {
+  onAddIgnore: (folder: SyncFolderSettings, pattern: string) => Promise<boolean>;
+  onRemoveIgnore: (folder: SyncFolderSettings, pattern: string) => void;
+}> = ({
+  folders,
+  statusFolders,
+  peers,
+  busy,
+  onAddFolder,
+  onRemoveFolder,
+  onAddIgnore,
+  onRemoveIgnore,
+}) => {
   const [pathInput, setPathInput] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -132,7 +233,9 @@ export const SyncFoldersCard: React.FC<{
         </p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
           Pick any folder under your home directory to keep identical on every
-          synced computer.
+          synced computer. Add custom ignore rules (Syncthing .stignore syntax)
+          to keep paths from syncing — on top of the managed defaults like
+          .git, node_modules, and lockfiles.
         </p>
       </div>
       {folders.length === 0 ? (
@@ -149,6 +252,8 @@ export const SyncFoldersCard: React.FC<{
               peersByDeviceId={peersByDeviceId}
               busy={busy}
               onRemove={() => onRemoveFolder(folder)}
+              onAddIgnore={onAddIgnore}
+              onRemoveIgnore={onRemoveIgnore}
             />
           ))}
         </div>

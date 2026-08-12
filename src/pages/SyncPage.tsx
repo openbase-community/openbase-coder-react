@@ -195,6 +195,49 @@ const SyncPage = () => {
     [settings, updateSettings],
   );
 
+  const setFolderIgnores = useCallback(
+    async (relpath: string, nextIgnores: string[]): Promise<boolean> => {
+      const current = settings?.folders ?? [];
+      return updateSettings({
+        folders: current.map((entry) => ({
+          relpath: entry.relpath,
+          extra_ignores:
+            entry.relpath === relpath ? nextIgnores : entry.extra_ignores,
+        })),
+      });
+    },
+    [settings, updateSettings],
+  );
+
+  const addIgnoreRule = useCallback(
+    async (folder: SyncFolderSettings, pattern: string): Promise<boolean> => {
+      const rule = pattern.trim();
+      if (!rule) return false;
+      if (folder.extra_ignores.includes(rule)) {
+        toast.error("That ignore rule is already set for this folder.");
+        return false;
+      }
+      const ok = await setFolderIgnores(folder.relpath, [
+        ...folder.extra_ignores,
+        rule,
+      ]);
+      if (ok) toast.success(`Ignoring "${rule}" in ~/${folder.relpath}`);
+      return ok;
+    },
+    [setFolderIgnores],
+  );
+
+  const removeIgnoreRule = useCallback(
+    async (folder: SyncFolderSettings, pattern: string) => {
+      const ok = await setFolderIgnores(
+        folder.relpath,
+        folder.extra_ignores.filter((rule) => rule !== pattern),
+      );
+      if (ok) toast.success(`Removed "${pattern}" from ~/${folder.relpath}`);
+    },
+    [setFolderIgnores],
+  );
+
   const removePeer = useCallback(
     async (peer: SyncPeer) => {
       setRemovingPeer(peer.device_id);
@@ -387,6 +430,10 @@ const SyncPage = () => {
               busy={saving}
               onAddFolder={addFolder}
               onRemoveFolder={(folder) => void removeFolder(folder)}
+              onAddIgnore={addIgnoreRule}
+              onRemoveIgnore={(folder, pattern) =>
+                void removeIgnoreRule(folder, pattern)
+              }
             />
 
             <SyncPeersCard
