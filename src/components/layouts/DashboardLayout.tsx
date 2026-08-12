@@ -27,7 +27,7 @@ import {
   type SidebarItem,
 } from "@/lib/sidebar-preferences";
 import { openExternalUrl } from "@/lib/external-links";
-import { useCliVersions } from "@/lib/useCliVersions";
+import { useCliVersions } from "@/hooks/useCliVersions";
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 

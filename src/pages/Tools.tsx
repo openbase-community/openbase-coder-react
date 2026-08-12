@@ -5,7 +5,7 @@ import {
   ResourceLoading,
   ResourcePageHeader,
 } from "@/components/resource/ResourcePage";
-import { useUvTools } from "@/lib/useUvTools";
+import { useUvTools } from "@/hooks/useUvTools";
 import { ChevronRight, Wrench } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Panel } from "@/components/ui/panel";

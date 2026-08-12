@@ -2,7 +2,7 @@ import { nextReportIndexAfterDelete } from "@/lib/reportDetailNavigation";
 import {
   useReportFileActions,
   type ReportFileTarget,
-} from "@/lib/useReportFileActions";
+} from "@/hooks/useReportFileActions";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 

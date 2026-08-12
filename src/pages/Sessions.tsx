@@ -31,7 +31,7 @@ import {
   threadListDisplayNames,
   threadRoutePath,
 } from "@/lib/thread-display";
-import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
+import { useProjectsAndThreads } from "@/hooks/useProjectsAndThreads";
 import { AlertTriangle, Archive, FolderOpen, Plus, Terminal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";

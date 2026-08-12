@@ -31,10 +31,10 @@ import {
   threadRoutePath,
   threadVoiceLabel,
 } from "@/lib/thread-display";
-import { useReportBrowser } from "@/lib/useReportBrowser";
-import type { ReportFileTarget } from "@/lib/useReportFileActions";
-import { useTagOptions } from "@/lib/useTagOptions";
-import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
+import { useReportBrowser } from "@/hooks/useReportBrowser";
+import type { ReportFileTarget } from "@/hooks/useReportFileActions";
+import { useTagOptions } from "@/hooks/useTagOptions";
+import { useProjectsAndThreads } from "@/hooks/useProjectsAndThreads";
 import { cn } from "@/lib/utils";
 import type { ReportsFile, ThreadInfo } from "@/types/session";
 import {

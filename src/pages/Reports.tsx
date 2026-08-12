@@ -17,9 +17,9 @@ import { setReportTags } from "@/lib/item-tags";
 import { fetchAllProjectPages, projectName } from "@/lib/project-display";
 import { groupReportItemsByDay } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
-import { useReportBrowser } from "@/lib/useReportBrowser";
-import type { ReportFileTarget } from "@/lib/useReportFileActions";
-import { useTagOptions } from "@/lib/useTagOptions";
+import { useReportBrowser } from "@/hooks/useReportBrowser";
+import type { ReportFileTarget } from "@/hooks/useReportFileActions";
+import { useTagOptions } from "@/hooks/useTagOptions";
 import type { ReportsFile, Project } from "@/types/session";
 import {
   ChevronDown,

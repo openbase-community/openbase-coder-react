@@ -8,7 +8,7 @@ import {
   type UvToolExecutable,
   type UvToolHelpResponse,
 } from "@/lib/uv-tools";
-import { useUvTools } from "@/lib/useUvTools";
+import { useUvTools } from "@/hooks/useUvTools";
 import { ArrowLeft, CircleHelp, RefreshCw, Trash2, Wrench } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";

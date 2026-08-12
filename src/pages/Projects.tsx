@@ -12,7 +12,7 @@ import {
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { GIT_STATUS, projectName } from "@/lib/project-display";
-import { useProjectsAndThreads } from "@/lib/useProjectsAndThreads";
+import { useProjectsAndThreads } from "@/hooks/useProjectsAndThreads";
 import type { Project } from "@/types/session";
 import {
   ChevronRight,
