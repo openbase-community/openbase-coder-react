@@ -1,5 +1,6 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import {
   ResourceEmptyState,
   ResourceError,
@@ -95,7 +96,7 @@ const BoilerSync = () => {
           </ResourceEmptyState>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)]">
-            <div className="overflow-hidden rounded border border-border bg-surface">
+            <Panel>
               {groupedTemplates.map(([source, sourceTemplates], groupIdx) => (
                 <div
                   key={source}
@@ -127,7 +128,7 @@ const BoilerSync = () => {
                   ))}
                 </div>
               ))}
-            </div>
+            </Panel>
 
             <div className="rounded border border-border bg-surface">
               <div className="border-b border-border px-3 py-2">

@@ -1,6 +1,8 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import { Input } from "@/components/ui/input";
+import { Panel } from "@/components/ui/panel";
 import {
   Tooltip,
   TooltipContent,
@@ -168,9 +170,9 @@ const Projects = () => {
         </div>
 
         {listError ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+          <ErrorBanner>
             {listError} — retrying automatically.
-          </div>
+          </ErrorBanner>
         ) : null}
 
         {/* List */}
@@ -183,7 +185,7 @@ const Projects = () => {
               : "No projects match."}
           </div>
         ) : (
-          <div className="overflow-hidden rounded border border-border bg-surface">
+          <Panel>
             {filtered.map((project, idx) => {
               const rows = [
                 { project, depth: 0 },
@@ -346,7 +348,7 @@ const Projects = () => {
                 </div>
               );
             })}
-          </div>
+          </Panel>
         )}
 
         {!projectsLoading && nextProjectsUrl ? (

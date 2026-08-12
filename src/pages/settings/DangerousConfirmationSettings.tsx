@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { RotateCcw, Save } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -96,7 +97,7 @@ export const DangerousConfirmationSettings: React.FC = () => {
   }, [settings]);
 
   return (
-    <div className="overflow-hidden rounded border border-border bg-surface">
+    <Panel>
       <div className="border-b border-border px-3 py-2.5">
         <p className="text-[12.5px] font-medium text-foreground">
           Risky action confirmation
@@ -161,6 +162,6 @@ export const DangerousConfirmationSettings: React.FC = () => {
         </div>
         {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
       </div>
-    </div>
+    </Panel>
   );
 };

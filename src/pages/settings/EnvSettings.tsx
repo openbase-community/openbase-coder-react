@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { Eye, EyeOff, Plus, Save, Trash2 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -165,7 +166,7 @@ export const EnvSettings: React.FC = () => {
   }, [deletedKeys, entries]);
 
   return (
-    <div className="overflow-hidden rounded border border-border bg-surface">
+    <Panel>
       <div className="flex flex-col gap-3 border-b border-border px-3 py-2.5 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
@@ -280,6 +281,6 @@ export const EnvSettings: React.FC = () => {
           ))}
         </datalist>
       </div>
-    </div>
+    </Panel>
   );
 };

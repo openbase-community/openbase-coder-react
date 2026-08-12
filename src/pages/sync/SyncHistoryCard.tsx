@@ -10,6 +10,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import { History, Trash2 } from "lucide-react";
 import React from "react";
 import { formatBytes } from "./syncApi";
@@ -19,7 +20,7 @@ export const SyncHistoryCard: React.FC<{
   purging: boolean;
   onPurge: () => void;
 }> = ({ usageBytes, purging, onPurge }) => (
-  <div className="overflow-hidden rounded border border-border bg-surface">
+  <Panel>
     <div className="flex items-center justify-between gap-3 px-3 py-2.5">
       <div className="flex min-w-0 items-start gap-2">
         <History className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -63,5 +64,5 @@ export const SyncHistoryCard: React.FC<{
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  </div>
+  </Panel>
 );

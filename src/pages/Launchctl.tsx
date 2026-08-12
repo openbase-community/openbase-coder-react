@@ -17,6 +17,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { DetailField } from "@/components/ui/detail-field";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import {
@@ -74,25 +77,6 @@ const runtimeLabel = (svc: LaunchctlService) =>
 
 const servicePath = (label: string) =>
   `/dashboard/launchctl/${encodeURIComponent(label)}`;
-
-const DetailField = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number | boolean | null | undefined;
-}) => (
-  <div className="min-w-0 rounded border border-border bg-background px-3 py-2">
-    <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-      {label}
-    </dt>
-    <dd className="mt-1 break-all font-mono text-[11px] text-foreground/80">
-      {value === null || value === undefined || value === ""
-        ? "—"
-        : String(value)}
-    </dd>
-  </div>
-);
 
 const ServiceActions = ({
   service,
@@ -367,9 +351,9 @@ const Launchctl = () => {
           </div>
 
           {error ? (
-            <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+            <ErrorBanner>
               {error}
-            </div>
+            </ErrorBanner>
           ) : null}
 
           {loading && !selectedService ? (
@@ -486,7 +470,7 @@ const Launchctl = () => {
         ) : services.length === 0 ? (
           <ResourceEmptyState icon={Server}>No LaunchAgents.</ResourceEmptyState>
         ) : (
-          <div className="overflow-hidden rounded border border-border bg-surface">
+          <Panel>
             {services.map((svc, idx) => (
               <div
                 key={svc.label}
@@ -573,7 +557,7 @@ const Launchctl = () => {
                 <ChevronRight className="hidden h-3.5 w-3.5 text-muted-foreground md:block" />
               </div>
             ))}
-          </div>
+          </Panel>
         )}
       </div>
     </DashboardLayout>

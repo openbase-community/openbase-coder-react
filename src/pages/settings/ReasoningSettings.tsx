@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import {
   Select,
   SelectContent,
@@ -108,7 +109,7 @@ export const ReasoningSettings: React.FC = () => {
       superAgentsEffort !== settings?.super_agents_reasoning_effort);
 
   return (
-    <div className="overflow-hidden rounded border border-border bg-surface">
+    <Panel>
       <div className="flex flex-col gap-3 border-b border-border px-3 py-2.5 lg:flex-row lg:items-center">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
@@ -202,6 +203,6 @@ export const ReasoningSettings: React.FC = () => {
           </Button>
         </div>
       </div>
-    </div>
+    </Panel>
   );
 };

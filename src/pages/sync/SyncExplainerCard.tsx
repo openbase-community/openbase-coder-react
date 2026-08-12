@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import {
   Tooltip,
   TooltipContent,
@@ -31,7 +32,7 @@ export const SyncExplainerCard: React.FC<{
   enabling?: boolean;
   onEnable?: () => void;
 }> = ({ eligible, eligibleReason, enabling, onEnable }) => (
-  <div className="overflow-hidden rounded border border-border bg-surface">
+  <Panel>
     <div className="flex flex-col gap-3 px-3 py-2.5">
       <div className="flex items-start gap-2">
         <FolderSync className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
@@ -104,5 +105,5 @@ export const SyncExplainerCard: React.FC<{
         </div>
       )}
     </div>
-  </div>
+  </Panel>
 );

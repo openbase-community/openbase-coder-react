@@ -9,6 +9,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Panel } from "@/components/ui/panel";
 import { Cloud, Laptop, Monitor, X } from "lucide-react";
 import React, { useMemo } from "react";
 import {
@@ -48,7 +49,7 @@ export const SyncPeersCard: React.FC<{
   if (computerPeers.length === 0) return null;
 
   return (
-    <div className="overflow-hidden rounded border border-border bg-surface">
+    <Panel>
       <div className="border-b border-border px-3 py-2.5">
         <p className="text-[12.5px] font-medium text-foreground">Computers</p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
@@ -126,6 +127,6 @@ export const SyncPeersCard: React.FC<{
           );
         })}
       </div>
-    </div>
+    </Panel>
   );
 };

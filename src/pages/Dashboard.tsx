@@ -1,6 +1,8 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { ThreadListItem } from "@/components/ThreadListItem";
 import { Button } from "@/components/ui/button";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { THREAD_LIST_REFRESH_INTERVAL_MS } from "@/lib/polling";
@@ -105,9 +107,9 @@ const Dashboard = () => {
       <div className="space-y-5">
         <SyncNudgeCard />
         {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+          <ErrorBanner>
             {error} — retrying automatically.
-          </div>
+          </ErrorBanner>
         ) : null}
 
         {serviceWarning ? (
@@ -217,7 +219,7 @@ const Dashboard = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded border border-border bg-surface">
+            <Panel>
               {recentThreads.map((thread, idx) => (
                 <ThreadListItem
                   key={thread.thread_id}
@@ -227,7 +229,7 @@ const Dashboard = () => {
                   onToggleFavorite={(item) => void toggleThreadFavorite(item)}
                 />
               ))}
-            </div>
+            </Panel>
           )}
         </section>
       </div>

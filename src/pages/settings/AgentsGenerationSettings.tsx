@@ -1,3 +1,4 @@
+import { Panel } from "@/components/ui/panel";
 import { Switch } from "@/components/ui/switch";
 import { apiFetch } from "@/lib/api";
 import React, { useCallback, useEffect, useState } from "react";
@@ -70,7 +71,7 @@ export const AgentsGenerationSettings: React.FC = () => {
     settings?.include_normal_codex_agents_in_openbase_agents ?? false;
 
   return (
-    <div className="overflow-hidden rounded border border-border bg-surface">
+    <Panel>
       <div className="flex items-center gap-3 px-3 py-3">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
@@ -94,6 +95,6 @@ export const AgentsGenerationSettings: React.FC = () => {
           {error}
         </p>
       ) : null}
-    </div>
+    </Panel>
   );
 };

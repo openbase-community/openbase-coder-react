@@ -1,5 +1,7 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import type { ServiceStatus } from "@/types/session";
@@ -72,9 +74,9 @@ const Status = () => {
         </div>
 
         {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+          <ErrorBanner>
             {error} — retrying automatically.
-          </div>
+          </ErrorBanner>
         ) : null}
 
         {entries.length === 0 ? (
@@ -82,7 +84,7 @@ const Status = () => {
             No services configured.
           </div>
         ) : (
-          <div className="overflow-hidden rounded border border-border bg-surface">
+          <Panel>
             {entries.map(([key, svc], idx) => {
               const disabled = svc.enabled === false;
               const statusLabel = disabled
@@ -138,7 +140,7 @@ const Status = () => {
                 </div>
               );
             })}
-          </div>
+          </Panel>
         )}
       </div>
     </DashboardLayout>

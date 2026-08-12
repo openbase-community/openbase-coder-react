@@ -8,6 +8,7 @@ import {
 import { useUvTools } from "@/lib/useUvTools";
 import { ChevronRight, Wrench } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Panel } from "@/components/ui/panel";
 
 const Tools = () => {
   const { tools, uvPath, error, loading, fetchTools } = useUvTools();
@@ -38,7 +39,7 @@ const Tools = () => {
         ) : tools.length === 0 ? (
           <ResourceEmptyState icon={Wrench}>No uv tools.</ResourceEmptyState>
         ) : (
-          <div className="overflow-hidden rounded border border-border bg-surface">
+          <Panel>
             {tools.map((tool, idx) => (
               <Link
                 key={tool.name}
@@ -112,7 +113,7 @@ const Tools = () => {
                 <ChevronRight className="hidden h-3.5 w-3.5 text-muted-foreground md:block" />
               </Link>
             ))}
-          </div>
+          </Panel>
         )}
       </div>
     </DashboardLayout>

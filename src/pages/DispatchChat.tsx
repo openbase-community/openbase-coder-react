@@ -1,5 +1,6 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import { apiFetch } from "@/lib/api";
 import { fetchThreadPage, LARGE_THREAD_PAGE_SIZE } from "@/lib/project-display";
 import type { ThreadInfo } from "@/types/session";
@@ -73,9 +74,9 @@ const DispatchChat = () => {
         </div>
 
         {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+          <ErrorBanner>
             {error}
-          </div>
+          </ErrorBanner>
         ) : null}
 
         <div className="rounded border border-dashed border-border bg-surface px-4 py-8 text-center">

@@ -8,6 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft,
@@ -604,9 +606,9 @@ const Routines = () => {
         />
 
         {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+          <ErrorBanner>
             {error}
-          </div>
+          </ErrorBanner>
         ) : null}
 
         {loading && sortedRoutines.length === 0 ? (
@@ -627,7 +629,7 @@ const Routines = () => {
             </Button>
           </div>
         ) : (
-          <div className="overflow-hidden rounded border border-border bg-surface">
+          <Panel>
             {sortedRoutines.map((routine, idx) => (
               <div
                 key={routine.name}
@@ -746,7 +748,7 @@ const Routines = () => {
                 </div>
               </div>
             ))}
-          </div>
+          </Panel>
         )}
       </div>
     </DashboardLayout>
@@ -921,9 +923,9 @@ export const RoutineDetail = () => {
         </div>
 
         {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+          <ErrorBanner>
             {error}
-          </div>
+          </ErrorBanner>
         ) : null}
 
         {loading && !routine ? (
@@ -954,9 +956,9 @@ export const RoutineDetail = () => {
               ) : null}
 
               {routine.lastError ? (
-                <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+                <ErrorBanner>
                   {routine.lastError}
-                </div>
+                </ErrorBanner>
               ) : null}
             </section>
 

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import { useAuth } from "@/contexts/auth";
 import { LogOut } from "lucide-react";
 import React from "react";
@@ -7,7 +8,7 @@ export const AuthenticationSettings: React.FC = () => {
   const { logout } = useAuth();
 
   return (
-    <div className="overflow-hidden rounded border border-border bg-surface">
+    <Panel>
       <div className="flex items-center gap-3 px-3 py-2.5">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
@@ -27,6 +28,6 @@ export const AuthenticationSettings: React.FC = () => {
           Log out
         </Button>
       </div>
-    </div>
+    </Panel>
   );
 };

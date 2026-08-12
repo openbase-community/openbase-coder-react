@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { Eye, RefreshCw } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
@@ -71,7 +72,7 @@ export const IgnoredLaunchctlSettings: React.FC = () => {
   );
 
   return (
-    <div className="overflow-hidden rounded border border-border bg-surface">
+    <Panel>
       <div className="flex items-center gap-3 border-b border-border px-3 py-2.5">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
@@ -131,6 +132,6 @@ export const IgnoredLaunchctlSettings: React.FC = () => {
           ))}
         </div>
       )}
-    </div>
+    </Panel>
   );
 };

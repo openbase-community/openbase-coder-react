@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import { AlertTriangle, FolderX, GitBranch } from "lucide-react";
 import React from "react";
 import { shortSha, type SyncConflict, type SyncConflictType } from "./syncApi";
@@ -56,7 +57,7 @@ export const SyncConflictsCard: React.FC<{
   onResolve,
   onIgnoreContainingFolder,
 }) => (
-  <div className="overflow-hidden rounded border border-border bg-surface">
+  <Panel>
     <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
       <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning" />
       <div className="min-w-0">
@@ -239,5 +240,5 @@ export const SyncConflictsCard: React.FC<{
         );
       })}
     </div>
-  </div>
+  </Panel>
 );

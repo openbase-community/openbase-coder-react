@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import { RefreshCw, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -41,9 +42,9 @@ export const ResourcePageHeader = ({
 
 export const ResourceError = ({ message }: { message: string | null }) =>
   message ? (
-    <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+    <ErrorBanner>
       {message}
-    </div>
+    </ErrorBanner>
   ) : null;
 
 export const ResourceLoading = ({ children }: { children: ReactNode }) => (

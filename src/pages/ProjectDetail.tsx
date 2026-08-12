@@ -16,6 +16,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage, readJson } from "@/lib/api-errors";
 import { setReportTags } from "@/lib/item-tags";
@@ -356,9 +358,9 @@ const ProjectDetail = () => {
         </div>
 
         {listError ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+          <ErrorBanner>
             {listError} — retrying automatically.
-          </div>
+          </ErrorBanner>
         ) : null}
 
         <div className="grid gap-2 md:grid-cols-2">
@@ -442,9 +444,7 @@ const ProjectDetail = () => {
           </AlertDialog>
         </div>
 
-        <div
-          className="overflow-hidden rounded border border-border bg-surface"
-        >
+        <Panel>
           <div className="border-b border-border px-3 py-2 text-[13px] font-medium text-foreground">
             Reports
           </div>
@@ -573,7 +573,7 @@ const ProjectDetail = () => {
               })}
             </div>
           )}
-        </div>
+        </Panel>
 
         {activeReportFile ? (
           <ReportFileDetailView
@@ -653,9 +653,8 @@ const ProjectDetail = () => {
           />
         ) : null}
 
-        <div
+        <Panel
           ref={threadsRef}
-          className="overflow-hidden rounded border border-border bg-surface"
         >
           <div className="border-b border-border px-3 py-2 text-[13px] font-medium text-foreground">
             Threads
@@ -789,7 +788,7 @@ const ProjectDetail = () => {
               ) : null}
             </div>
           )}
-        </div>
+        </Panel>
       </div>
     </DashboardLayout>
   );

@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import {
   Select,
   SelectContent,
@@ -390,7 +391,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
   }, [fetchClaudePlugins, showClaudePlugins]);
 
   return (
-    <div className="overflow-hidden rounded border border-border bg-surface">
+    <Panel>
       <div className="flex flex-col gap-3 border-b border-border px-3 py-2.5 lg:flex-row lg:items-center">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
@@ -645,6 +646,6 @@ export const CodingBackendSettings: React.FC<Props> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </Panel>
   );
 };

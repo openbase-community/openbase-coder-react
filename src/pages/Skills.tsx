@@ -2,7 +2,9 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import { Input } from "@/components/ui/input";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import {
@@ -561,7 +563,7 @@ const Skills = () => {
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded border border-border bg-surface">
+          <Panel>
             {editorLoading ? (
               <div className="flex h-72 items-center justify-center text-[12px] text-muted-foreground">
                 Loading…
@@ -578,7 +580,7 @@ const Skills = () => {
                 placeholder={`---\nname: ${editingSkill}\ndescription: What this skill does\n---\n\nYour skill instructions…`}
               />
             )}
-          </div>
+          </Panel>
 
           <div className="flex gap-2">
             <Button
@@ -655,7 +657,7 @@ const Skills = () => {
 
         {activeView === "printing-press" && !projectPath ? (
           <div className="grid gap-3 lg:grid-cols-[13rem_minmax(0,1fr)_18rem]">
-            <div className="overflow-hidden rounded border border-border bg-surface">
+            <Panel>
               <button
                 type="button"
                 onClick={() => setPrintingPressCategory("")}
@@ -683,7 +685,7 @@ const Skills = () => {
                   </button>
                 ))}
               </div>
-            </div>
+            </Panel>
 
             <div className="space-y-2">
               <div className="relative">
@@ -695,7 +697,7 @@ const Skills = () => {
                   className="h-8 pl-7 text-[12.5px]"
                 />
               </div>
-              <div className="overflow-hidden rounded border border-border bg-surface">
+              <Panel>
                 {printingPressLoading ? (
                   <div className="flex h-40 items-center justify-center gap-2 text-[12px] text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -750,10 +752,10 @@ const Skills = () => {
                     ))}
                   </div>
                 )}
-              </div>
+              </Panel>
             </div>
 
-            <div className="overflow-hidden rounded border border-border bg-surface">
+            <Panel>
               {selectedPrintingPressEntry ? (
                 <div className="space-y-3 p-3">
                   <div>
@@ -849,7 +851,7 @@ const Skills = () => {
                   Select a skill.
                 </div>
               )}
-            </div>
+            </Panel>
           </div>
         ) : (
           <>
@@ -878,7 +880,7 @@ const Skills = () => {
             </form>
 
             {listError ? (
-              <div className="flex items-center justify-between gap-3 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+              <ErrorBanner className="flex items-center justify-between gap-3">
                 <span className="min-w-0">{listError}</span>
                 <Button
                   type="button"
@@ -893,7 +895,7 @@ const Skills = () => {
                   <RefreshCw className="h-3 w-3" />
                   Retry
                 </Button>
-              </div>
+              </ErrorBanner>
             ) : null}
 
             {loading ? (
@@ -977,9 +979,8 @@ const Skills = () => {
                 {visibleSections.map((section) => {
                   const collapsed = !!collapsedSections[section.key];
                   return (
-                    <div
+                    <Panel
                       key={section.key}
-                      className="overflow-hidden rounded border border-border bg-surface"
                     >
                       <button
                         type="button"
@@ -1105,7 +1106,7 @@ const Skills = () => {
                           })
                         )
                       ) : null}
-                    </div>
+                    </Panel>
                   );
                 })}
               </div>

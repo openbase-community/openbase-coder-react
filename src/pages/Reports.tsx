@@ -10,6 +10,7 @@ import {
   ReportFileListRow,
 } from "@/components/reports/ReportFileRow";
 import { Input } from "@/components/ui/input";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { readJson } from "@/lib/api-errors";
 import { setReportTags } from "@/lib/item-tags";
@@ -331,7 +332,7 @@ const Reports = () => {
         ) : filteredItems.length === 0 ? (
           <ResourceEmptyState>No files match.</ResourceEmptyState>
         ) : (
-          <div className="overflow-hidden rounded border border-border bg-surface">
+          <Panel>
             {dateSections.map((section, sectionIndex) => (
               <section
                 key={section.key}
@@ -444,7 +445,7 @@ const Reports = () => {
             })}
               </section>
             ))}
-          </div>
+          </Panel>
         )}
         {activeItem ? (
           <ReportFileDetailView

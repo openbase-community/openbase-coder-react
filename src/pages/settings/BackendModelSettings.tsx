@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Panel } from "@/components/ui/panel";
 import {
   Select,
   SelectContent,
@@ -125,7 +126,7 @@ export const BackendModelSettings: React.FC = () => {
   const options = settings?.options ?? [];
 
   return (
-    <div className="overflow-hidden rounded border border-border bg-surface">
+    <Panel>
       {MODEL_ROLES.map(({ role, label, description }) => {
         const selectedOption = options.find(
           (option) => option.id === models[role],
@@ -242,6 +243,6 @@ export const BackendModelSettings: React.FC = () => {
           Refresh
         </Button>
       </div>
-    </div>
+    </Panel>
   );
 };

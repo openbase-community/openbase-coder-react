@@ -6,6 +6,7 @@ import {
   ResourcePageHeader,
 } from "@/components/resource/ResourcePage";
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { Check, ExternalLink, ShieldAlert, X } from "lucide-react";
@@ -147,7 +148,7 @@ const ApprovalRequests = () => {
             No pending approvals.
           </ResourceEmptyState>
         ) : (
-          <div className="overflow-hidden rounded border border-border bg-surface">
+          <Panel>
             {sortedRequests.map((request, idx) => {
               const requestId = String(request.id);
               const detail = requestDetail(request);
@@ -225,7 +226,7 @@ const ApprovalRequests = () => {
                 </div>
               );
             })}
-          </div>
+          </Panel>
         )}
       </div>
     </DashboardLayout>

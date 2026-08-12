@@ -1,5 +1,7 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { DetailField } from "@/components/ui/detail-field";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import {
   fetchUvToolHelp,
   uninstallUvTool,
@@ -11,23 +13,6 @@ import { ArrowLeft, CircleHelp, RefreshCw, Trash2, Wrench } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-
-const DetailField = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null | undefined;
-}) => (
-  <div className="min-w-0 rounded border border-border bg-background px-3 py-2">
-    <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-      {label}
-    </dt>
-    <dd className="mt-1 break-all font-mono text-[11px] text-foreground/80">
-      {value || "—"}
-    </dd>
-  </div>
-);
 
 type HelpState = {
   loading: boolean;
@@ -180,9 +165,9 @@ const ToolDetail = () => {
         </div>
 
         {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+          <ErrorBanner>
             {error}
-          </div>
+          </ErrorBanner>
         ) : null}
 
         {loading && !tool ? (
@@ -254,9 +239,9 @@ const ToolDetail = () => {
                           {helpState?.loading ? "Loading" : "Help"}
                         </Button>
                         {helpState?.error ? (
-                          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive md:col-span-3">
+                          <ErrorBanner className="md:col-span-3">
                             {helpState.error}
-                          </div>
+                          </ErrorBanner>
                         ) : helpState?.response ? (
                           <div className="min-w-0 rounded border border-border bg-background md:col-span-3">
                             <div className="border-b border-border px-3 py-1.5 font-mono text-[10.5px] text-muted-foreground">

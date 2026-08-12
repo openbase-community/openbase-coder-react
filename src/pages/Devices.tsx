@@ -8,6 +8,7 @@ import {
 import { apiFetch } from "@/lib/api";
 import { Monitor } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Panel } from "@/components/ui/panel";
 
 type TailnetDevice = {
   name: string;
@@ -88,7 +89,7 @@ const Devices = () => {
             No Openbase Coder hosts found on the tailnet.
           </ResourceEmptyState>
         ) : (
-          <div className="overflow-hidden rounded border border-border bg-surface">
+          <Panel>
             {openbaseDevices.map((device, idx) => (
               <div
                 key={device.host}
@@ -139,7 +140,7 @@ const Devices = () => {
                 </div>
               </div>
             ))}
-          </div>
+          </Panel>
         )}
 
         {allDevices.length > openbaseDevices.length ? (
@@ -147,7 +148,7 @@ const Devices = () => {
             <h2 className="text-[12px] font-medium text-muted-foreground">
               Other tailnet devices
             </h2>
-            <div className="overflow-hidden rounded border border-border bg-surface/60">
+            <Panel className="bg-surface/60">
               {allDevices
                 .filter((device) => !device.openbase_available)
                 .map((device, idx) => (
@@ -173,7 +174,7 @@ const Devices = () => {
                     </span>
                   </div>
                 ))}
-            </div>
+            </Panel>
           </div>
         ) : null}
       </div>

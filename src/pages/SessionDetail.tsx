@@ -14,6 +14,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { Panel } from "@/components/ui/panel";
 import {
   Popover,
   PopoverContent,
@@ -496,7 +498,7 @@ const SessionDetail = ({
           <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-2.5 backdrop-blur md:left-[13rem]">
             <div className="mx-auto flex max-w-3xl items-end gap-1.5">
               {hasActiveCurrentTurn ? (
-                <div className="grid w-24 shrink-0 grid-cols-1 overflow-hidden rounded border border-border bg-surface text-[11px]">
+                <Panel className="grid w-24 shrink-0 grid-cols-1 text-[11px]">
                   <button
                     type="button"
                     onClick={() => setActivePromptMode("steer")}
@@ -519,7 +521,7 @@ const SessionDetail = ({
                   >
                     Queue
                   </button>
-                </div>
+                </Panel>
               ) : null}
               <textarea
                 value={prompt}
@@ -566,9 +568,9 @@ const SessionDetail = ({
 
         {!thread ? (
           loadError ? (
-            <div className="mx-auto mt-12 max-w-md rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-[12px] text-destructive">
+            <ErrorBanner className="mx-auto mt-12 max-w-md text-center">
               {loadError}
-            </div>
+            </ErrorBanner>
           ) : (
             <div className="py-12 text-center text-[12px] text-muted-foreground">
               {isConnected ? "Loading…" : "Connecting…"}

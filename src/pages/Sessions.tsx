@@ -20,6 +20,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { projectName } from "@/lib/project-display";
@@ -233,9 +235,9 @@ const Sessions = () => {
         </div>
 
         {listError ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+          <ErrorBanner>
             {listError} — retrying automatically.
-          </div>
+          </ErrorBanner>
         ) : null}
 
         {loading ? (
@@ -255,7 +257,7 @@ const Sessions = () => {
                   <div className="mb-1.5 px-1 text-[11px] font-semibold uppercase text-muted-foreground">
                     {group.label}
                   </div>
-                  <div className="overflow-hidden rounded border border-border bg-surface">
+                  <Panel>
                     {group.threads.map((thread, idx) => {
                       const isDispatchThread = thread.voice_route?.role === "dispatcher";
 
@@ -329,7 +331,7 @@ const Sessions = () => {
                         />
                       );
                     })}
-                  </div>
+                  </Panel>
                 </section>
               ))}
             </div>

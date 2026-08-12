@@ -1,5 +1,6 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import { Switch } from "@/components/ui/switch";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
@@ -403,7 +404,7 @@ const SyncPage = () => {
           />
         ) : (
           <>
-            <div className="overflow-hidden rounded border border-border bg-surface">
+            <Panel>
               <div className="flex items-center justify-between gap-3 px-3 py-2.5">
                 <div className="min-w-0">
                   <p className="text-[12.5px] font-medium text-foreground">
@@ -421,7 +422,7 @@ const SyncPage = () => {
                   aria-label="Sync enabled"
                 />
               </div>
-            </div>
+            </Panel>
 
             <SyncFoldersCard
               folders={settings.folders}

@@ -1,3 +1,4 @@
+import { Panel } from "@/components/ui/panel";
 import { Switch } from "@/components/ui/switch";
 import {
   BUILT_IN_SIDEBAR_ITEMS,
@@ -102,7 +103,7 @@ export const SidebarItemsSettings: React.FC = () => {
     });
 
   return (
-    <div className="overflow-hidden rounded border border-border bg-surface">
+    <Panel>
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}
@@ -155,6 +156,6 @@ export const SidebarItemsSettings: React.FC = () => {
         ) : null}
       </div>
       ) : null}
-    </div>
+    </Panel>
   );
 };

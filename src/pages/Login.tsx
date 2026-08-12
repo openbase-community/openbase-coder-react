@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import { useAuth } from "@/contexts/auth";
 import { ArrowRight, Terminal } from "lucide-react";
 import { useState } from "react";
@@ -45,9 +46,9 @@ export default function Login() {
           </p>
 
           {message ? (
-            <div className="mt-4 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+            <ErrorBanner className="mt-4">
               {message}
-            </div>
+            </ErrorBanner>
           ) : null}
 
           <div className="mt-4 rounded border border-border bg-background px-3 py-2 font-mono text-[12px] text-foreground/80">

@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Panel } from "@/components/ui/panel";
 import { FolderPlus, Plus, X } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import {
@@ -232,7 +233,7 @@ export const SyncFoldersCard: React.FC<{
   };
 
   return (
-    <div className="overflow-hidden rounded border border-border bg-surface">
+    <Panel>
       <div className="border-b border-border px-3 py-2.5">
         <p className="text-[12.5px] font-medium text-foreground">
           Synced directories
@@ -296,6 +297,6 @@ export const SyncFoldersCard: React.FC<{
           </p>
         )}
       </div>
-    </div>
+    </Panel>
   );
 };

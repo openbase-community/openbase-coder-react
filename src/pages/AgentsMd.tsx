@@ -4,6 +4,7 @@ import {
   Collapsible,
   CollapsibleContent,
 } from "@/components/ui/collapsible";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
 import { ChevronDown, RefreshCw, Save } from "lucide-react";
@@ -250,9 +251,9 @@ const AgentsMd = () => {
         </div>
 
         {error ? (
-          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+          <ErrorBanner>
             {error}
-          </div>
+          </ErrorBanner>
         ) : null}
 
         {loading && documents.length === 0 ? (
