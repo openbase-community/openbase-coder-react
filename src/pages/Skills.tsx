@@ -3,11 +3,9 @@ import { Button } from "@/components/ui/button";
 import { useCallback, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { PrintingPress } from "./skills/PrintingPress";
 import { SkillDetail } from "./skills/SkillDetail";
 import { SkillsList } from "./skills/SkillsList";
 import { computeVisibleSections, sectionsByKeyFrom } from "./skills/scopes";
-import { usePrintingPress } from "./skills/usePrintingPress";
 import { useSkillDetail } from "./skills/useSkillDetail";
 import { useSkills } from "./skills/useSkills";
 
@@ -16,9 +14,6 @@ const Skills = () => {
   const projectPath = searchParams.get("path") || "";
   const editingSkill = searchParams.get("skill") || "";
   const editingScope = searchParams.get("scope") || "home";
-  const [activeView, setActiveView] = useState<"installed" | "printing-press">(
-    "installed",
-  );
   const [collapsedSections, setCollapsedSections] = useState<
     Record<string, boolean>
   >({});
@@ -67,9 +62,6 @@ const Skills = () => {
     onDeleted: backToList,
     refreshList: skillsData.fetchSkills,
   });
-  const printingPress = usePrintingPress(
-    activeView === "printing-press" && !projectPath,
-  );
 
   const visibleSections = computeVisibleSections(
     projectPath,
@@ -110,26 +102,6 @@ const Skills = () => {
           </div>
           <div className="flex gap-1">
             <Button
-              variant={activeView === "installed" ? "default" : "outline"}
-              size="sm"
-              className="h-7 px-2.5 text-[12px]"
-              onClick={() => setActiveView("installed")}
-            >
-              Installed
-            </Button>
-            {!projectPath ? (
-              <Button
-                variant={
-                  activeView === "printing-press" ? "default" : "outline"
-                }
-                size="sm"
-                className="h-7 px-2.5 text-[12px]"
-                onClick={() => setActiveView("printing-press")}
-              >
-                Printing Press
-              </Button>
-            ) : null}
-            <Button
               variant={projectPath ? "outline" : "default"}
               size="sm"
               className="h-7 px-2.5 text-[12px]"
@@ -145,32 +117,28 @@ const Skills = () => {
           </div>
         </div>
 
-        {activeView === "printing-press" && !projectPath ? (
-          <PrintingPress {...printingPress} />
-        ) : (
-          <SkillsList
-            projectPath={projectPath}
-            openSkill={openSkill}
-            visibleSections={visibleSections}
-            sectionsByKey={sectionsByKey}
-            loading={skillsData.loading}
-            setLoading={skillsData.setLoading}
-            listError={skillsData.listError}
-            fetchSkills={skillsData.fetchSkills}
-            newName={skillsData.newName}
-            setNewName={skillsData.setNewName}
-            createSkill={skillsData.createSkill}
-            syncingSkill={skillsData.syncingSkill}
-            linkSkill={skillsData.linkSkill}
-            autoLinkSettings={skillsData.autoLinkSettings}
-            autoLinkSync={skillsData.autoLinkSync}
-            savingAutoLink={skillsData.savingAutoLink}
-            updateAutoLinkSetting={skillsData.updateAutoLinkSetting}
-            runAutoLinkSync={skillsData.runAutoLinkSync}
-            collapsedSections={collapsedSections}
-            toggleSection={toggleSection}
-          />
-        )}
+        <SkillsList
+          projectPath={projectPath}
+          openSkill={openSkill}
+          visibleSections={visibleSections}
+          sectionsByKey={sectionsByKey}
+          loading={skillsData.loading}
+          setLoading={skillsData.setLoading}
+          listError={skillsData.listError}
+          fetchSkills={skillsData.fetchSkills}
+          newName={skillsData.newName}
+          setNewName={skillsData.setNewName}
+          createSkill={skillsData.createSkill}
+          syncingSkill={skillsData.syncingSkill}
+          linkSkill={skillsData.linkSkill}
+          autoLinkSettings={skillsData.autoLinkSettings}
+          autoLinkSync={skillsData.autoLinkSync}
+          savingAutoLink={skillsData.savingAutoLink}
+          updateAutoLinkSetting={skillsData.updateAutoLinkSetting}
+          runAutoLinkSync={skillsData.runAutoLinkSync}
+          collapsedSections={collapsedSections}
+          toggleSection={toggleSection}
+        />
       </div>
     </DashboardLayout>
   );
