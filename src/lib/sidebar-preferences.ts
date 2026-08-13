@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Monitor,
   PackageOpen,
+  Phone,
   Server,
   Settings as SettingsIcon,
   ShieldAlert,
@@ -57,6 +58,13 @@ export const BUILT_IN_SIDEBAR_ITEMS: SidebarItem[] = [
     path: "/dashboard/reports",
     icon: FileText,
     title: "Reports",
+    section: "workspace",
+  },
+  {
+    key: "call",
+    path: "/dashboard/call",
+    icon: Phone,
+    title: "Call",
     section: "workspace",
   },
   {

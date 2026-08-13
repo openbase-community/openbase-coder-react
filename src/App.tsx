@@ -19,6 +19,7 @@ import {
 import AgentsMd from "./pages/AgentsMd";
 import ApprovalRequests from "./pages/ApprovalRequests";
 import BoilerSync from "./pages/BoilerSync";
+import Call from "./pages/Call";
 import Dashboard from "./pages/Dashboard";
 import DispatchChat from "./pages/DispatchChat";
 import Reports from "./pages/Reports";
@@ -132,6 +133,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Reports />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/call"
+        element={
+          <ProtectedRoute>
+            <Call />
           </ProtectedRoute>
         }
       />

@@ -34,6 +34,7 @@
     "boilersync-react": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "livekit-client": "^2.21.0",
     "lucide-react": "^0.462.0",
     "multi-react": "workspace:*",
     "next-themes": "^0.3.0",
