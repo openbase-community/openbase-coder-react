@@ -45,6 +45,19 @@ export const threadListDisplayNames = (threads: ThreadInfo[]) => {
 export const threadProjectLabel = (thread: ThreadInfo) =>
   basename(thread.directory) || thread.directory;
 
+export const shortModelLabel = (model: string | null | undefined) => {
+  const trimmed = model?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  // Compact vendor prefixes and dated snapshot suffixes for narrow rows:
+  // "claude-sonnet-5" -> "sonnet-5", "claude-haiku-4-5-20251001" -> "haiku-4-5".
+  return trimmed.replace(/^claude-/, "").replace(/-\d{8}$/, "");
+};
+
+export const threadModelLabel = (thread: ThreadInfo) =>
+  shortModelLabel(thread.model ?? thread.current_turn?.model ?? undefined);
+
 export const threadAgentVoiceName = (thread: ThreadInfo) =>
   firstPresent(
     thread.voice_assignment?.voice_name,

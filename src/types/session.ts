@@ -20,6 +20,7 @@ export interface TurnInfo {
   accumulated_stderr: string;
   return_code: number | null;
   prompt: string;
+  model?: string | null;
   reasoning_effort?: string | null;
   steers?: TurnSteer[];
 }
@@ -37,6 +38,9 @@ export interface ThreadInfo {
   backend?: string | null;
   /** Backend-native conversation id (e.g. the Claude Code session id). */
   backend_session_id?: string | null;
+  /** Model and reasoning effort last used by the thread's backend. */
+  model?: string | null;
+  reasoning_effort?: string | null;
   is_favorite?: boolean;
   favorited_at?: string | null;
   tags?: string[];

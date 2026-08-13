@@ -28,6 +28,7 @@ import { cliResumeCommands, type CliResumeCommand } from "@/lib/cli-resume";
 import {
   threadAgentVoiceName,
   threadDisplayName,
+  threadModelLabel,
   threadProjectLabel,
   threadRoutePath,
 } from "@/lib/thread-display";
@@ -341,6 +342,15 @@ const SessionDetail = ({
                   isLikelyStale={thread.is_likely_stale}
                   statusWarning={thread.status_warning}
                 />
+                {threadModelLabel(thread) ? (
+                  <span
+                    className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                    title={`${thread.model ?? ""}${thread.reasoning_effort ? ` · ${thread.reasoning_effort} reasoning` : ""}`}
+                  >
+                    {threadModelLabel(thread)}
+                    {thread.reasoning_effort ? ` · ${thread.reasoning_effort}` : ""}
+                  </span>
+                ) : null}
                 {agentVoiceName ? (
                   <span className="font-mono text-[10px] text-warning">
                     {agentVoiceName}

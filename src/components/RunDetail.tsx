@@ -5,6 +5,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { shortModelLabel } from "@/lib/thread-display";
 import type { TurnInfo } from "@/types/session";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
@@ -28,6 +29,14 @@ export function RunDetail({
           {run.prompt}
         </span>
         <StatusBadge status={run.status} />
+        {run.model ? (
+          <span
+            className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+            title={run.model}
+          >
+            {shortModelLabel(run.model)}
+          </span>
+        ) : null}
         {run.reasoning_effort ? (
           <span className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
             reasoning {run.reasoning_effort}

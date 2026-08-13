@@ -4,6 +4,7 @@ import {
   shouldDeemphasizeThread,
   threadAgentVoiceName,
   threadDisplayName,
+  threadModelLabel,
   threadProjectLabel,
 } from "@/lib/thread-display";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,9 @@ export const ThreadListItem = ({
 }: ThreadListItemProps) => {
   const isDeemphasized = shouldDeemphasizeThread(thread);
   const agentVoiceName = threadAgentVoiceName(thread);
+  const modelLabel = threadModelLabel(thread);
+  const reasoningEffort =
+    thread.reasoning_effort ?? thread.current_turn?.reasoning_effort ?? null;
 
   return (
     <div
@@ -94,6 +98,15 @@ export const ThreadListItem = ({
           {threadProjectLabel(thread)}
         </span>
       </div>
+      {modelLabel ? (
+        <span
+          className="hidden shrink-0 font-mono text-[10px] text-muted-foreground md:inline"
+          title={`${thread.model ?? modelLabel}${reasoningEffort ? ` · ${reasoningEffort} reasoning` : ""}`}
+        >
+          {modelLabel}
+          {reasoningEffort ? ` · ${reasoningEffort}` : ""}
+        </span>
+      ) : null}
       <StatusBadge
         status={thread.status}
         isLikelyStale={thread.is_likely_stale}
