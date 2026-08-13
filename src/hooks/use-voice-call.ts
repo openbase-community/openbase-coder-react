@@ -107,6 +107,25 @@ export function useVoiceCall() {
 
     setStatus("connecting");
     try {
+      // Acquire the microphone before connecting, matching the iOS call
+      // flow. Browsers only reveal real host ICE candidates once the origin
+      // holds the mic permission; with the pre-grant mDNS-obfuscated
+      // candidates the same-host LiveKit server is unreachable and the
+      // call times out in ICE checking.
+      try {
+        const probe = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        probe.getTracks().forEach((track) => track.stop());
+      } catch (micError) {
+        throw micError instanceof DOMException &&
+          micError.name === "NotAllowedError"
+          ? new Error(
+              "Microphone access was denied. Allow microphone access and try again.",
+            )
+          : micError;
+      }
+
       const response = await apiFetch("/api/livekit-room-token/", {
         method: "POST",
         body: JSON.stringify({
