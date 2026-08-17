@@ -147,12 +147,14 @@ export const ServiceTierSettings: React.FC<Props> = ({
     setSaving(false);
   }, [onRestartScheduled, tiers]);
 
+  const notEditable = settings?.editable === false;
   const dirty =
     Boolean(settings) &&
     (tiers.dispatcher_service_tier !== settings?.dispatcher_service_tier ||
       tiers.super_agents_service_tier !== settings?.super_agents_service_tier);
   const canSave =
     dirty &&
+    !notEditable &&
     Boolean(tiers.dispatcher_service_tier) &&
     Boolean(tiers.super_agents_service_tier) &&
     !loading &&
@@ -167,8 +169,10 @@ export const ServiceTierSettings: React.FC<Props> = ({
               Fast mode
             </p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Speed tier per lane, applied to Codex, Openbase Cloud, and Claude
-              turns (Claude maps tiers to effort lanes).
+              {notEditable
+                ? (settings?.not_editable_reason ??
+                  "Fast mode is not configurable on the current backend.")
+                : "Speed tier per lane, applied to Codex turns."}
             </p>
             {message ? (
               <p className="mt-1 text-[12px] text-success">{message}</p>
@@ -207,46 +211,48 @@ export const ServiceTierSettings: React.FC<Props> = ({
             </Button>
           </div>
         </div>
-        {SCOPES.map((scope) => (
-          <div
-            key={scope.key}
-            className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div className="min-w-0">
-              <p className="text-[12px] font-medium text-foreground">
-                {scope.label}
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                {scope.detail}
-              </p>
-            </div>
-            <Select
-              value={tiers[scope.key]}
-              onValueChange={(value) => {
-                setTiers((prev) => ({
-                  ...prev,
-                  [scope.key]: value as ServiceTier,
-                }));
-                setMessage(null);
-                setError(null);
-              }}
-              disabled={loading || saving}
-            >
-              <SelectTrigger className="h-8 w-full min-w-0 text-[12px] sm:w-[190px]">
-                <SelectValue
-                  placeholder={loading ? "Loading..." : "Service tier"}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {settings?.options.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ))}
+        {notEditable
+          ? null
+          : SCOPES.map((scope) => (
+              <div
+                key={scope.key}
+                className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="text-[12px] font-medium text-foreground">
+                    {scope.label}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {scope.detail}
+                  </p>
+                </div>
+                <Select
+                  value={tiers[scope.key]}
+                  onValueChange={(value) => {
+                    setTiers((prev) => ({
+                      ...prev,
+                      [scope.key]: value as ServiceTier,
+                    }));
+                    setMessage(null);
+                    setError(null);
+                  }}
+                  disabled={loading || saving}
+                >
+                  <SelectTrigger className="h-8 w-full min-w-0 text-[12px] sm:w-[190px]">
+                    <SelectValue
+                      placeholder={loading ? "Loading..." : "Service tier"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {settings?.options.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
       </div>
 
       <ServiceTierChangeDialog

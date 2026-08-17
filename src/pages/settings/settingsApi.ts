@@ -159,6 +159,9 @@ export type ServiceTierOption = {
 };
 
 export type ServiceTierSettingsResponse = {
+  // Absent on older CLIs; treat as editable.
+  editable?: boolean;
+  not_editable_reason?: string | null;
   dispatcher_service_tier: ServiceTier;
   super_agents_service_tier: ServiceTier;
   effective: {
