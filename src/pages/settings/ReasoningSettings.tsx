@@ -105,10 +105,8 @@ export const ReasoningSettings: React.FC = () => {
   }, [dispatcherEffort, superAgentsEffort]);
 
   const options = settings?.options ?? [];
-  const notEditable = settings?.editable === false;
   const canSave =
     Boolean(settings) &&
-    !notEditable &&
     Boolean(dispatcherEffort) &&
     Boolean(superAgentsEffort) &&
     !loading &&
@@ -124,12 +122,9 @@ export const ReasoningSettings: React.FC = () => {
             Reasoning levels
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            {notEditable
-              ? (settings?.not_editable_reason ??
-                "Reasoning levels are not configurable on the current backend.")
-              : "Set reasoning effort for dispatcher and Super Agent turns."}
+            Set reasoning effort for dispatcher and Super Agent turns.
           </p>
-          {settings && !notEditable ? (
+          {settings ? (
             <p className="mt-1 text-[11px] text-muted-foreground">
               Current: dispatcher{" "}
               {settings.effective.dispatcher_reasoning_effort}, Super Agents{" "}
@@ -143,81 +138,75 @@ export const ReasoningSettings: React.FC = () => {
             <p className="mt-1 text-[12px] text-destructive">{error}</p>
           ) : null}
         </div>
-        {notEditable ? null : (
-          <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-auto lg:grid-cols-[150px_150px_auto_auto]">
-            <Select
-              value={dispatcherEffort}
-              onValueChange={(value) => {
-                setDispatcherEffort(value as ReasoningEffort);
-                setMessage(null);
-                setError(null);
-              }}
-              disabled={loading || saving}
-            >
-              <SelectTrigger className="h-8 min-w-0 text-[12px]">
-                <SelectValue
-                  placeholder={loading ? "Loading…" : "Dispatcher"}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {options.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    Dispatcher: {effortLabels[option]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={superAgentsEffort}
-              onValueChange={(value) => {
-                setSuperAgentsEffort(value as ReasoningEffort);
-                setMessage(null);
-                setError(null);
-              }}
-              disabled={loading || saving}
-            >
-              <SelectTrigger className="h-8 min-w-0 text-[12px]">
-                <SelectValue
-                  placeholder={loading ? "Loading…" : "Super Agents"}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {options.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    Super Agents: {effortLabels[option]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2.5 text-[12px]"
-              onClick={() => {
-                void fetchSettings();
-              }}
-              disabled={loading || saving}
-              title="Refresh reasoning levels"
-            >
-              <RefreshCw
-                className={`h-3 w-3 ${loading ? "animate-spin" : ""}`}
+        <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-auto lg:grid-cols-[150px_150px_auto_auto]">
+          <Select
+            value={dispatcherEffort}
+            onValueChange={(value) => {
+              setDispatcherEffort(value as ReasoningEffort);
+              setMessage(null);
+              setError(null);
+            }}
+            disabled={loading || saving}
+          >
+            <SelectTrigger className="h-8 min-w-0 text-[12px]">
+              <SelectValue placeholder={loading ? "Loading…" : "Dispatcher"} />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option} value={option}>
+                  Dispatcher: {effortLabels[option]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={superAgentsEffort}
+            onValueChange={(value) => {
+              setSuperAgentsEffort(value as ReasoningEffort);
+              setMessage(null);
+              setError(null);
+            }}
+            disabled={loading || saving}
+          >
+            <SelectTrigger className="h-8 min-w-0 text-[12px]">
+              <SelectValue
+                placeholder={loading ? "Loading…" : "Super Agents"}
               />
-              Refresh
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2.5 text-[12px]"
-              onClick={() => {
-                void saveSettings();
-              }}
-              disabled={!canSave}
-            >
-              <Save className="h-3 w-3" />
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </div>
-        )}
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option} value={option}>
+                  Super Agents: {effortLabels[option]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2.5 text-[12px]"
+            onClick={() => {
+              void fetchSettings();
+            }}
+            disabled={loading || saving}
+            title="Refresh reasoning levels"
+          >
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2.5 text-[12px]"
+            onClick={() => {
+              void saveSettings();
+            }}
+            disabled={!canSave}
+          >
+            <Save className="h-3 w-3" />
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </div>
       </div>
     </Panel>
   );

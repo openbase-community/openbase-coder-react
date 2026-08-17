@@ -134,8 +134,6 @@ export type BackendModelSettingsResponse = {
 export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
 
 export type ReasoningSettingsResponse = {
-  editable?: boolean;
-  not_editable_reason?: string | null;
   dispatcher_reasoning_effort: ReasoningEffort | null;
   super_agents_reasoning_effort: ReasoningEffort | null;
   effective: {
