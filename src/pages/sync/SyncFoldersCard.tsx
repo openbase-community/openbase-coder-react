@@ -26,7 +26,10 @@ const formatPercent = (value: number) => `${Math.round(value)}%`;
 const FolderIgnores: React.FC<{
   folder: SyncFolderSettings;
   busy: boolean;
-  onAddIgnore: (folder: SyncFolderSettings, pattern: string) => Promise<boolean>;
+  onAddIgnore: (
+    folder: SyncFolderSettings,
+    pattern: string,
+  ) => Promise<boolean>;
   onRemoveIgnore: (folder: SyncFolderSettings, pattern: string) => void;
 }> = ({ folder, busy, onAddIgnore, onRemoveIgnore }) => {
   const [input, setInput] = useState("");
@@ -109,7 +112,10 @@ const FolderRow: React.FC<{
   peersByDeviceId: Map<string, SyncPeer>;
   busy: boolean;
   onRemove: () => void;
-  onAddIgnore: (folder: SyncFolderSettings, pattern: string) => Promise<boolean>;
+  onAddIgnore: (
+    folder: SyncFolderSettings,
+    pattern: string,
+  ) => Promise<boolean>;
   onRemoveIgnore: (folder: SyncFolderSettings, pattern: string) => void;
 }> = ({
   folder,
@@ -129,7 +135,13 @@ const FolderRow: React.FC<{
             {displayRelpath(folder.relpath)}
           </span>
           <Badge
-            variant={status ? stateBadgeVariant(status.state) : "outline"}
+            variant={
+              status
+                ? status.error
+                  ? "destructive"
+                  : stateBadgeVariant(status.state)
+                : "outline"
+            }
             className="h-5 px-1.5 text-[10px]"
           >
             {status
@@ -157,6 +169,14 @@ const FolderRow: React.FC<{
           <X className="h-3 w-3" />
         </Button>
       </div>
+      {status?.error ? (
+        <p
+          className="truncate text-[11px] text-destructive"
+          title={status.error}
+        >
+          Not syncing: {status.error}
+        </p>
+      ) : null}
       {peerEntries.length > 0 ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {peerEntries.map(([deviceId, completion]) => (
@@ -188,7 +208,10 @@ export const SyncFoldersCard: React.FC<{
   busy: boolean;
   onAddFolder: (relpath: string) => Promise<boolean>;
   onRemoveFolder: (folder: SyncFolderSettings) => void;
-  onAddIgnore: (folder: SyncFolderSettings, pattern: string) => Promise<boolean>;
+  onAddIgnore: (
+    folder: SyncFolderSettings,
+    pattern: string,
+  ) => Promise<boolean>;
   onRemoveIgnore: (folder: SyncFolderSettings, pattern: string) => void;
 }> = ({
   folders,
@@ -219,10 +242,9 @@ export const SyncFoldersCard: React.FC<{
   const validationError =
     pathInput.trim().length === 0
       ? null
-      : parsed.error ??
-        (duplicate ? "This folder is already being synced." : null);
-  const canAdd =
-    !busy && !adding && parsed.relpath !== undefined && !duplicate;
+      : (parsed.error ??
+        (duplicate ? "This folder is already being synced." : null));
+  const canAdd = !busy && !adding && parsed.relpath !== undefined && !duplicate;
 
   const submit = async () => {
     if (!canAdd || parsed.relpath === undefined) return;
@@ -241,8 +263,8 @@ export const SyncFoldersCard: React.FC<{
         <p className="mt-0.5 text-[11px] text-muted-foreground">
           Pick any folder under your home directory to keep identical on every
           synced computer. Add custom ignore rules (Syncthing .stignore syntax)
-          to keep paths from syncing — on top of the managed defaults like
-          .git, node_modules, and lockfiles.
+          to keep paths from syncing — on top of the managed defaults like .git,
+          node_modules, and lockfiles.
         </p>
       </div>
       {folders.length === 0 ? (

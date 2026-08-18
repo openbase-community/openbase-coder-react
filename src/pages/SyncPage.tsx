@@ -239,30 +239,27 @@ const SyncPage = () => {
     [setFolderIgnores],
   );
 
-  const removePeer = useCallback(
-    async (peer: SyncPeer) => {
-      setRemovingPeer(peer.device_id);
-      try {
-        const res = await apiFetch("/api/sync/peers/remove/", {
-          method: "POST",
-          body: JSON.stringify({ device_id: peer.device_id }),
-        });
-        if (!res.ok) {
-          throw new Error(
-            await extractErrorMessage(res, "Unable to remove sync peer."),
-          );
-        }
-        setSettings((await res.json()) as SyncSettingsResponse);
-        toast.success(`Removed ${peer.name} from sync`);
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Unable to remove sync peer.",
+  const removePeer = useCallback(async (peer: SyncPeer) => {
+    setRemovingPeer(peer.device_id);
+    try {
+      const res = await apiFetch("/api/sync/peers/remove/", {
+        method: "POST",
+        body: JSON.stringify({ device_id: peer.device_id }),
+      });
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Unable to remove sync peer."),
         );
       }
-      setRemovingPeer(null);
-    },
-    [],
-  );
+      setSettings((await res.json()) as SyncSettingsResponse);
+      toast.success(`Removed ${peer.name} from sync`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Unable to remove sync peer.",
+      );
+    }
+    setRemovingPeer(null);
+  }, []);
 
   const purgeHistory = useCallback(async () => {
     setPurging(true);
@@ -300,7 +297,9 @@ const SyncPage = () => {
           );
         }
         toast.success(
-          action === "keep_local" ? "Kept local version" : "Used remote version",
+          action === "keep_local"
+            ? "Kept local version"
+            : "Used remote version",
         );
         await fetchStatus();
       } catch (err) {
@@ -356,6 +355,17 @@ const SyncPage = () => {
   }, [enabled, fetchSettings, fetchStatus]);
 
   const lastReconcile = formatReconcileTime(status?.last_reconcile_at ?? null);
+  const reconcileSummary = status?.last_reconcile;
+  const reconcileCounts =
+    reconcileSummary && "at" in reconcileSummary
+      ? ` (repos ${reconcileSummary.repo_count ?? 0}, ff ${
+          reconcileSummary.fast_forwarded ?? 0
+        }, errors ${reconcileSummary.errors ?? 0})`
+      : "";
+  const stalledFolders = (status?.folders ?? []).filter(
+    (folder) => folder.error,
+  );
+  const engineErrors = status?.syncthing_errors ?? [];
 
   return (
     <DashboardLayout>
@@ -366,8 +376,8 @@ const SyncPage = () => {
               Sync
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Keep selected directories from your filesystem in sync across
-              your computers.
+              Keep selected directories from your filesystem in sync across your
+              computers.
             </p>
           </div>
           <Button
@@ -412,8 +422,17 @@ const SyncPage = () => {
                   </p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
                     Files sync between your devices over your tailnet only.
-                    {lastReconcile ? ` Last reconcile ${lastReconcile}.` : ""}
+                    {lastReconcile
+                      ? ` Last reconcile ${lastReconcile}${reconcileCounts}.`
+                      : ""}
                   </p>
+                  {stalledFolders.length > 0 || engineErrors.length > 0 ? (
+                    <p className="mt-1 text-[11px] text-destructive">
+                      File sync is stalled:{" "}
+                      {stalledFolders[0]?.error ??
+                        engineErrors[engineErrors.length - 1]?.message}
+                    </p>
+                  ) : null}
                 </div>
                 <Switch
                   checked

@@ -37,15 +37,34 @@ export type SyncFolderStatus = {
   id: string;
   relpath: string;
   state: string;
+  // Engine-side stall reason (e.g. "insufficient space on disk"); absent on
+  // older CLIs.
+  error?: string;
   completion: number;
   receive_only: boolean;
   peer_completion: Record<string, number>;
 };
 
+export type SyncEngineError = {
+  when: string;
+  message: string;
+};
+
+export type SyncReconcileSummary = {
+  at: string;
+  repo_count?: number;
+  fast_forwarded?: number;
+  awaiting_files?: number;
+  diverged?: number;
+  errors?: number;
+};
+
 export type SyncStatusResponse = {
   enabled: boolean;
   folders: SyncFolderStatus[];
+  syncthing_errors?: SyncEngineError[];
   last_reconcile_at: string | null;
+  last_reconcile?: SyncReconcileSummary | Record<string, never>;
   conflicts_count: number;
 };
 
@@ -109,13 +128,17 @@ export const displayRelpath = (relpath: string) => `~/${relpath}`;
  */
 export const parseHomeRelativePath = (
   raw: string,
-): { relpath: string; error?: undefined } | { relpath?: undefined; error: string } => {
+):
+  | { relpath: string; error?: undefined }
+  | { relpath?: undefined; error: string } => {
   const trimmed = raw.trim();
   if (!trimmed) {
     return { error: "Enter a folder path under your home directory." };
   }
   if (trimmed === "~" || trimmed === "~/") {
-    return { error: "Pick a folder inside your home directory, not all of it." };
+    return {
+      error: "Pick a folder inside your home directory, not all of it.",
+    };
   }
   let rest = trimmed;
   if (rest.startsWith("~/")) {
@@ -134,7 +157,9 @@ export const parseHomeRelativePath = (
   }
   const relpath = segments.filter((segment) => segment !== ".").join("/");
   if (!relpath) {
-    return { error: "Pick a folder inside your home directory, not all of it." };
+    return {
+      error: "Pick a folder inside your home directory, not all of it.",
+    };
   }
   return { relpath };
 };
