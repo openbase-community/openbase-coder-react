@@ -7,21 +7,14 @@ import {
 } from "@/components/resource/ResourcePage";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
+import { useApprovalRequestsWebSocket } from "@/hooks/use-approval-requests-websocket";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
+import type { ApprovalRequest } from "@/lib/approval-requests";
 import { Check, ExternalLink, ShieldAlert, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-
-type ApprovalRequest = {
-  id: string | number;
-  method?: string | null;
-  params?: Record<string, unknown>;
-  received_at?: string | null;
-  thread_id?: string | null;
-  turn_id?: string | null;
-};
 
 type ApprovalDecision = "accept" | "decline";
 
@@ -84,11 +77,19 @@ const ApprovalRequests = () => {
     setLoading(false);
   }, []);
 
+  const applyLiveSnapshot = useCallback((nextRequests: ApprovalRequest[]) => {
+    setRequests(nextRequests);
+    setError(null);
+    setLoading(false);
+  }, []);
+  const live = useApprovalRequestsWebSocket({ onSnapshot: applyLiveSnapshot });
+
   useEffect(() => {
     void fetchRequests();
+    if (live) return;
     const interval = window.setInterval(() => void fetchRequests(), POLL_MS);
     return () => window.clearInterval(interval);
-  }, [fetchRequests]);
+  }, [fetchRequests, live]);
 
   const answerRequest = async (
     request: ApprovalRequest,
@@ -136,7 +137,7 @@ const ApprovalRequests = () => {
           title="Approval requests"
           loading={loading}
           onRefresh={() => void fetchRequests()}
-          subtitle={`${pendingCount} pending · auto-refresh 5s`}
+          subtitle={`${pendingCount} pending · ${live ? "live updates" : "auto-refresh 5s"}`}
         />
 
         <ResourceError message={error} />
