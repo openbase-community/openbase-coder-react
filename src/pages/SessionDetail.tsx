@@ -299,10 +299,10 @@ const SessionDetail = ({
   };
 
   return (
-    <DashboardLayout>
-      <div className="flex flex-col gap-3 pb-24">
+    <DashboardLayout noPadding>
+      <div className="flex h-full min-h-0 flex-col">
         {thread ? (
-          <div className="sticky top-9 z-[5] -mx-5 border-b border-border bg-background/95 px-5 py-3 backdrop-blur">
+          <header className="shrink-0 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 {fromProjectPath ? (
@@ -425,9 +425,10 @@ const SessionDetail = ({
                 {thread.thread_id}
               </p>
             </div>
-          </div>
+          </header>
         ) : null}
 
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
         {thread && (connectionLost || loadError) ? (
           <div className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-[12px] text-warning">
             {loadError
@@ -504,8 +505,21 @@ const SessionDetail = ({
 
         <div ref={threadEndRef} aria-hidden="true" />
 
+        {!thread ? (
+          loadError ? (
+            <ErrorBanner className="mx-auto mt-12 max-w-md text-center">
+              {loadError}
+            </ErrorBanner>
+          ) : (
+            <div className="py-12 text-center text-[12px] text-muted-foreground">
+              {isConnected ? "Loading…" : "Connecting…"}
+            </div>
+          )
+        ) : null}
+        </div>
+
         {thread ? (
-          <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-2.5 backdrop-blur md:left-[13rem]">
+          <div className="shrink-0 border-t border-border bg-background/95 p-2.5 backdrop-blur">
             <div className="mx-auto flex max-w-3xl items-end gap-1.5">
               {hasActiveCurrentTurn ? (
                 <Panel className="grid w-24 shrink-0 grid-cols-1 text-[11px]">
@@ -574,18 +588,6 @@ const SessionDetail = ({
               </Button>
             </div>
           </div>
-        ) : null}
-
-        {!thread ? (
-          loadError ? (
-            <ErrorBanner className="mx-auto mt-12 max-w-md text-center">
-              {loadError}
-            </ErrorBanner>
-          ) : (
-            <div className="py-12 text-center text-[12px] text-muted-foreground">
-              {isConnected ? "Loading…" : "Connecting…"}
-            </div>
-          )
         ) : null}
       </div>
     </DashboardLayout>

@@ -1,7 +1,8 @@
+import { OpenbaseWordmark } from "@/components/OpenbaseWordmark";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { useAuth } from "@/contexts/auth";
-import { ArrowRight, Terminal } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -28,46 +29,40 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground text-background">
-            <Terminal className="h-3 w-3" strokeWidth={2.25} />
-          </div>
-          <span className="font-mono text-[12px] font-medium text-foreground">
-            openbase-coder
+    <div className="ob-app-shell flex min-h-screen items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+        <OpenbaseWordmark className="mx-auto h-6" />
+        <div className="mt-7 rounded-xl border border-border bg-surface p-6 shadow-sm">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <ShieldCheck className="h-5 w-5" strokeWidth={1.9} />
           </span>
-        </div>
-
-        <div className="rounded border border-border bg-surface p-5">
-          <h1 className="text-sm font-semibold text-foreground">Sign in</h1>
-          <p className="mt-1 text-[12px] text-muted-foreground">
-            Authentication is managed by the local CLI.
+          <h1 className="mt-5 text-lg font-semibold tracking-tight text-foreground">
+            Connect your account
+          </h1>
+          <p className="mt-1.5 text-[13px] leading-6 text-muted-foreground">
+            Authentication is managed by the local CLI on this machine. Sign in
+            there, then verify the connection here.
           </p>
 
-          {message ? (
-            <ErrorBanner className="mt-4">
-              {message}
-            </ErrorBanner>
-          ) : null}
+          {message ? <ErrorBanner className="mt-4">{message}</ErrorBanner> : null}
 
-          <div className="mt-4 rounded border border-border bg-background px-3 py-2 font-mono text-[12px] text-foreground/80">
-            $ openbase-coder login
+          <div className="mt-5 rounded-lg border border-border bg-foreground px-3 py-2.5 font-mono text-[12.5px] text-background">
+            <span className="text-primary-foreground/60">$</span> openbase-coder
+            login
           </div>
 
           <Button
             type="button"
             onClick={onContinue}
             disabled={isLoading}
-            size="sm"
-            className="mt-4 h-8 w-full text-[12.5px]"
+            className="mt-5 w-full"
           >
-            {isLoading ? "Checking…" : "I already logged in"}
-            {!isLoading ? <ArrowRight className="h-3 w-3" /> : null}
+            {isLoading ? "Checking connection…" : "Verify connection"}
+            {!isLoading ? <ArrowRight className="h-4 w-4" /> : null}
           </Button>
         </div>
 
-        <p className="mt-3 text-center font-mono text-[11px] text-muted-foreground">
+        <p className="mt-4 text-center font-mono text-[11px] text-muted-foreground">
           {window.location.host || "localhost"}
         </p>
       </div>

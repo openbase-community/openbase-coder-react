@@ -1,8 +1,8 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { NewThreadDialog } from "@/components/NewThreadDialog";
 import { ThreadListItem } from "@/components/ThreadListItem";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
-import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { THREAD_LIST_REFRESH_INTERVAL_MS } from "@/lib/polling";
@@ -14,7 +14,13 @@ import {
 import { setThreadFavorite } from "@/lib/thread-favorites";
 import { threadRoutePath } from "@/lib/thread-display";
 import type { Project, ServiceStatus, ThreadInfo } from "@/types/session";
-import { AlertTriangle, ChevronRight, Plus } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  ChevronRight,
+  Folder,
+  Plus,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { SyncNudgeCard } from "./sync/SyncNudgeCard";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +32,7 @@ const Dashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [services, setServices] = useState<Record<string, ServiceStatus>>({});
   const [error, setError] = useState<string | null>(null);
+  const [newThreadOpen, setNewThreadOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     // Polled on an interval: failures update a persistent inline banner
@@ -64,7 +71,7 @@ const Dashboard = () => {
   const recentThreads = [...threads]
     .sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at))
     .slice(0, 8);
-  const recentProjects = projects.slice(0, 3);
+  const recentProjects = projects.slice(0, 4);
   const serviceEntries = Object.entries(services);
   const requiredServiceEntries = serviceEntries.filter(
     ([, service]) => !service.optional,
@@ -107,132 +114,173 @@ const Dashboard = () => {
       <div className="space-y-5">
         <SyncNudgeCard />
         {error ? (
-          <ErrorBanner>
-            {error} — retrying automatically.
-          </ErrorBanner>
+          <ErrorBanner>{error} — retrying automatically.</ErrorBanner>
         ) : null}
 
-        {serviceWarning ? (
-          <button
-            onClick={() => navigate("/dashboard/status")}
-            className="flex w-full items-start gap-2 rounded border border-warning/40 bg-warning/10 px-3 py-2 text-left transition-colors hover:bg-warning/15"
-          >
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
-            <div className="min-w-0 flex-1">
-              <p className="text-[12.5px] font-medium text-foreground">
-                Service warning
-              </p>
-              <p className="mt-0.5 text-[12px] text-muted-foreground">
-                {runningServices.length}/{requiredServiceEntries.length} services
-                running
-                {stoppedServices.length > 0
-                  ? ` · stopped: ${stoppedServices
-                      .map(([, service]) => service.name)
-                      .join(", ")}`
-                  : ""}
-              </p>
-            </div>
-            <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-          </button>
-        ) : null}
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-base font-semibold tracking-tight text-foreground">
-              Overview
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              Workspace overview
             </h1>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Workspace summary
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Continue recent work or start a new coding thread.
             </p>
           </div>
           <Button
+            className="shrink-0"
+            onClick={() => setNewThreadOpen(true)}
             size="sm"
-            className="h-7 px-2.5 text-[12px]"
-            onClick={() => navigate("/dashboard/threads")}
           >
-            <Plus className="h-3 w-3" />
+            <Plus className="h-4 w-4" />
             New thread
           </Button>
-        </div>
+        </header>
 
-        <section>
-          <div className="mb-2 flex items-end justify-between">
-            <h2 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Recent projects
-            </h2>
-            <button
-              onClick={() => navigate("/dashboard/projects")}
-              className="text-[11px] text-muted-foreground hover:text-foreground"
-            >
-              View all →
-            </button>
-          </div>
-
-          {recentProjects.length === 0 ? (
-            <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
-              <p className="text-[12px] text-muted-foreground">
-                No projects yet.
-              </p>
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(260px,1fr)]">
+          {/* Recent activity */}
+          <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface">
+            <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+              <div>
+                <h2 className="text-[13px] font-semibold text-foreground">
+                  Recent activity
+                </h2>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Your latest coding threads
+                </p>
+              </div>
+              <button
+                className="text-[11px] font-medium text-primary hover:underline"
+                onClick={() => navigate("/dashboard/threads")}
+                type="button"
+              >
+                View all
+              </button>
             </div>
-          ) : (
-            <div className="grid gap-2 md:grid-cols-3">
-              {recentProjects.map((project) => (
-                <button
-                  key={project.path}
-                  onClick={() => openProject(project)}
-                  className="group flex min-w-0 items-center gap-2 rounded border border-border bg-surface px-3 py-2.5 text-left transition-colors hover:bg-surface-muted"
+            {recentThreads.length === 0 ? (
+              <div className="flex min-h-56 flex-col items-center justify-center px-6 text-center">
+                <Activity className="h-6 w-6 text-muted-foreground/40" />
+                <p className="mt-2.5 text-[13px] font-medium text-foreground">
+                  No threads yet
+                </p>
+                <p className="mt-1 max-w-xs text-[12px] text-muted-foreground">
+                  Start a thread and it will appear here with its current status.
+                </p>
+                <Button
+                  className="mt-4"
+                  onClick={() => setNewThreadOpen(true)}
+                  size="sm"
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium text-foreground">
-                      {projectName(project.path)}
-                    </p>
-                    <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground/70">
-                      {project.path}
-                    </p>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
+                  <Plus className="h-4 w-4" />
+                  Start a thread
+                </Button>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {recentThreads.map((thread) => (
+                  <ThreadListItem
+                    key={thread.thread_id}
+                    onClick={() => navigate(threadRoutePath(thread))}
+                    onToggleFavorite={(item) => void toggleThreadFavorite(item)}
+                    thread={thread}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
 
-        {/* Recent threads */}
-        <section>
-          <div className="mb-2 flex items-end justify-between">
-            <h2 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Recent threads
-            </h2>
+          {/* Side column */}
+          <div className="min-w-0 space-y-5">
+            <section className="min-w-0 rounded-lg border border-border bg-surface p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[13px] font-semibold text-foreground">
+                  Projects
+                </h2>
+                <button
+                  className="text-[11px] font-medium text-primary hover:underline"
+                  onClick={() => navigate("/dashboard/projects")}
+                  type="button"
+                >
+                  View all
+                </button>
+              </div>
+              <div className="mt-3 space-y-1">
+                {recentProjects.length === 0 ? (
+                  <div className="rounded-md bg-surface-muted px-3 py-6 text-center text-[12px] text-muted-foreground">
+                    No projects yet
+                  </div>
+                ) : (
+                  recentProjects.map((project) => (
+                    <button
+                      className="group flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors hover:bg-surface-muted"
+                      key={project.path}
+                      onClick={() => openProject(project)}
+                      type="button"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                        <Folder className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] font-medium text-foreground">
+                          {projectName(project.path)}
+                        </span>
+                        <span className="mt-0.5 block truncate font-mono text-[10.5px] text-muted-foreground">
+                          {project.path}
+                        </span>
+                      </span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                    </button>
+                  ))
+                )}
+              </div>
+            </section>
+
             <button
-              onClick={() => navigate("/dashboard/threads")}
-              className="text-[11px] text-muted-foreground hover:text-foreground"
+              className={`w-full rounded-lg border p-4 text-left transition-colors ${
+                serviceWarning
+                  ? "border-warning/40 bg-warning/10 hover:bg-warning/15"
+                  : "border-border bg-surface hover:bg-surface-muted"
+              }`}
+              onClick={() => navigate("/dashboard/status")}
+              type="button"
             >
-              View all →
+              <div className="flex items-start gap-3">
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${
+                    serviceWarning
+                      ? "bg-warning/15 text-warning"
+                      : "bg-success/10 text-success"
+                  }`}
+                >
+                  {serviceWarning ? (
+                    <AlertTriangle className="h-[18px] w-[18px]" />
+                  ) : (
+                    <Activity className="h-[18px] w-[18px]" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-semibold text-foreground">
+                    {serviceWarning ? "Services need attention" : "System ready"}
+                  </span>
+                  <span className="mt-1 block text-[12px] leading-5 text-muted-foreground">
+                    {requiredServiceEntries.length === 0
+                      ? "Open Status to review local services."
+                      : `${runningServices.length} of ${requiredServiceEntries.length} required services running${
+                          stoppedServices.length
+                            ? ` · ${stoppedServices
+                                .map(([, service]) => service.name)
+                                .join(", ")}`
+                            : ""
+                        }`}
+                  </span>
+                </span>
+                <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/40" />
+              </div>
             </button>
           </div>
-
-          {recentThreads.length === 0 ? (
-            <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
-              <p className="text-[12px] text-muted-foreground">
-                No threads yet.
-              </p>
-            </div>
-          ) : (
-            <Panel>
-              {recentThreads.map((thread, idx) => (
-                <ThreadListItem
-                  key={thread.thread_id}
-                  thread={thread}
-                  showTopBorder={idx > 0}
-                  onClick={() => navigate(threadRoutePath(thread))}
-                  onToggleFavorite={(item) => void toggleThreadFavorite(item)}
-                />
-              ))}
-            </Panel>
-          )}
-        </section>
+        </div>
       </div>
+
+      <NewThreadDialog onOpenChange={setNewThreadOpen} open={newThreadOpen} />
     </DashboardLayout>
   );
 };
