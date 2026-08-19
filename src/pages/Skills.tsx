@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { SkillDetail } from "./skills/SkillDetail";
+import { MarketplaceCatalog } from "./skills/MarketplaceCatalog";
 import { SkillsList } from "./skills/SkillsList";
 import { computeVisibleSections, sectionsByKeyFrom } from "./skills/scopes";
 import { useSkillDetail } from "./skills/useSkillDetail";
@@ -14,6 +15,11 @@ const Skills = () => {
   const projectPath = searchParams.get("path") || "";
   const editingSkill = searchParams.get("skill") || "";
   const editingScope = searchParams.get("scope") || "home";
+  const requestedView = searchParams.get("view");
+  const view =
+    !projectPath && (requestedView === "catalog" || requestedView === "routines")
+      ? requestedView
+      : "installed";
   const [collapsedSections, setCollapsedSections] = useState<
     Record<string, boolean>
   >({});
@@ -54,6 +60,18 @@ const Skills = () => {
     params.delete("scope");
     setSearchParams(params);
   }, [searchParams, setSearchParams]);
+
+  const setView = useCallback(
+    (nextView: "installed" | "catalog" | "routines") => {
+      const params = new URLSearchParams(searchParams);
+      params.delete("skill");
+      params.delete("scope");
+      if (nextView === "installed") params.delete("view");
+      else params.set("view", nextView);
+      setSearchParams(params);
+    },
+    [searchParams, setSearchParams],
+  );
 
   const skillsData = useSkills(listApiParams, openSkill);
   const detail = useSkillDetail({
@@ -117,28 +135,61 @@ const Skills = () => {
           </div>
         </div>
 
-        <SkillsList
-          projectPath={projectPath}
-          openSkill={openSkill}
-          visibleSections={visibleSections}
-          sectionsByKey={sectionsByKey}
-          loading={skillsData.loading}
-          setLoading={skillsData.setLoading}
-          listError={skillsData.listError}
-          fetchSkills={skillsData.fetchSkills}
-          newName={skillsData.newName}
-          setNewName={skillsData.setNewName}
-          createSkill={skillsData.createSkill}
-          syncingSkill={skillsData.syncingSkill}
-          linkSkill={skillsData.linkSkill}
-          autoLinkSettings={skillsData.autoLinkSettings}
-          autoLinkSync={skillsData.autoLinkSync}
-          savingAutoLink={skillsData.savingAutoLink}
-          updateAutoLinkSetting={skillsData.updateAutoLinkSetting}
-          runAutoLinkSync={skillsData.runAutoLinkSync}
-          collapsedSections={collapsedSections}
-          toggleSection={toggleSection}
-        />
+        {!projectPath ? (
+          <div className="flex gap-1 border-b border-border">
+            {(
+              [
+                ["installed", "Installed"],
+                ["catalog", "Catalog"],
+                ["routines", "Routine templates"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setView(key)}
+                aria-current={view === key ? "page" : undefined}
+                className={`border-b-2 px-2.5 py-1.5 text-[12px] transition-colors ${
+                  view === key
+                    ? "border-primary font-medium text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {view === "installed" ? (
+          <SkillsList
+            projectPath={projectPath}
+            openSkill={openSkill}
+            visibleSections={visibleSections}
+            sectionsByKey={sectionsByKey}
+            loading={skillsData.loading}
+            setLoading={skillsData.setLoading}
+            listError={skillsData.listError}
+            fetchSkills={skillsData.fetchSkills}
+            newName={skillsData.newName}
+            setNewName={skillsData.setNewName}
+            createSkill={skillsData.createSkill}
+            syncingSkill={skillsData.syncingSkill}
+            linkSkill={skillsData.linkSkill}
+            autoLinkSettings={skillsData.autoLinkSettings}
+            autoLinkSync={skillsData.autoLinkSync}
+            savingAutoLink={skillsData.savingAutoLink}
+            updateAutoLinkSetting={skillsData.updateAutoLinkSetting}
+            runAutoLinkSync={skillsData.runAutoLinkSync}
+            collapsedSections={collapsedSections}
+            toggleSection={toggleSection}
+          />
+        ) : (
+          <MarketplaceCatalog
+            kind={view === "catalog" ? "skills" : "routines"}
+            onInstalled={skillsData.fetchSkills}
+          />
+        )}
       </div>
     </DashboardLayout>
   );
