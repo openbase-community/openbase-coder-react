@@ -202,7 +202,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
             {systemNav.length > 0 ? (
               <Collapsible
-                className="mt-2"
+                className="mt-auto border-t border-sidebar-border pt-2"
                 onOpenChange={setSystemOpen}
                 open={systemOpen}
               >
@@ -210,7 +210,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   <CollapsibleTrigger asChild>
                     <button
                       type="button"
-                      className={`flex h-6 w-full items-center rounded ${groupLabelClass} hover:text-sidebar-foreground`}
+                      aria-label={systemOpen ? "Collapse system navigation" : "Expand system navigation"}
+                      className={`flex h-7 w-full items-center rounded transition-colors ${groupLabelClass} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground`}
                     >
                       System
                       <ChevronDown
