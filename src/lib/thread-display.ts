@@ -1,4 +1,5 @@
 import type { ThreadInfo } from "@/types/session";
+import { voicePromptForDisplay } from "./voice-display";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -26,18 +27,23 @@ export const threadRoutePath = (
     : path;
 };
 
-export const threadDisplayName = (thread: ThreadInfo) =>
-  firstPresent(thread.display_name, thread.name, thread.title, thread.preview) ||
-  basename(thread.directory) ||
-  thread.thread_id;
+export const threadDisplayName = (thread: ThreadInfo) => {
+  const provided = firstPresent(
+    thread.display_name,
+    thread.name,
+    thread.title,
+    thread.preview,
+  );
+  return provided
+    ? voicePromptForDisplay(provided)
+    : basename(thread.directory) || thread.thread_id;
+};
 
 export const threadListDisplayNames = (threads: ThreadInfo[]) => {
   return new Map(
     threads.map((thread) => [
       thread.thread_id,
-      firstPresent(thread.display_name, thread.name, thread.title, thread.preview) ??
-        basename(thread.directory) ??
-        thread.thread_id,
+      threadDisplayName(thread),
     ]),
   );
 };

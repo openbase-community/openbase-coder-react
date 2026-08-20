@@ -2,6 +2,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { TurnFileEdits } from "@/components/TurnFileEdits";
 import { relativeTimeShort } from "@/lib/relative-time";
 import { shortModelLabel } from "@/lib/thread-display";
+import { voicePromptForDisplay } from "@/lib/voice-display";
 import type { TurnInfo } from "@/types/session";
 import { ChevronDown, CornerUpLeft } from "lucide-react";
 import type { ReactNode, Ref } from "react";
@@ -39,7 +40,9 @@ export function UserBubble({
               aria-label="steer"
             />
           ) : null}
-          <span className="whitespace-pre-wrap break-words">{text}</span>
+          <span className="whitespace-pre-wrap break-words">
+            {voicePromptForDisplay(text)}
+          </span>
         </div>
       </div>
     </div>

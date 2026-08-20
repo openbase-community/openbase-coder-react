@@ -110,6 +110,17 @@ describe("threadDisplayName", () => {
     ).toBe("Build thread");
   });
 
+  it("removes a voice transport envelope from API display names", () => {
+    const voiceThread = thread("idle", {
+      display_name: "<voice>  fix &lt;login&gt;  </voice>",
+    });
+
+    expect(threadDisplayName(voiceThread)).toBe("  fix <login>  ");
+    expect(threadListDisplayNames([voiceThread]).get("thread-1")).toBe(
+      "  fix <login>  ",
+    );
+  });
+
   it("keeps the agent voice name as separate metadata", () => {
     expect(
       threadAgentVoiceName(
