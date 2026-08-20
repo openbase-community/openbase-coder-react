@@ -1,4 +1,5 @@
 import { StatusBadge } from "@/components/StatusBadge";
+import { TurnFileEdits } from "@/components/TurnFileEdits";
 import { relativeTimeShort } from "@/lib/relative-time";
 import { shortModelLabel } from "@/lib/thread-display";
 import type { TurnInfo } from "@/types/session";
@@ -118,13 +119,18 @@ export function TurnBody({
   turn,
   outputRef,
   defaultOpen = true,
+  directory,
 }: {
   turn: TurnInfo;
   outputRef?: Ref<HTMLDivElement>;
   defaultOpen?: boolean;
+  directory?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const hasResponse = Boolean(turn.accumulated_output || turn.accumulated_stderr);
+  const editedPaths = turn.file_edits ?? [];
+  const hasResponse =
+    Boolean(turn.accumulated_output || turn.accumulated_stderr) ||
+    editedPaths.length > 0;
 
   return (
     <div className="group/turn space-y-2">
@@ -156,7 +162,7 @@ export function TurnBody({
         <div className="space-y-1">
           {turn.accumulated_output ? (
             <div ref={outputRef} className="max-h-[36rem] overflow-auto">
-              <article className="prose prose-sm max-w-none break-words leading-relaxed dark:prose-invert">
+              <article className="prose prose-sm max-w-none break-words dark:prose-invert [&>:first-child]:mt-0 [&>:last-child]:mb-0">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {turn.accumulated_output}
                 </ReactMarkdown>
@@ -168,6 +174,7 @@ export function TurnBody({
               {turn.accumulated_stderr}
             </div>
           ) : null}
+          <TurnFileEdits paths={editedPaths} directory={directory} />
           <TurnMeta turn={turn} />
         </div>
       ) : null}

@@ -23,6 +23,8 @@ export interface TurnInfo {
   model?: string | null;
   reasoning_effort?: string | null;
   steers?: TurnSteer[];
+  /** Absolute paths of files the agent edited during the turn. */
+  file_edits?: string[];
 }
 
 export interface ThreadInfo {

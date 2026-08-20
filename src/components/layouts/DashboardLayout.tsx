@@ -164,7 +164,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           Skip to content
         </a>
         <Sidebar className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-          <SidebarHeader className="border-b border-sidebar-border px-3 py-3">
+          <SidebarHeader className="flex h-11 justify-center border-b border-sidebar-border px-3 py-0">
             <button
               type="button"
               onClick={() => navigate("/dashboard")}

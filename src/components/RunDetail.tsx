@@ -9,9 +9,11 @@ import type { TurnInfo } from "@/types/session";
 export function RunDetail({
   run,
   defaultOpen = true,
+  directory,
 }: {
   run: TurnInfo;
   defaultOpen?: boolean;
+  directory?: string;
 }) {
-  return <TurnBody turn={run} defaultOpen={defaultOpen} />;
+  return <TurnBody turn={run} defaultOpen={defaultOpen} directory={directory} />;
 }

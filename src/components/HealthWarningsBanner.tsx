@@ -56,7 +56,7 @@ export function HealthWarningsBanner() {
   if (warnings.length === 0) return null;
 
   return (
-    <div className="shrink-0 space-y-1 border-b border-border px-3 py-1.5 md:px-4">
+    <div className="shrink-0 space-y-1 px-3 py-1.5 md:px-4">
       {warnings.map((warning) => {
         const clickable = isSyncWarning(warning);
         const base =

@@ -487,7 +487,11 @@ const SessionDetail = ({
             ) : null}
 
             {thread?.turn_history.map((turn) => (
-              <RunDetail key={turn.turn_id} run={turn} />
+              <RunDetail
+                key={turn.turn_id}
+                run={turn}
+                directory={thread.directory}
+              />
             ))}
 
             {thread?.current_turn ? (
@@ -506,7 +510,11 @@ const SessionDetail = ({
                     </Button>
                   </div>
                 ) : null}
-                <TurnBody turn={thread.current_turn} outputRef={outputRef} />
+                <TurnBody
+                  turn={thread.current_turn}
+                  outputRef={outputRef}
+                  directory={thread.directory}
+                />
               </div>
             ) : null}
 
