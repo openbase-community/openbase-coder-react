@@ -5,6 +5,8 @@ import type { TurnInfo } from "@/types/session";
 import { ChevronDown, CornerUpLeft } from "lucide-react";
 import type { ReactNode, Ref } from "react";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 /**
  * A user-authored message (prompt, steer, or queued follow-up) rendered as a
@@ -23,7 +25,7 @@ export function UserBubble({
 }) {
   return (
     <div className="flex justify-end">
-      <div className="max-w-[66%] rounded-2xl bg-user-message px-3.5 py-2 text-[13px] leading-relaxed text-foreground">
+      <div className="max-w-[82%] rounded-2xl bg-user-message px-3.5 py-2 text-[13px] leading-relaxed text-foreground">
         {hint ? (
           <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             {hint}
@@ -153,11 +155,12 @@ export function TurnBody({
       {open && hasResponse ? (
         <div className="space-y-1">
           {turn.accumulated_output ? (
-            <div
-              ref={outputRef}
-              className="max-h-[36rem] overflow-auto whitespace-pre-wrap break-words text-[13px] leading-relaxed text-foreground"
-            >
-              {turn.accumulated_output}
+            <div ref={outputRef} className="max-h-[36rem] overflow-auto">
+              <article className="prose prose-sm max-w-none break-words leading-relaxed dark:prose-invert">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {turn.accumulated_output}
+                </ReactMarkdown>
+              </article>
             </div>
           ) : null}
           {turn.accumulated_stderr ? (
