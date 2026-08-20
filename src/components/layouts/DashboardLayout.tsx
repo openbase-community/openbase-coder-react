@@ -143,16 +143,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       );
     });
 
-  const activeItem = [
-    ...primaryNav,
-    ...systemNav,
-    ...footerNav,
-    ...pluginNav,
-  ].find(
-    (item) => !item.externalUrl && isActive(item.path, item.exact ?? false),
-  );
-  const pageTitle = activeItem ? navigationTitle(activeItem) : "Openbase Coder";
-
   return (
     <SidebarProvider
       style={{ "--sidebar-width": "14rem" } as React.CSSProperties}
@@ -273,9 +263,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           <header className="sticky top-0 z-10 flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/85 px-3 backdrop-blur md:px-4">
             <div className="flex min-w-0 items-center gap-2">
               <SidebarTrigger className="md:hidden" />
-              <p className="truncate text-[13px] font-semibold tracking-tight text-foreground">
-                {pageTitle}
-              </p>
             </div>
             <UserProfile />
           </header>

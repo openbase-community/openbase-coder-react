@@ -1,13 +1,50 @@
-import { StatusBadge } from "@/components/StatusBadge";
 import { TurnFileEdits } from "@/components/TurnFileEdits";
 import { relativeTimeShort } from "@/lib/relative-time";
 import { shortModelLabel } from "@/lib/thread-display";
-import type { TurnInfo } from "@/types/session";
-import { ChevronDown, CornerUpLeft } from "lucide-react";
+import type { ThreadStatus, TurnInfo } from "@/types/session";
+import {
+  AlertCircle,
+  ChevronDown,
+  CircleDashed,
+  CornerUpLeft,
+  Loader2,
+  type LucideIcon,
+} from "lucide-react";
 import type { ReactNode, Ref } from "react";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+/**
+ * How each non-final turn status shows up beside the agent response: a
+ * spinning loader while work is in flight, distinct glyphs for the terminal
+ * states, each carrying a hover tooltip so the meaning is discoverable. The
+ * "completed" happy path is intentionally absent — a finished turn shows no
+ * status marker at all rather than a redundant "Done".
+ */
+const TURN_STATUS_ICON: Partial<
+  Record<ThreadStatus, { icon: LucideIcon; label: string; spin?: boolean; className: string }>
+> = {
+  running: { icon: Loader2, label: "Running", spin: true, className: "text-info" },
+  waiting: { icon: Loader2, label: "Waiting", spin: true, className: "text-warning" },
+  error: { icon: AlertCircle, label: "Error", className: "text-destructive" },
+  idle: { icon: CircleDashed, label: "Idle", className: "text-muted-foreground" },
+};
+
+function TurnStatusIcon({ status }: { status: ThreadStatus }) {
+  const config = TURN_STATUS_ICON[status];
+  if (!config) return null;
+  const Icon = config.icon;
+  return (
+    <span
+      title={config.label}
+      aria-label={config.label}
+      className={`inline-flex ${config.className}`}
+    >
+      <Icon className={`h-3.5 w-3.5 ${config.spin ? "animate-spin" : ""}`} />
+    </span>
+  );
+}
 
 /**
  * A user-authored message (prompt, steer, or queued follow-up) rendered as a
@@ -71,9 +108,6 @@ function TurnMeta({ turn }: { turn: TurnInfo }) {
   const when = turn.completed_at ?? turn.started_at;
   const showExit = turn.return_code !== null && turn.return_code !== 0;
   const bits: ReactNode[] = [];
-  if (turn.status !== "completed") {
-    bits.push(<StatusBadge key="status" status={turn.status} />);
-  }
   if (showExit) {
     bits.push(
       <span key="exit" className="text-destructive">
@@ -131,6 +165,27 @@ export function TurnBody({
   const hasResponse =
     Boolean(turn.accumulated_output || turn.accumulated_stderr) ||
     editedPaths.length > 0;
+  const showStatusIcon = turn.status !== "completed";
+  const responseInner = (
+    <>
+      {turn.accumulated_output ? (
+        <div ref={outputRef} className="max-h-[36rem] overflow-auto">
+          <article className="prose prose-sm max-w-none break-words dark:prose-invert [&>:first-child]:mt-0 [&>:last-child]:mb-0">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {turn.accumulated_output}
+            </ReactMarkdown>
+          </article>
+        </div>
+      ) : null}
+      {turn.accumulated_stderr ? (
+        <div className="whitespace-pre-wrap break-words text-[12.5px] leading-relaxed text-destructive">
+          {turn.accumulated_stderr}
+        </div>
+      ) : null}
+      <TurnFileEdits paths={editedPaths} directory={directory} />
+      <TurnMeta turn={turn} />
+    </>
+  );
 
   return (
     <div className="group/turn space-y-2">
@@ -158,25 +213,17 @@ export function TurnBody({
         <UserBubble key={steer.created_at ?? index} text={steer.text} steer />
       ))}
 
-      {open && hasResponse ? (
-        <div className="space-y-1">
-          {turn.accumulated_output ? (
-            <div ref={outputRef} className="max-h-[36rem] overflow-auto">
-              <article className="prose prose-sm max-w-none break-words dark:prose-invert [&>:first-child]:mt-0 [&>:last-child]:mb-0">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {turn.accumulated_output}
-                </ReactMarkdown>
-              </article>
+      {open && (hasResponse || showStatusIcon) ? (
+        showStatusIcon ? (
+          <div className="flex gap-2">
+            <div className="shrink-0 pt-0.5">
+              <TurnStatusIcon status={turn.status} />
             </div>
-          ) : null}
-          {turn.accumulated_stderr ? (
-            <div className="whitespace-pre-wrap break-words text-[12.5px] leading-relaxed text-destructive">
-              {turn.accumulated_stderr}
-            </div>
-          ) : null}
-          <TurnFileEdits paths={editedPaths} directory={directory} />
-          <TurnMeta turn={turn} />
-        </div>
+            <div className="min-w-0 flex-1 space-y-1">{responseInner}</div>
+          </div>
+        ) : (
+          <div className="space-y-1">{responseInner}</div>
+        )
       ) : null}
     </div>
   );

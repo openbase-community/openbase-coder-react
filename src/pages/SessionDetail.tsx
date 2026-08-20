@@ -409,7 +409,7 @@ const SessionDetail = ({
                   size="sm"
                   onClick={openProject}
                   className="h-6 max-w-[16rem] gap-1 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-                  title="Open project"
+                  title={thread.directory}
                 >
                   <FolderOpen className="h-3 w-3 shrink-0" />
                   <span className="truncate font-mono">
@@ -466,9 +466,6 @@ const SessionDetail = ({
                   )}
                 </span>
               </div>
-              <p className="truncate font-mono text-[11px] text-muted-foreground">
-                {thread.directory}
-              </p>
               <p className="truncate font-mono text-[10.5px] text-muted-foreground/60">
                 {thread.thread_id}
               </p>
