@@ -1,7 +1,7 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { RunDetail } from "@/components/RunDetail";
 import { StatusBadge } from "@/components/StatusBadge";
-import { TurnBody, UserInputBlock } from "@/components/TurnBody";
+import { TurnBody, UserBubble } from "@/components/TurnBody";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +15,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
-import { Panel } from "@/components/ui/panel";
+import type {
+  VoiceAgentState,
+  VoiceCallStatus,
+} from "@/hooks/use-voice-call";
 import {
   Popover,
   PopoverContent,
@@ -37,10 +40,14 @@ import { promptAfterThreadTurnSubmission } from "@/lib/thread-turn-actions";
 import {
   Archive,
   ArrowLeft,
+  ArrowUp,
   Check,
   Copy,
   FolderOpen,
-  Send,
+  Mic,
+  MicOff,
+  Phone,
+  PhoneOff,
   Square,
   Star,
   Terminal,
@@ -51,9 +58,41 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
+/**
+ * Voice-call controls handed to the dispatch composer so an empty message
+ * field offers a "start call" button instead of a disabled send button. Shaped
+ * to match the return value of {@link useVoiceCall}.
+ */
+export interface VoiceCallControls {
+  status: VoiceCallStatus;
+  muted: boolean;
+  agentState: VoiceAgentState;
+  error: string | null;
+  audioContainerRef: React.RefObject<HTMLDivElement | null>;
+  start: () => Promise<void>;
+  end: () => void;
+  toggleMute: () => Promise<void>;
+}
+
 interface SessionDetailProps {
   threadIdOverride?: string;
   allowDispatcherThread?: boolean;
+  call?: VoiceCallControls;
+}
+
+function agentStateLabel(state: VoiceAgentState): string {
+  switch (state) {
+    case "initializing":
+      return "Dispatcher is joining…";
+    case "listening":
+      return "Dispatcher is listening";
+    case "thinking":
+      return "Dispatcher is thinking…";
+    case "speaking":
+      return "Dispatcher is speaking";
+    default:
+      return "In call with the dispatcher";
+  }
 }
 
 const ResumeFromCliButton = ({
@@ -148,6 +187,7 @@ const findScrollContainer = (target: HTMLElement | null) => {
 const SessionDetail = ({
   threadIdOverride,
   allowDispatcherThread = false,
+  call,
 }: SessionDetailProps = {}) => {
   const { threadId: routeThreadId } = useParams<{ threadId: string }>();
   const threadId = threadIdOverride ?? routeThreadId;
@@ -173,7 +213,7 @@ const SessionDetail = ({
     hasConnectedRef.current = true;
   }
   const connectionLost = hasConnectedRef.current && !isConnected;
-  const outputRef = useRef<HTMLPreElement>(null);
+  const outputRef = useRef<HTMLDivElement>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
   const currentTurnOutput = thread?.current_turn?.accumulated_output;
   const currentTurnStderr = thread?.current_turn?.accumulated_stderr;
@@ -247,6 +287,14 @@ const SessionDetail = ({
   const hasActiveCurrentTurn =
     thread?.current_turn?.status === "running" ||
     thread?.current_turn?.status === "waiting";
+  const inCall = call?.status === "connected";
+  const callConnecting = call?.status === "connecting";
+  // An empty composer offers the voice call; typing turns it back into send.
+  const showCallButton =
+    Boolean(call) &&
+    !inCall &&
+    !hasActiveCurrentTurn &&
+    prompt.trim().length === 0;
   const fromProjectPath = searchParams.get("fromProject");
   const openProject = () => {
     if (!thread?.directory) return;
@@ -356,17 +404,17 @@ const SessionDetail = ({
                     {agentVoiceName}
                   </span>
                 ) : null}
-                <span className="truncate font-mono text-[11px] text-muted-foreground">
-                  {threadProjectLabel(thread)}
-                </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={openProject}
-                  className="h-6 px-2 text-[11px]"
+                  className="h-6 max-w-[16rem] gap-1 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                  title="Open project"
                 >
-                  <FolderOpen className="h-3 w-3" />
-                  Project
+                  <FolderOpen className="h-3 w-3 shrink-0" />
+                  <span className="truncate font-mono">
+                    {threadProjectLabel(thread)}
+                  </span>
                 </Button>
                 {resumeCommands.map((resumeCommand) => (
                   <ResumeFromCliButton
@@ -408,12 +456,12 @@ const SessionDetail = ({
                   {isConnected ? (
                     <>
                       <Wifi className="h-3 w-3 text-success" />
-                      <span className="text-success">connected</span>
+                      <span className="text-success">Connected</span>
                     </>
                   ) : (
                     <>
                       <WifiOff className="h-3 w-3 text-destructive" />
-                      <span className="text-destructive">disconnected</span>
+                      <span className="text-destructive">Disconnected</span>
                     </>
                   )}
                 </span>
@@ -428,105 +476,116 @@ const SessionDetail = ({
           </header>
         ) : null}
 
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
-        {thread && (connectionLost || loadError) ? (
-          <div className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-[12px] text-warning">
-            {loadError
-              ? loadError
-              : "Live connection lost — reconnecting… Updates may be delayed."}
-          </div>
-        ) : null}
-
-        {thread && thread.turn_history.length > 0 ? (
-          <section className="overflow-hidden rounded border border-border bg-surface">
-            <div className="border-b border-border bg-surface-muted px-3 py-1.5">
-              <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
-                turn history
-              </p>
-            </div>
-            <div className="space-y-px p-2">
-              {thread.turn_history.map((turn) => (
-                <RunDetail key={turn.turn_id} run={turn} />
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {thread?.current_turn ? (
-          <section className="overflow-hidden rounded border border-border bg-surface">
-            <div className="flex items-center justify-between border-b border-border bg-surface-muted px-3 py-1.5">
-              <div className="flex min-w-0 items-center gap-2">
-                <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
-                  current turn
-                </p>
-                {thread.current_turn.reasoning_effort ? (
-                  <span className="rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
-                    reasoning {thread.current_turn.reasoning_effort}
-                  </span>
-                ) : null}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+          <div className="mx-auto w-full max-w-[720px] space-y-4">
+            {thread && (connectionLost || loadError) ? (
+              <div className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-[12px] text-warning">
+                {loadError
+                  ? loadError
+                  : "Live connection lost — reconnecting… Updates may be delayed."}
               </div>
-              {hasActiveCurrentTurn ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={interruptTurn}
-                  aria-label="Interrupt current turn"
-                  className="h-6 px-2 text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <Square className="h-2.5 w-2.5" />
-                  Interrupt
-                </Button>
-              ) : null}
-            </div>
-            <div className="space-y-2 p-3">
-              <TurnBody turn={thread.current_turn} outputRef={outputRef} />
-            </div>
-          </section>
-        ) : null}
+            ) : null}
 
-        {thread?.queued_turns?.length ? (
-          <section className="overflow-hidden rounded border border-border bg-surface">
-            <div className="border-b border-border bg-surface-muted px-3 py-1.5">
-              <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
-                queued turns
-              </p>
-            </div>
-            <div className="space-y-2 p-3">
-              {thread.queued_turns.map((queued, index) => (
-                <UserInputBlock
-                  key={queued.queue_id ?? index}
-                  label="queued"
-                  text={queued.prompt}
-                />
-              ))}
-            </div>
-          </section>
-        ) : null}
+            {thread?.turn_history.map((turn) => (
+              <RunDetail key={turn.turn_id} run={turn} />
+            ))}
 
-        <div ref={threadEndRef} aria-hidden="true" />
+            {thread?.current_turn ? (
+              <div className="space-y-2">
+                {hasActiveCurrentTurn ? (
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={interruptTurn}
+                      aria-label="Interrupt current turn"
+                      className="h-6 px-2 text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Square className="h-2.5 w-2.5" />
+                      Interrupt
+                    </Button>
+                  </div>
+                ) : null}
+                <TurnBody turn={thread.current_turn} outputRef={outputRef} />
+              </div>
+            ) : null}
 
-        {!thread ? (
-          loadError ? (
-            <ErrorBanner className="mx-auto mt-12 max-w-md text-center">
-              {loadError}
-            </ErrorBanner>
-          ) : (
-            <div className="py-12 text-center text-[12px] text-muted-foreground">
-              {isConnected ? "Loading…" : "Connecting…"}
-            </div>
-          )
-        ) : null}
+            {thread?.queued_turns?.length
+              ? thread.queued_turns.map((queued, index) => (
+                  <UserBubble
+                    key={queued.queue_id ?? index}
+                    text={queued.prompt}
+                    hint="Queued"
+                  />
+                ))
+              : null}
+
+            <div ref={threadEndRef} aria-hidden="true" />
+
+            {!thread ? (
+              loadError ? (
+                <ErrorBanner className="mx-auto mt-12 max-w-md text-center">
+                  {loadError}
+                </ErrorBanner>
+              ) : (
+                <div className="py-12 text-center text-[12px] text-muted-foreground">
+                  {isConnected ? "Loading…" : "Connecting…"}
+                </div>
+              )
+            ) : null}
+          </div>
         </div>
 
         {thread ? (
           <div className="shrink-0 border-t border-border bg-background/95 p-2.5 backdrop-blur">
-            <div className="mx-auto flex max-w-3xl items-end gap-1.5">
+            <div className="mx-auto w-full max-w-3xl space-y-1.5">
+              {call && (inCall || callConnecting) ? (
+                <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-1.5 text-[12px]">
+                  <span className="truncate text-muted-foreground">
+                    {callConnecting
+                      ? "Connecting to the dispatcher…"
+                      : agentStateLabel(call.agentState)}
+                  </span>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <Button
+                      variant={call.muted ? "destructive" : "outline"}
+                      size="sm"
+                      className="h-7 px-2 text-[11px]"
+                      onClick={() => void call.toggleMute()}
+                      aria-label={call.muted ? "Unmute" : "Mute"}
+                    >
+                      {call.muted ? (
+                        <MicOff className="h-3 w-3" />
+                      ) : (
+                        <Mic className="h-3 w-3" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-7 px-2 text-[11px]"
+                      onClick={call.end}
+                      aria-label="End call"
+                    >
+                      <PhoneOff className="h-3 w-3" />
+                      End
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {call?.error ? (
+                <p className="px-1 text-[11px] text-destructive">
+                  {call.error}
+                </p>
+              ) : null}
+
               {hasActiveCurrentTurn ? (
-                <Panel className="grid w-24 shrink-0 grid-cols-1 text-[11px]">
+                <div className="flex items-center gap-1 text-[11px]">
                   <button
                     type="button"
                     onClick={() => setActivePromptMode("steer")}
-                    className={`px-2 py-1 text-left ${
+                    className={`rounded-full px-2.5 py-0.5 transition-colors ${
                       activePromptMode === "steer"
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-surface-muted"
@@ -537,7 +596,7 @@ const SessionDetail = ({
                   <button
                     type="button"
                     onClick={() => setActivePromptMode("queue")}
-                    className={`border-t border-border px-2 py-1 text-left ${
+                    className={`rounded-full px-2.5 py-0.5 transition-colors ${
                       activePromptMode === "queue"
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-surface-muted"
@@ -545,48 +604,72 @@ const SessionDetail = ({
                   >
                     Queue
                   </button>
-                </Panel>
+                </div>
               ) : null}
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={handleKeyDown}
-                aria-label="Codex turn prompt"
-                placeholder={
-                  hasActiveCurrentTurn
-                    ? activePromptMode === "steer"
-                      ? "Steer the active turn…"
-                      : "Queue a follow-up turn…"
-                    : "Start a turn…"
-                }
-                className="flex-1 resize-none rounded border border-border bg-surface p-2 text-[12.5px] text-foreground focus:border-ring focus:outline-none"
-                rows={1}
-              />
-              <Button
-                onClick={() => void handleStartTurn()}
-                disabled={!isConnected || !prompt.trim() || isSubmittingPrompt}
-                aria-busy={isSubmittingPrompt}
-                size="sm"
-                aria-label={
-                  hasActiveCurrentTurn
-                    ? activePromptMode === "steer"
-                      ? "Steer active turn"
-                      : "Queue follow-up turn"
-                    : "Start Codex turn"
-                }
-                title={
-                  isConnected
-                    ? hasActiveCurrentTurn
+
+              <div className="flex items-end gap-2 rounded-2xl border border-border bg-surface p-1.5 transition-colors focus-within:border-ring">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  aria-label="Turn prompt"
+                  placeholder={
+                    hasActiveCurrentTurn
                       ? activePromptMode === "steer"
-                        ? "Steer active turn"
-                        : "Queue follow-up turn"
-                      : "Start Codex turn"
-                    : "Thread disconnected"
-                }
-              >
-                <Send className="h-3 w-3" />
-              </Button>
+                        ? "Steer the active turn…"
+                        : "Queue a follow-up turn…"
+                      : showCallButton
+                        ? "Message the dispatcher, or start a call…"
+                        : "Start a turn…"
+                  }
+                  className="flex-1 resize-none bg-transparent px-2 py-1.5 text-[12.5px] text-foreground focus:outline-none"
+                  rows={1}
+                />
+                {showCallButton ? (
+                  <Button
+                    onClick={() => void call?.start()}
+                    disabled={callConnecting}
+                    size="icon"
+                    className="h-8 w-8 shrink-0 rounded-full"
+                    aria-label="Start voice call"
+                    title="Start voice call with the dispatcher"
+                  >
+                    <Phone className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => void handleStartTurn()}
+                    disabled={
+                      !isConnected || !prompt.trim() || isSubmittingPrompt
+                    }
+                    aria-busy={isSubmittingPrompt}
+                    size="icon"
+                    className="h-8 w-8 shrink-0 rounded-full"
+                    aria-label={
+                      hasActiveCurrentTurn
+                        ? activePromptMode === "steer"
+                          ? "Steer active turn"
+                          : "Queue follow-up turn"
+                        : "Start turn"
+                    }
+                    title={
+                      isConnected
+                        ? hasActiveCurrentTurn
+                          ? activePromptMode === "steer"
+                            ? "Steer active turn"
+                            : "Queue follow-up turn"
+                          : "Start turn"
+                        : "Thread disconnected"
+                    }
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
+            {call ? (
+              <div ref={call.audioContainerRef} className="hidden" />
+            ) : null}
           </div>
         ) : null}
       </div>

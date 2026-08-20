@@ -4,12 +4,12 @@ const statusConfig: Record<
   ThreadStatus,
   { label: string; dot: string; text: string }
 > = {
-  running: { label: "running", dot: "bg-info", text: "text-info" },
-  waiting: { label: "waiting", dot: "bg-warning", text: "text-warning" },
-  completed: { label: "done", dot: "bg-success", text: "text-success" },
-  error: { label: "error", dot: "bg-destructive", text: "text-destructive" },
+  running: { label: "Running", dot: "bg-info", text: "text-info" },
+  waiting: { label: "Waiting", dot: "bg-warning", text: "text-warning" },
+  completed: { label: "Done", dot: "bg-success", text: "text-success" },
+  error: { label: "Error", dot: "bg-destructive", text: "text-destructive" },
   idle: {
-    label: "idle",
+    label: "Idle",
     dot: "bg-muted-foreground/50",
     text: "text-muted-foreground",
   },
@@ -26,7 +26,7 @@ export function StatusBadge({
 }) {
   const config =
     isLikelyStale || statusWarning
-      ? { label: "stale", dot: "bg-warning", text: "text-warning" }
+      ? { label: "Stale", dot: "bg-warning", text: "text-warning" }
       : statusConfig[status] || statusConfig.idle;
   return (
     <span

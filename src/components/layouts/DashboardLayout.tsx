@@ -1,6 +1,6 @@
 import HealthWarningsBanner from "@/components/HealthWarningsBanner";
-import { OpenbaseWordmark } from "@/components/OpenbaseWordmark";
 import UserProfile from "@/components/UserProfile";
+import dashboardWordmarkUrl from "@/assets/openbase-dashboard-wordmark.png";
 import {
   Collapsible,
   CollapsibleContent,
@@ -171,12 +171,17 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               aria-label="Openbase Coder home"
               className="flex h-6 items-center rounded px-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
             >
-              <OpenbaseWordmark className="h-[19px]" />
+              <img
+                src={dashboardWordmarkUrl}
+                alt="Openbase"
+                draggable={false}
+                className="h-[23px] w-auto select-none mix-blend-multiply dark:mix-blend-screen dark:invert"
+              />
             </button>
           </SidebarHeader>
 
           <SidebarContent className="px-2 py-2">
-            <SidebarGroup>
+            <SidebarGroup className="px-0">
               <SidebarGroupLabel className={groupLabelClass}>
                 Workspace
               </SidebarGroupLabel>
@@ -188,7 +193,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </SidebarGroup>
 
             {pluginNav.length > 0 ? (
-              <SidebarGroup className="mt-2">
+              <SidebarGroup className="mt-2 px-0">
                 <SidebarGroupLabel className={groupLabelClass}>
                   Plugins
                 </SidebarGroupLabel>
@@ -206,16 +211,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 onOpenChange={setSystemOpen}
                 open={systemOpen}
               >
-                <SidebarGroup>
+                <SidebarGroup className="px-0">
                   <CollapsibleTrigger asChild>
                     <button
                       type="button"
                       aria-label={systemOpen ? "Collapse system navigation" : "Expand system navigation"}
-                      className={`flex h-7 w-full items-center rounded transition-colors ${groupLabelClass} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground`}
+                      className="flex h-7 w-full items-center rounded px-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     >
                       System
                       <ChevronDown
-                        className={`ml-auto h-3.5 w-3.5 transition-transform ${systemOpen ? "rotate-180" : ""}`}
+                        className={`ml-auto h-4 w-4 transition-transform ${systemOpen ? "rotate-180" : ""}`}
                       />
                     </button>
                   </CollapsibleTrigger>

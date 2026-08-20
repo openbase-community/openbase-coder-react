@@ -8,7 +8,6 @@ import type { SidebarItem } from "@/lib/sidebar-preferences";
  */
 export const WORKSPACE_ORDER = [
   "overview",
-  "call",
   "dispatch",
   "threads",
   "projects",

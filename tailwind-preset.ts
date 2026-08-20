@@ -33,6 +33,7 @@ const preset = {
           DEFAULT: "hsl(var(--surface))",
           muted: "hsl(var(--surface-muted))",
         },
+        "user-message": "hsl(var(--color-user-message-bg))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",

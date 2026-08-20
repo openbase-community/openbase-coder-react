@@ -54,6 +54,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
+/** How many report files to show before the "Load more" control appears. */
+const REPORTS_PAGE_SIZE = 10;
+
 const ProjectDetail = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -69,6 +72,9 @@ const ProjectDetail = () => {
     loadMoreThreads,
   } = useProjectsAndThreads();
   const [reportsFiles, setReportsFiles] = useState<ReportsFile[]>([]);
+  // Reports are capped to an initial page and grown with "Load more", mirroring
+  // the threads list, so a project with hundreds of reports stays scannable.
+  const [visibleReportsCount, setVisibleReportsCount] = useState(REPORTS_PAGE_SIZE);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [reportsError, setReportsError] = useState<string | null>(null);
   const [removingProject, setRemovingProject] = useState(false);
@@ -176,9 +182,13 @@ const ProjectDetail = () => {
     (thread) => thread.status === "running",
   );
   const gitStatus = GIT_STATUS[project?.git_status ?? "unknown"];
+  const visibleReportsFiles = useMemo(
+    () => reportsFiles.slice(0, visibleReportsCount),
+    [reportsFiles, visibleReportsCount],
+  );
   const groupedReportsFiles = useMemo(
-    () => groupReportItems(reportsFiles, (file) => file),
-    [reportsFiles],
+    () => groupReportItems(visibleReportsFiles, (file) => file),
+    [visibleReportsFiles],
   );
 
   const saveReportContent = useCallback(
@@ -248,6 +258,7 @@ const ProjectDetail = () => {
         (a, b) => b.updated_at - a.updated_at,
       );
       setReportsFiles(files);
+      setVisibleReportsCount(REPORTS_PAGE_SIZE);
       setReportsError(null);
       if (
         activeReportKey &&
@@ -571,6 +582,22 @@ const ProjectDetail = () => {
                   />
                 );
               })}
+              {reportsFiles.length > visibleReportsCount ? (
+                <div className="border-t border-border px-3 py-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-full text-[12px]"
+                    onClick={() =>
+                      setVisibleReportsCount((count) => count + REPORTS_PAGE_SIZE)
+                    }
+                  >
+                    Load more reports ({reportsFiles.length - visibleReportsCount}{" "}
+                    more)
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
         </Panel>

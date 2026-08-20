@@ -19,7 +19,6 @@ import {
 import AgentsMd from "./pages/AgentsMd";
 import ApprovalRequests from "./pages/ApprovalRequests";
 import BoilerSync from "./pages/BoilerSync";
-import Call from "./pages/Call";
 import Dashboard from "./pages/Dashboard";
 import DispatchChat from "./pages/DispatchChat";
 import Reports from "./pages/Reports";
@@ -136,13 +135,11 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      {/* Call merged into Dispatch: the dispatch chat starts a voice call
+          from its composer when the message field is empty. */}
       <Route
         path="/dashboard/call"
-        element={
-          <ProtectedRoute>
-            <Call />
-          </ProtectedRoute>
-        }
+        element={<Navigate to="/dashboard/dispatch" replace />}
       />
       <Route
         path="/dashboard/dispatch"

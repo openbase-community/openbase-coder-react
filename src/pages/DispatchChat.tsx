@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import { useVoiceCall } from "@/hooks/use-voice-call";
 import { apiFetch } from "@/lib/api";
 import { fetchThreadPage, LARGE_THREAD_PAGE_SIZE } from "@/lib/project-display";
 import type { ThreadInfo } from "@/types/session";
@@ -12,6 +13,10 @@ const DispatchChat = () => {
   const [dispatchThread, setDispatchThread] = useState<ThreadInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Call and dispatch are one surface: the dispatch composer starts a voice
+  // call when its message field is empty, so the voice-call lifecycle lives
+  // here and is handed to the chat composer.
+  const call = useVoiceCall();
 
   const fetchDispatchThreadFallback = useCallback(async () => {
     const data = await fetchThreadPage(
@@ -57,6 +62,7 @@ const DispatchChat = () => {
       <SessionDetail
         threadIdOverride={dispatchThread.thread_id}
         allowDispatcherThread
+        call={call}
       />
     );
   }
