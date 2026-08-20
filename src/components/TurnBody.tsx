@@ -1,50 +1,13 @@
+import { StatusBadge } from "@/components/StatusBadge";
 import { TurnFileEdits } from "@/components/TurnFileEdits";
 import { relativeTimeShort } from "@/lib/relative-time";
 import { shortModelLabel } from "@/lib/thread-display";
-import type { ThreadStatus, TurnInfo } from "@/types/session";
-import {
-  AlertCircle,
-  ChevronDown,
-  CircleDashed,
-  CornerUpLeft,
-  Loader2,
-  type LucideIcon,
-} from "lucide-react";
+import type { TurnInfo } from "@/types/session";
+import { ChevronDown, CornerUpLeft } from "lucide-react";
 import type { ReactNode, Ref } from "react";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-
-/**
- * How each non-final turn status shows up beside the agent response: a
- * spinning loader while work is in flight, distinct glyphs for the terminal
- * states, each carrying a hover tooltip so the meaning is discoverable. The
- * "completed" happy path is intentionally absent — a finished turn shows no
- * status marker at all rather than a redundant "Done".
- */
-const TURN_STATUS_ICON: Partial<
-  Record<ThreadStatus, { icon: LucideIcon; label: string; spin?: boolean; className: string }>
-> = {
-  running: { icon: Loader2, label: "Running", spin: true, className: "text-info" },
-  waiting: { icon: Loader2, label: "Waiting", spin: true, className: "text-warning" },
-  error: { icon: AlertCircle, label: "Error", className: "text-destructive" },
-  idle: { icon: CircleDashed, label: "Idle", className: "text-muted-foreground" },
-};
-
-function TurnStatusIcon({ status }: { status: ThreadStatus }) {
-  const config = TURN_STATUS_ICON[status];
-  if (!config) return null;
-  const Icon = config.icon;
-  return (
-    <span
-      title={config.label}
-      aria-label={config.label}
-      className={`inline-flex ${config.className}`}
-    >
-      <Icon className={`h-3.5 w-3.5 ${config.spin ? "animate-spin" : ""}`} />
-    </span>
-  );
-}
 
 /**
  * A user-authored message (prompt, steer, or queued follow-up) rendered as a
@@ -217,7 +180,7 @@ export function TurnBody({
         showStatusIcon ? (
           <div className="flex gap-2">
             <div className="shrink-0 pt-0.5">
-              <TurnStatusIcon status={turn.status} />
+              <StatusBadge status={turn.status} />
             </div>
             <div className="min-w-0 flex-1 space-y-1">{responseInner}</div>
           </div>

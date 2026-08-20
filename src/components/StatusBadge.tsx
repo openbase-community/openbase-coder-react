@@ -1,17 +1,35 @@
 import type { ThreadStatus } from "@/types/session";
+import {
+  AlertCircle,
+  CircleDashed,
+  Loader2,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react";
 
-const statusConfig: Record<
-  ThreadStatus,
-  { label: string; dot: string; text: string }
+/**
+ * Icon-only status marker with a hover tooltip. Work-in-flight spins; the
+ * terminal states get distinct glyphs. "completed" is intentionally absent —
+ * a finished turn/thread shows no marker rather than a redundant "Done".
+ */
+const STATUS_ICON: Partial<
+  Record<
+    ThreadStatus,
+    { icon: LucideIcon; label: string; spin?: boolean; className: string }
+  >
 > = {
-  running: { label: "Running", dot: "bg-info", text: "text-info" },
-  waiting: { label: "Waiting", dot: "bg-warning", text: "text-warning" },
-  completed: { label: "Done", dot: "bg-success", text: "text-success" },
-  error: { label: "Error", dot: "bg-destructive", text: "text-destructive" },
+  running: { icon: Loader2, label: "Running", spin: true, className: "text-info" },
+  waiting: {
+    icon: Loader2,
+    label: "Waiting",
+    spin: true,
+    className: "text-warning",
+  },
+  error: { icon: AlertCircle, label: "Error", className: "text-destructive" },
   idle: {
+    icon: CircleDashed,
     label: "Idle",
-    dot: "bg-muted-foreground/50",
-    text: "text-muted-foreground",
+    className: "text-muted-foreground",
   },
 };
 
@@ -24,17 +42,28 @@ export function StatusBadge({
   isLikelyStale?: boolean;
   statusWarning?: string | null;
 }) {
-  const config =
-    isLikelyStale || statusWarning
-      ? { label: "Stale", dot: "bg-warning", text: "text-warning" }
-      : statusConfig[status] || statusConfig.idle;
+  if (isLikelyStale || statusWarning) {
+    return (
+      <span
+        title={statusWarning || "Likely stale turn"}
+        aria-label="Stale"
+        className="inline-flex text-warning"
+      >
+        <TriangleAlert className="h-3.5 w-3.5" />
+      </span>
+    );
+  }
+
+  const config = STATUS_ICON[status];
+  if (!config) return null;
+  const Icon = config.icon;
   return (
     <span
-      title={statusWarning || (isLikelyStale ? "Likely stale turn" : undefined)}
-      className={`inline-flex items-center gap-1 font-mono text-[10.5px] ${config.text}`}
+      title={config.label}
+      aria-label={config.label}
+      className={`inline-flex ${config.className}`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />
-      {config.label}
+      <Icon className={`h-3.5 w-3.5 ${config.spin ? "animate-spin" : ""}`} />
     </span>
   );
 }

@@ -69,7 +69,7 @@ const BoilerSync = () => {
     <DashboardLayout>
       <div className="space-y-4">
         <ResourcePageHeader
-          title="BoilerSync"
+          title="Templates"
           loading={loading}
           onRefresh={() => fetchTemplates(selectedTemplate ?? undefined)}
           subtitle={
@@ -92,7 +92,7 @@ const BoilerSync = () => {
           <ResourceLoading>Loading...</ResourceLoading>
         ) : templates.length === 0 ? (
           <ResourceEmptyState icon={ScrollText}>
-            No BoilerSync templates found.
+            No templates found.
           </ResourceEmptyState>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)]">
