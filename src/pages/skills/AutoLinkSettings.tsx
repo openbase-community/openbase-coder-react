@@ -34,8 +34,8 @@ export function AutoLinkSettings({
               Auto-link personal skills
             </span>
             <span className="block truncate text-[11.5px] text-muted-foreground">
-              Symlink normal Codex and Claude Code skills into the Openbase
-              homes when this page refreshes.
+              Symlink personal skills into the shared Codex and Claude Code
+              skill directories when this page refreshes.
             </span>
           </span>
         </label>

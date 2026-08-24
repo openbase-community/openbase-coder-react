@@ -10,12 +10,6 @@ export type DangerousConfirmationSettingsResponse = {
   refreshed: boolean;
 };
 
-export type AgentsGenerationSettingsResponse = {
-  include_normal_codex_agents_in_openbase_agents: boolean;
-  default_include_normal_codex_agents_in_openbase_agents: boolean;
-  refreshed: boolean;
-};
-
 export type KeepAwakeSettingsResponse = {
   keep_system_awake: boolean;
   default_keep_system_awake: boolean;
@@ -58,9 +52,7 @@ export type ClaudeAuthSettingsResponse = {
   logged_in: boolean;
   raw_output: string;
   returncode: number;
-  state_updated: boolean;
-  keychain_copied: boolean;
-  message: string | null;
+  verified?: boolean;
 };
 
 export type CodingBackendSettingsResponse = {

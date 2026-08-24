@@ -34,7 +34,7 @@ describe("cliResumeCommand", () => {
         "019f7ce0-eb0e-7b11-80be-457c6c2c537d",
       ),
     ).toBe(
-      "cd ~/Projects/openbase-coder-workspace && CODEX_HOME=~/.openbase/codex_home codex resume 019f7ce0-eb0e-7b11-80be-457c6c2c537d",
+      "cd ~/Projects/openbase-coder-workspace && codex resume 019f7ce0-eb0e-7b11-80be-457c6c2c537d",
     );
   });
 
@@ -47,8 +47,7 @@ describe("cliResumeCommand", () => {
       }),
     ).toEqual([
       {
-        command:
-          "cd /tmp/project && CODEX_HOME=~/.openbase/codex_home codex resume thread-1",
+        command: "cd /tmp/project && codex resume thread-1",
         description: "Open this thread's conversation in Codex CLI:",
         label: "Resume in Codex CLI",
         target: "codex",

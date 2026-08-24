@@ -42,7 +42,8 @@ type ThreadSnapshotSummary = {
 
 type ThreadSyncConflict = {
   id?: string | null;
-  source_type?: "home" | "device" | null;
+  source_type?: "device" | null;
+  backend?: string | null;
   thread_id: string;
   title: string;
   cwd?: string | null;
@@ -53,24 +54,18 @@ type ThreadSyncConflict = {
   local_fingerprint?: string | null;
   current_local_fingerprint?: string | null;
   incoming_fingerprint?: string | null;
-  normal_fingerprint?: string | null;
-  voice_fingerprint?: string | null;
   remote_label?: string | null;
   is_resolvable?: boolean | null;
   local?: ThreadSnapshotSummary | null;
   incoming_snapshot?: ThreadSnapshotSummary | null;
   latest_remote_snapshot?: ThreadSnapshotSummary | null;
-  normal?: ThreadSnapshotSummary | null;
-  voice?: ThreadSnapshotSummary | null;
 };
 
 type ThreadSyncConflictsPayload = {
   conflict_count: number;
-  home_conflict_count?: number;
-  device_conflict_count?: number;
   conflicts: ThreadSyncConflict[];
   exchange_dir?: string | null;
-  home_ledger_path?: string | null;
+  ledger_path?: string | null;
 };
 
 const shortHash = (value?: string | null) =>
@@ -176,12 +171,6 @@ const ThreadSyncConflicts = () => {
   };
 
   const conflicts = payload?.conflicts ?? [];
-  const homeConflictCount =
-    payload?.home_conflict_count ??
-    conflicts.filter((conflict) => conflict.source_type === "home").length;
-  const deviceConflictCount =
-    payload?.device_conflict_count ??
-    conflicts.filter((conflict) => conflict.source_type !== "home").length;
 
   return (
     <DashboardLayout>
@@ -208,7 +197,7 @@ const ThreadSyncConflicts = () => {
             </div>
             <p className="truncate font-mono text-[11px] text-muted-foreground">
               {payload
-                ? `${homeConflictCount} homes · ${deviceConflictCount} devices`
+                ? `${payload.conflict_count} device conflicts`
                 : "~/.openbase/thread-sync"}
             </p>
           </div>
@@ -236,24 +225,17 @@ const ThreadSyncConflicts = () => {
         ) : (
           <div className="space-y-2">
             {conflicts.map((conflict) => {
-              const sourceType = conflict.source_type ?? "device";
-              const isHomeConflict = sourceType === "home";
-              const remote = isHomeConflict
-                ? conflict.normal
-                : conflict.latest_remote_snapshot ?? conflict.incoming_snapshot;
-              const local = isHomeConflict ? conflict.voice : conflict.local;
+              const remote =
+                conflict.latest_remote_snapshot ?? conflict.incoming_snapshot;
+              const local = conflict.local;
               const remoteLabel =
                 conflict.remote_label ??
                 conflict.source_device_name ??
                 remote?.source_device_name ??
                 conflict.source_device_id ??
-                (isHomeConflict ? "Normal Codex home" : "remote");
-              const localLabel = isHomeConflict ? "Voice home" : "Local";
-              const remoteColumnLabel = isHomeConflict ? "Normal home" : "Remote";
-              const sourceLabel = isHomeConflict ? "Homes" : "Devices";
-              const canResolve = !isHomeConflict && conflict.is_resolvable !== false;
-              const conflictKey =
-                conflict.id ?? `${sourceType}:${conflict.thread_id}`;
+                "remote";
+              const canResolve = conflict.is_resolvable !== false;
+              const conflictKey = conflict.id ?? `device:${conflict.thread_id}`;
               const localActionKey = `${conflictKey}:accept_local`;
               const remoteActionKey = `${conflictKey}:accept_remote_latest`;
 
@@ -272,10 +254,10 @@ const ThreadSyncConflicts = () => {
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
                         <Badge
-                          variant={isHomeConflict ? "secondary" : "outline"}
+                          variant="outline"
                           className="h-5 px-1.5 font-sans text-[10px]"
                         >
-                          {sourceLabel}
+                          Devices
                         </Badge>
                         <span>{shortHash(conflict.thread_id)}</span>
                         <span>{conflict.reason}</span>
@@ -304,22 +286,19 @@ const ThreadSyncConflicts = () => {
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
                     <SnapshotColumn
                       icon={<HardDrive className="h-3 w-3" />}
-                      label={localLabel}
+                      label="Local"
                       snapshot={local}
                       fingerprint={
                         conflict.current_local_fingerprint ??
-                        conflict.local_fingerprint ??
-                        conflict.voice_fingerprint
+                        conflict.local_fingerprint
                       }
                     />
                     <SnapshotColumn
                       icon={<Download className="h-3 w-3" />}
-                      label={remoteColumnLabel}
+                      label="Remote"
                       snapshot={remote}
                       fingerprint={
-                        remote?.fingerprint ??
-                        conflict.incoming_fingerprint ??
-                        conflict.normal_fingerprint
+                        remote?.fingerprint ?? conflict.incoming_fingerprint
                       }
                     />
                   </div>
@@ -398,11 +377,7 @@ const ThreadSyncConflicts = () => {
                           </AlertDialogContent>
                         </AlertDialog>
                       </>
-                    ) : (
-                      <div className="text-[11px] text-muted-foreground">
-                        Resolve home conflicts with the Codex sync CLI.
-                      </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               );

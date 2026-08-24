@@ -37,9 +37,9 @@ export function scopeName(
     sectionsByKey[scope]?.label ??
     (scope === "home"
       ? "Personal"
-      : scope === "openbase_codex"
-        ? "Openbase Codex"
-        : scope === "normal_claude"
+      : scope === "codex"
+        ? "Codex"
+        : scope === "claude"
           ? "Claude Code"
           : scope)
   );
@@ -51,13 +51,11 @@ export function scopeButtonLabel(
 ): string {
   return scope === "home"
     ? "Personal"
-    : scope === "normal_claude"
-      ? "Claude Code"
-      : scope === "openbase_codex"
-        ? "Codex"
-        : scope === "openbase_claude"
-          ? "Claude"
-          : scopeName(scope, sectionsByKey);
+    : scope === "codex"
+      ? "Codex"
+      : scope === "claude"
+        ? "Claude"
+        : scopeName(scope, sectionsByKey);
 }
 
 export function skillDirForComparison(skill: SkillEntry): string {

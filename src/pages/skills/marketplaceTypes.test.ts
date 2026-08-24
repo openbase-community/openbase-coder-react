@@ -28,19 +28,14 @@ const skill: MarketplaceSkill = {
   installable: true,
   installed_targets: {
     home: "not_installed",
-    normal_claude: "conflict",
-    openbase_codex: "installed",
-    openbase_claude: "not_installed",
+    codex: "installed",
+    claude: "conflict",
   },
 };
 
 describe("marketplace install contract", () => {
   it("excludes conflicting targets from installation choices", () => {
-    expect(availableInstallScopes(skill)).toEqual([
-      "home",
-      "openbase_codex",
-      "openbase_claude",
-    ]);
+    expect(availableInstallScopes(skill)).toEqual(["home", "codex"]);
   });
 
   it("sends only the slug, pinned commit, targets, and explicit confirmation", () => {

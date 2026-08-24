@@ -39,22 +39,16 @@ const EXPECTED_TARGETS: Array<
   Pick<AgentsMdDocumentResponse, "id" | "label" | "description">
 > = [
   {
-    id: "voice",
-    label: "Voice Codex home instructions",
+    id: "openbase",
+    label: "Openbase base instructions",
     description:
-      "Affects the Openbase Coder voice Codex home environment and its general voice-coding behavior.",
+      "Affects every Openbase Coder session on both backends; delivered per session, never written into the shared agent homes.",
   },
   {
     id: "normal",
-    label: "Normal Codex home instructions",
+    label: "Codex home AGENTS.md",
     description:
-      "Affects regular non-voice Codex sessions that use the standard Codex home directory.",
-  },
-  {
-    id: "claude",
-    label: "Openbase Claude config instructions",
-    description:
-      "Affects Claude Code sessions that use Openbase's managed CLAUDE_CONFIG_DIR.",
+      "Your ~/.codex/AGENTS.md — applies to every Codex session in the shared home, including Openbase sessions.",
   },
   {
     id: "direct_livekit",
@@ -78,24 +72,21 @@ const EXPECTED_TARGETS: Array<
 
 const fallbackPathForTarget = (
   target: AgentsMdTarget,
-  codexHome: string,
+  instructionsDir: string,
 ): string => {
   if (target === "normal") {
     return "~/.codex/AGENTS.md";
   }
-  if (target === "claude") {
-    return "~/.openbase/claude_config/CLAUDE.md";
-  }
   if (target === "direct_livekit") {
-    return `${codexHome}/direct-livekit-target-instructions.md`;
+    return `${instructionsDir}/VOICE_INSTRUCTIONS.md`;
   }
   if (target === "super_agent") {
-    return `${codexHome}/super-agent-instructions.md`;
+    return `${instructionsDir}/SUPER_AGENT_INSTRUCTIONS.md`;
   }
   if (target === "dispatcher") {
-    return `${codexHome}/DISPATCHER_INSTRUCTIONS.md`;
+    return `${instructionsDir}/DISPATCHER_INSTRUCTIONS.md`;
   }
-  return `${codexHome}/AGENTS.md`;
+  return `${instructionsDir}/AGENTS.md`;
 };
 
 const mergeExpectedDocuments = (
@@ -105,20 +96,15 @@ const mergeExpectedDocuments = (
   const apiByTarget = new Map(
     apiDocuments.map((document) => [document.id, document]),
   );
-  const codexHome =
+  const instructionsDir =
     data.codex_home ??
-    apiByTarget.get("voice")?.codex_home ??
-    "~/.openbase/codex_home";
+    apiByTarget.get("openbase")?.codex_home ??
+    "~/.openbase/instructions";
   const expectedDocuments = EXPECTED_TARGETS.map((target) => ({
     ...target,
     content: "",
-    path: fallbackPathForTarget(target.id, codexHome),
-    codex_home:
-      target.id === "normal"
-        ? "~/.codex"
-        : target.id === "claude"
-          ? "~/.openbase/claude_config"
-          : codexHome,
+    path: fallbackPathForTarget(target.id, instructionsDir),
+    codex_home: target.id === "normal" ? "~/.codex" : instructionsDir,
     exists: false,
     ...apiByTarget.get(target.id),
     existenceKnown: apiByTarget.has(target.id),
@@ -235,7 +221,8 @@ const AgentsMd = () => {
               Instructions
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Edit Codex instruction files for each home environment.
+              Edit the instruction files that shape Openbase sessions and your
+              shared Codex home.
             </p>
           </div>
           <Button

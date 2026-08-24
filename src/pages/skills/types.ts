@@ -28,8 +28,7 @@ export interface AutoLinkSyncResult {
 export interface AutoLinkSettings {
   auto_link_personal_skills: boolean;
   personal_skills_dir: string;
-  normal_claude_skills_dir?: string;
-  openbase_codex_skills_dir: string;
-  openbase_claude_skills_dir?: string;
+  codex_skills_dir: string;
+  claude_skills_dir: string;
   sync: AutoLinkSyncResult | null;
 }

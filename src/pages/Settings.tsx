@@ -6,12 +6,10 @@ import {
   Radio,
   Settings2,
   ShieldCheck,
-  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import React, { useState, type ReactNode } from "react";
 import { AuthenticationSettings } from "./settings/AuthenticationSettings";
-import { AgentsGenerationSettings } from "./settings/AgentsGenerationSettings";
 import { BackendModelSettings } from "./settings/BackendModelSettings";
 import { CodingBackendSettings } from "./settings/CodingBackendSettings";
 import { DangerousConfirmationSettings } from "./settings/DangerousConfirmationSettings";
@@ -29,7 +27,6 @@ type SettingsSectionId =
   | "general"
   | "agents"
   | "voice"
-  | "automation"
   | "safety"
   | "advanced";
 
@@ -42,12 +39,6 @@ const SETTINGS_SECTIONS: Array<{
   { id: "general", label: "General", description: "Services and account", icon: Cog },
   { id: "agents", label: "Agents", description: "Backend and model", icon: Bot },
   { id: "voice", label: "Voice", description: "Dispatch and sharing", icon: Radio },
-  {
-    id: "automation",
-    label: "Automation",
-    description: "Generated instructions",
-    icon: Sparkles,
-  },
   {
     id: "safety",
     label: "Safety",
@@ -94,7 +85,6 @@ const Settings: React.FC = () => {
         />
       </>
     ),
-    automation: <AgentsGenerationSettings />,
     safety: <DangerousConfirmationSettings />,
     advanced: (
       <>

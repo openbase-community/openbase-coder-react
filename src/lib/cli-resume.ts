@@ -20,7 +20,7 @@ export const claudeCliResumeCommand = (
 ) => `cd ${shellQuote(directory)} && claude --resume ${shellQuote(backendSessionId)}`;
 
 export const codexCliResumeCommand = (directory: string, threadId: string) =>
-  `cd ${shellQuote(directory)} && CODEX_HOME=~/.openbase/codex_home codex resume ${shellQuote(threadId)}`;
+  `cd ${shellQuote(directory)} && codex resume ${shellQuote(threadId)}`;
 
 export const cliResumeCommand = (
   directory: string,

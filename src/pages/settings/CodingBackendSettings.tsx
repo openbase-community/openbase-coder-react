@@ -234,8 +234,8 @@ export const CodingBackendSettings: React.FC<Props> = ({
       );
       setMessage(
         claudeAuth.logged_in
-          ? "Claude auth synced. Openbase Claude Code auth is ready."
-          : "Claude auth synced, but Openbase Claude Code is still not logged in.",
+          ? "Claude auth verified. Claude Code is logged in."
+          : "Claude Code is not logged in. Run `claude login` in a terminal.",
       );
     } catch {
       setError("Unable to reach the local API.");
@@ -421,10 +421,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
                 Claude auth loggedIn:{" "}
                 {settings?.claude_auth?.logged_in ? "true" : "false"}
               </p>
-              <p>
-                {settings?.claude_auth?.command ??
-                  "openbase-coder claude sync-state"}
-              </p>
+              <p>{settings?.claude_auth?.command ?? "claude login"}</p>
             </div>
           ) : null}
           {showCodexPlugins ? (
@@ -585,14 +582,12 @@ export const CodingBackendSettings: React.FC<Props> = ({
                 void syncClaudeAuth();
               }}
               disabled={loading || saving || syncingClaudeAuth}
-              title={
-                settings?.claude_auth?.command ?? "openbase-coder claude sync-state"
-              }
+              title={settings?.claude_auth?.command ?? "claude login"}
             >
               <KeyRound
                 className={`h-3 w-3 ${syncingClaudeAuth ? "animate-pulse" : ""}`}
               />
-              {syncingClaudeAuth ? "Syncing…" : "Sync Claude auth"}
+              {syncingClaudeAuth ? "Checking…" : "Check Claude auth"}
             </Button>
           ) : null}
         </div>

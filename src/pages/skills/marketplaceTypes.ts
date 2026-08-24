@@ -1,8 +1,7 @@
 export const marketplaceScopeLabels = {
   home: "Personal Codex",
-  normal_claude: "Claude Code",
-  openbase_codex: "Openbase Codex",
-  openbase_claude: "Openbase Claude",
+  codex: "Codex",
+  claude: "Claude Code",
 } as const;
 
 export type MarketplaceScope = keyof typeof marketplaceScopeLabels;
