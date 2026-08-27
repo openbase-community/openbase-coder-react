@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -25,15 +26,22 @@ const MODEL_ROLES: Array<{
 }> = [
   {
     role: "dispatcher",
-    label: "Dispatcher model",
-    description: "Select the model alias used for dispatcher turns.",
+    label: "Dispatcher",
+    description:
+      "Backend and model for voice dispatch turns. Picking a model picks its engine.",
   },
   {
     role: "super_agents",
-    label: "Super Agents model",
-    description: "Select the model alias used for Super Agents turns.",
+    label: "Default super agent",
+    description:
+      "Backend and model for super agents when a launch doesn't name one.",
   },
 ];
+
+const ENGINE_LABELS: Record<string, string> = {
+  claude: "Claude Code",
+  codex: "Codex",
+};
 
 const emptyModels: Record<ModelRole, string> = {
   dispatcher: "",
@@ -44,8 +52,7 @@ export const BackendModelSettings: React.FC = () => {
   const [settings, setSettings] = useState<BackendModelSettingsResponse | null>(
     null,
   );
-  const [models, setModels] =
-    useState<Record<ModelRole, string>>(emptyModels);
+  const [models, setModels] = useState<Record<ModelRole, string>>(emptyModels);
   const [loading, setLoading] = useState(true);
   const [savingRole, setSavingRole] = useState<ModelRole | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -68,8 +75,9 @@ export const BackendModelSettings: React.FC = () => {
       const data = (await res.json()) as BackendModelSettingsResponse;
       setSettings(data);
       setModels({
-        dispatcher: data.models.dispatcher ?? "",
-        super_agents: data.models.super_agents ?? "",
+        dispatcher: data.roles?.dispatcher?.model ?? data.models.dispatcher ?? "",
+        super_agents:
+          data.roles?.super_agents?.model ?? data.models.super_agents ?? "",
       });
       setMessage(null);
       setError(null);
@@ -111,7 +119,7 @@ export const BackendModelSettings: React.FC = () => {
         setSettings(data);
         setModels((current) => ({
           ...current,
-          [role]: data.models[role] ?? "",
+          [role]: data.roles?.[role]?.model ?? data.models[role] ?? "",
         }));
         const roleLabel = MODEL_ROLES.find((entry) => entry.role === role)?.label;
         setMessage(`${roleLabel ?? "Model"} saved. ${data.restart_hint}`);
@@ -124,6 +132,7 @@ export const BackendModelSettings: React.FC = () => {
   );
 
   const options = settings?.options ?? [];
+  const engines = [...new Set(options.map((option) => option.engine))];
 
   return (
     <Panel>
@@ -132,12 +141,15 @@ export const BackendModelSettings: React.FC = () => {
           (option) => option.id === models[role],
         );
         const saving = savingRole === role;
+        const currentModel =
+          settings?.roles?.[role]?.model ?? settings?.models[role] ?? null;
+        const currentEngine = settings?.roles?.[role]?.engine ?? null;
         const canSave =
           Boolean(settings) &&
           Boolean(models[role].trim()) &&
           !loading &&
           savingRole === null &&
-          models[role].trim() !== settings?.models[role];
+          models[role].trim() !== currentModel;
 
         return (
           <div
@@ -151,7 +163,10 @@ export const BackendModelSettings: React.FC = () => {
               </p>
               {settings ? (
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  Current: {settings.effective[role]}
+                  Current: {currentModel ?? "backend default"}
+                  {currentEngine
+                    ? ` (${ENGINE_LABELS[currentEngine] ?? currentEngine})`
+                    : ""}
                 </p>
               ) : null}
               {selectedOption ? (
@@ -161,49 +176,45 @@ export const BackendModelSettings: React.FC = () => {
               ) : null}
             </div>
             <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-              {settings?.allows_custom ? (
-                <Input
-                  value={models[role]}
-                  onChange={(event) => {
-                    setModels((current) => ({
-                      ...current,
-                      [role]: event.target.value,
-                    }));
-                    setMessage(null);
-                    setError(null);
-                  }}
+              <Select
+                value={models[role]}
+                onValueChange={(value) => {
+                  setModels((current) => ({ ...current, [role]: value }));
+                  setMessage(null);
+                  setError(null);
+                }}
+                disabled={loading || savingRole !== null || options.length === 0}
+              >
+                <SelectTrigger
+                  className="h-8 min-w-0 text-[12px] sm:w-64"
                   aria-label={label}
-                  placeholder={loading ? "Loading..." : "Model alias"}
-                  className="h-8 min-w-0 text-[12px] sm:w-56"
-                  disabled={loading || savingRole !== null}
-                />
-              ) : (
-                <Select
-                  value={models[role]}
-                  onValueChange={(value) => {
-                    setModels((current) => ({ ...current, [role]: value }));
-                    setMessage(null);
-                    setError(null);
-                  }}
-                  disabled={loading || savingRole !== null || options.length === 0}
                 >
-                  <SelectTrigger
-                    className="h-8 min-w-0 text-[12px] sm:w-56"
-                    aria-label={label}
-                  >
-                    <SelectValue
-                      placeholder={loading ? "Loading..." : "Select model"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {options.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+                  <SelectValue
+                    placeholder={loading ? "Loading..." : "Select model"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {engines.map((engine) => (
+                    <SelectGroup key={engine}>
+                      <SelectLabel>
+                        {ENGINE_LABELS[engine] ?? engine}
+                      </SelectLabel>
+                      {options
+                        .filter((option) => option.engine === engine)
+                        .map((option) => (
+                          <SelectItem
+                            key={option.id}
+                            value={option.id}
+                            disabled={!option.available}
+                          >
+                            {option.label}
+                            {option.available ? "" : " (unavailable on Cloud)"}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 variant="outline"
                 size="sm"

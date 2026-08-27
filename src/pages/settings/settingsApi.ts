@@ -55,9 +55,17 @@ export type ClaudeAuthSettingsResponse = {
   verified?: boolean;
 };
 
+export type BackendLocationOption = {
+  id: "local" | "cloud";
+  label: string;
+  description: string;
+};
+
 export type CodingBackendSettingsResponse = {
   backend: string;
   configured_backend?: string;
+  location: "local" | "cloud";
+  location_options: BackendLocationOption[];
   codex_provider?: string;
   backend_note?: string | null;
   claude_auth?: ClaudeAuthSettingsResponse;
@@ -103,10 +111,22 @@ export type BackendModelOption = {
   id: string;
   label: string;
   description: string;
+  engine: string;
+  available: boolean;
+};
+
+export type BackendModelRoleEntry = {
+  model: string | null;
+  engine: string | null;
 };
 
 export type BackendModelSettingsResponse = {
   backend: string;
+  location: "local" | "cloud";
+  roles: {
+    dispatcher: BackendModelRoleEntry;
+    super_agents: BackendModelRoleEntry;
+  };
   models: {
     dispatcher: string | null;
     super_agents: string | null;

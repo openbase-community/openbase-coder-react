@@ -42,7 +42,9 @@ export const CodingBackendSettings: React.FC<Props> = ({
   const [settings, setSettings] = useState<CodingBackendSettingsResponse | null>(
     null,
   );
-  const [selectedBackend, setSelectedBackend] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState<
+    "local" | "cloud" | ""
+  >("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncingClaudeAuth, setSyncingClaudeAuth] = useState(false);
@@ -79,15 +81,10 @@ export const CodingBackendSettings: React.FC<Props> = ({
         return;
       }
       const data = (await res.json()) as CodingBackendSettingsResponse;
-      const supportedIds = new Set(data.supported_backends.map((option) => option.id));
       setSettings(data);
-      setSelectedBackend(supportedIds.has(data.backend) ? data.backend : "");
+      setSelectedLocation(data.location ?? "local");
       setMessage(null);
-      setError(
-        supportedIds.has(data.backend)
-          ? null
-          : `Unsupported current backend: ${data.backend}`,
-      );
+      setError(null);
     } catch {
       setError("Unable to reach the local API.");
     }
@@ -144,14 +141,14 @@ export const CodingBackendSettings: React.FC<Props> = ({
 
   const selectedOption = useMemo(
     () =>
-      settings?.supported_backends.find(
-        (option) => option.id === selectedBackend,
+      settings?.location_options.find(
+        (option) => option.id === selectedLocation,
       ) ?? null,
-    [selectedBackend, settings],
+    [selectedLocation, settings],
   );
 
   const saveBackend = useCallback(async () => {
-    if (!selectedBackend) {
+    if (!selectedLocation) {
       return;
     }
     setSaving(true);
@@ -161,7 +158,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
     try {
       const res = await apiFetch("/api/settings/coding-backend/", {
         method: "PUT",
-        body: JSON.stringify({ backend: selectedBackend }),
+        body: JSON.stringify({ location: selectedLocation }),
       });
       if (!res.ok) {
         setError(
@@ -208,7 +205,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
       );
     }
     setSaving(false);
-  }, [onRestartScheduled, selectedBackend]);
+  }, [onRestartScheduled, selectedLocation]);
 
   const syncClaudeAuth = useCallback(async () => {
     setSyncingClaudeAuth(true);
@@ -356,18 +353,21 @@ export const CodingBackendSettings: React.FC<Props> = ({
     setSchedulingPluginRestart(false);
   }, [onRestartScheduled]);
 
-  const currentOption = settings?.supported_backends.find(
-    (option) => option.id === settings.backend,
+  const currentLocation = settings?.location ?? "local";
+  const currentOption = settings?.location_options.find(
+    (option) => option.id === currentLocation,
   );
   const configuredBackend =
     settings?.configured_backend ?? settings?.backend ?? "";
-  const showClaudeAuth = configuredBackend === "claude_code";
-  const showCodexPlugins = selectedBackend === "codex";
-  const showClaudePlugins = selectedBackend === "claude_code";
+  const isLocal = currentLocation === "local";
+  // Local runs both engines, so both engines' auth and plugin surfaces apply.
+  const showClaudeAuth = isLocal || configuredBackend !== "codex";
+  const showCodexPlugins = isLocal;
+  const showClaudePlugins = isLocal;
   const canSave =
-    Boolean(selectedBackend) &&
+    Boolean(selectedLocation) &&
     Boolean(settings) &&
-    selectedBackend !== configuredBackend &&
+    selectedLocation !== currentLocation &&
     !loading &&
     !saving;
   const visibleCodexPlugins = useMemo(
@@ -395,14 +395,16 @@ export const CodingBackendSettings: React.FC<Props> = ({
       <div className="flex flex-col gap-3 border-b border-border px-3 py-2.5 lg:flex-row lg:items-center">
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
-            Coding backend
+            Where agents run
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Select the backend used for Super Agents coding sessions.
+            Local CLI runs both engines on this machine — each launch&apos;s
+            model picks Claude Code or Codex. Openbase Cloud runs Claude Code
+            with your Openbase login.
           </p>
           {settings ? (
             <p className="mt-1 truncate text-[11px] text-muted-foreground">
-              Current: {currentOption?.label ?? settings.backend}
+              Current: {currentOption?.label ?? currentLocation}
             </p>
           ) : null}
           {settings?.backend_note ? (
@@ -410,9 +412,9 @@ export const CodingBackendSettings: React.FC<Props> = ({
               {settings.backend_note}
             </p>
           ) : null}
-          {selectedOption ? (
+          {selectedOption && selectedOption.id !== currentLocation ? (
             <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-              {selectedOption.summary} {selectedOption.description}
+              {selectedOption.description}
             </p>
           ) : null}
           {showClaudeAuth ? (
@@ -521,9 +523,9 @@ export const CodingBackendSettings: React.FC<Props> = ({
         </div>
         <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
           <Select
-            value={selectedBackend}
+            value={selectedLocation}
             onValueChange={(value) => {
-              setSelectedBackend(value);
+              setSelectedLocation(value as "local" | "cloud");
               setMessage(null);
               setError(null);
             }}
@@ -531,11 +533,11 @@ export const CodingBackendSettings: React.FC<Props> = ({
           >
             <SelectTrigger className="h-8 min-w-0 text-[12px] sm:w-56">
               <SelectValue
-                placeholder={loading ? "Loading…" : "Select backend"}
+                placeholder={loading ? "Loading…" : "Select location"}
               />
             </SelectTrigger>
             <SelectContent>
-              {settings?.supported_backends.map((option) => (
+              {settings?.location_options.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
                   {option.label}
                 </SelectItem>
@@ -595,8 +597,8 @@ export const CodingBackendSettings: React.FC<Props> = ({
 
       <CodingBackendChangeDialog
         open={confirmationOpen}
-        currentLabel={currentOption?.label ?? configuredBackend}
-        selectedLabel={selectedOption?.label ?? selectedBackend}
+        currentLabel={currentOption?.label ?? currentLocation}
+        selectedLabel={selectedOption?.label ?? selectedLocation}
         saving={saving}
         canConfirm={canSave}
         onOpenChange={setConfirmationOpen}
