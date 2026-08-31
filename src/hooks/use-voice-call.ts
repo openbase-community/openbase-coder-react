@@ -5,6 +5,7 @@ import {
   getLiveKitServerUrl,
   LIVEKIT_DISPATCH_AGENT_NAME,
 } from "@/lib/livekit-call";
+import { trackProductAnalytics } from "@/lib/product-analytics";
 import {
   Room,
   RoomEvent,
@@ -71,6 +72,28 @@ export function useVoiceCall() {
   const [error, setError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
   const audioContainerRef = useRef<HTMLDivElement | null>(null);
+  const analyticsCallRef = useRef<{
+    callId: string;
+    connectedAt: number | null;
+    ended: boolean;
+    startedAt: number;
+  } | null>(null);
+
+  const trackCallEnded = useCallback(
+    (outcome: "cancelled" | "completed" | "failed", errorCode?: string) => {
+      const call = analyticsCallRef.current;
+      if (!call || call.ended) return;
+      call.ended = true;
+      trackProductAnalytics("voice_call_ended", {
+        call_id: call.callId,
+        connected: call.connectedAt !== null,
+        duration_ms: Math.max(0, Date.now() - call.startedAt),
+        error_code: errorCode,
+        outcome,
+      });
+    },
+    [],
+  );
 
   const teardown = useCallback(() => {
     roomRef.current = null;
@@ -84,12 +107,14 @@ export function useVoiceCall() {
   }, []);
 
   const end = useCallback(() => {
+    const call = analyticsCallRef.current;
+    trackCallEnded(call?.connectedAt ? "completed" : "cancelled");
     const room = roomRef.current;
     if (room) {
       void room.disconnect();
     }
     teardown();
-  }, [teardown]);
+  }, [teardown, trackCallEnded]);
 
   useEffect(() => end, [end]);
 
@@ -97,7 +122,20 @@ export function useVoiceCall() {
     if (roomRef.current) return;
     setError(null);
 
+    const callId = crypto.randomUUID();
+    analyticsCallRef.current = {
+      callId,
+      connectedAt: null,
+      ended: false,
+      startedAt: Date.now(),
+    };
+    trackProductAnalytics("voice_call_started", {
+      call_id: callId,
+      direction: "outbound",
+    });
+
     if (!navigator.mediaDevices?.getUserMedia) {
+      trackCallEnded("failed", "microphone_unavailable");
       setError(
         "Microphone capture is unavailable here. Open the console over " +
           "localhost or HTTPS (or use the desktop app).",
@@ -175,7 +213,11 @@ export function useVoiceCall() {
           }
         })
         .on(RoomEvent.Disconnected, () => {
-          if (roomRef.current === room) teardown();
+          if (roomRef.current === room) {
+            const call = analyticsCallRef.current;
+            trackCallEnded(call?.connectedAt ? "completed" : "failed");
+            teardown();
+          }
         });
 
       await room.connect(getLiveKitServerUrl(), payload.token);
@@ -198,7 +240,16 @@ export function useVoiceCall() {
         if (state) setAgentState(state);
       }
       setStatus("connected");
+      const call = analyticsCallRef.current;
+      if (call && !call.ended) {
+        call.connectedAt = Date.now();
+        trackProductAnalytics("voice_call_connected", {
+          call_id: call.callId,
+          connect_duration_ms: Math.max(0, call.connectedAt - call.startedAt),
+        });
+      }
     } catch (caughtError) {
+      trackCallEnded("failed", "call_start_failed");
       teardown();
       setError(
         caughtError instanceof Error
@@ -206,7 +257,7 @@ export function useVoiceCall() {
           : "Unable to start the voice call.",
       );
     }
-  }, [teardown]);
+  }, [teardown, trackCallEnded]);
 
   const toggleMute = useCallback(async () => {
     const room = roomRef.current;

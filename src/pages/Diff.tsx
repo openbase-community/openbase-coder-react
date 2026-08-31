@@ -3,11 +3,12 @@ import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { useAuth } from "@/contexts/auth";
 import { projectName } from "@/lib/project-display";
+import { trackProductAnalytics } from "@/lib/product-analytics";
 import {
   DiffViewer,
   type Repository,
 } from "multi-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
 const DiffContent = ({ mobile }: { mobile?: boolean }) => {
@@ -16,6 +17,7 @@ const DiffContent = ({ mobile }: { mobile?: boolean }) => {
   const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const lastReviewedTargetRef = useRef<string | null>(null);
 
   const projectPath = searchParams.get("path");
 
@@ -33,6 +35,11 @@ const DiffContent = ({ mobile }: { mobile?: boolean }) => {
       const data = await res.json();
       setRepositories(data.repositories);
       setError(null);
+      const reviewTarget = projectPath ?? "all-projects";
+      if (lastReviewedTargetRef.current !== reviewTarget) {
+        lastReviewedTargetRef.current = reviewTarget;
+        trackProductAnalytics("diff_reviewed", { action: "viewed" });
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to reach the local API.",

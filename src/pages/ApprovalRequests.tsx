@@ -11,6 +11,7 @@ import { useApprovalRequestsWebSocket } from "@/hooks/use-approval-requests-webs
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import type { ApprovalRequest } from "@/lib/approval-requests";
+import { trackProductAnalytics } from "@/lib/product-analytics";
 import { Check, ExternalLink, ShieldAlert, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -111,6 +112,16 @@ const ApprovalRequests = () => {
           await extractErrorMessage(res, `Unable to ${decision} request.`),
         );
       }
+      const receivedAt = request.received_at
+        ? new Date(request.received_at).getTime()
+        : Number.NaN;
+      trackProductAnalytics("approval_resolved", {
+        decision,
+        request_type: request.params?.source === "skill" ? "skill" : "tool",
+        response_duration_ms: Number.isFinite(receivedAt)
+          ? Math.max(0, Date.now() - receivedAt)
+          : undefined,
+      });
       setRequests((prev) => prev.filter((item) => String(item.id) !== requestId));
       toast.success(decision === "accept" ? "Approved" : "Denied");
       void fetchRequests();
