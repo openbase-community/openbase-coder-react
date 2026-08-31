@@ -6,7 +6,7 @@ import {
   useContext,
   type ReactNode,
 } from "react";
-import { getBackendUrl } from "@/lib/runtime-config";
+import { apiFetch } from "@/lib/api";
 export type { PluginConsolePage } from "./types/plugins";
 import type { PluginConsolePage } from "./types/plugins";
 
@@ -25,7 +25,7 @@ export function PluginRegistryProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(getBackendUrl("/api/plugins/console-registry/"))
+    apiFetch("/api/plugins/console-registry/")
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
         if (cancelled || !payload) {

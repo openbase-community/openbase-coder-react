@@ -1,9 +1,10 @@
 import { getBackendUrl } from "@/lib/runtime-config";
 
-const LOCAL_REFRESH_URL = "/api/auth/refresh-jwt/";
 const LOCAL_SESSION_URL = "/api/auth/session/";
 const LOCAL_LOGOUT_URL = "/api/auth/logout/";
 const REFRESH_SKEW_MS = 60_000;
+const LOCAL_TOKEN_FRAGMENT_KEY = "openbase-local-token";
+const LOCAL_TOKEN_SESSION_KEY = "openbase.local-api-token";
 
 declare global {
   interface Window {
@@ -14,16 +15,12 @@ declare global {
 }
 
 type LocalAuthResponse = {
-  access_token?: string;
-  access_token_expires_in?: number;
-  expires_at?: number;
   logged_in?: boolean;
   detail?: string;
 };
 
 let accessToken: string | null = null;
 let accessTokenExpiresAt = 0;
-let refreshPromise: Promise<string | null> | null = null;
 const listeners = new Set<() => void>();
 
 function emitChange() {
@@ -78,22 +75,25 @@ function getTokenExpiryMs(token: string) {
   }
 }
 
-function applyToken(payload: LocalAuthResponse | null) {
-  const nextToken = payload?.access_token;
-  if (!nextToken) {
-    clearStoredAuth();
-    return null;
+function consumeLaunchCapability() {
+  const fragment = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const params = new URLSearchParams(fragment);
+  const token = params.get(LOCAL_TOKEN_FRAGMENT_KEY)?.trim() ?? "";
+  if (!token) {
+    return window.sessionStorage.getItem(LOCAL_TOKEN_SESSION_KEY);
   }
 
-  let nextExpiresAt = 0;
-  if (typeof payload?.expires_at === "number") {
-    nextExpiresAt = payload.expires_at * 1000;
-  } else {
-    const expiresIn = payload?.access_token_expires_in ?? 300;
-    nextExpiresAt = Date.now() + expiresIn * 1000;
-  }
-  updateStoredAuth(nextToken, nextExpiresAt);
-  return nextToken;
+  window.sessionStorage.setItem(LOCAL_TOKEN_SESSION_KEY, token);
+  params.delete(LOCAL_TOKEN_FRAGMENT_KEY);
+  const remaining = params.toString();
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${window.location.search}${remaining ? `#${remaining}` : ""}`,
+  );
+  return token;
 }
 
 async function getNativeAccessToken() {
@@ -109,11 +109,10 @@ async function getNativeAccessToken() {
       return null;
     }
 
-    const expiresAt = getTokenExpiryMs(token);
+    const expiresAt = getTokenExpiryMs(token) || Number.POSITIVE_INFINITY;
     if (expiresAt && Date.now() + REFRESH_SKEW_MS >= expiresAt) {
-      // The bridge handed back an expired (or nearly expired) token. Fall
-      // through to the local refresh endpoint instead of looping 401/403s
-      // on a token we already know is dead.
+      // The bridge handed back an expired (or nearly expired) cloud token.
+      // Treat it as unavailable instead of looping 401/403s.
       return null;
     }
     updateStoredAuth(token, expiresAt);
@@ -127,73 +126,29 @@ async function fetchLocal(path: string, init?: RequestInit) {
   return fetch(getBackendUrl(path), init);
 }
 
-async function refreshAccessToken() {
-  if (refreshPromise) {
-    return refreshPromise;
-  }
-
-  refreshPromise = (async () => {
-    const response = await fetchLocal(LOCAL_REFRESH_URL, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-      },
-    });
-    const payload = await parseJson(response);
-
-    if (!response.ok) {
-      // Only a 401 means the CLI's refresh token is gone for good. Network
-      // blips and 5xx responses are transient: keep the current token so a
-      // hiccup does not bounce the user to the login screen.
-      if (response.status === 401) {
-        clearStoredAuth();
-      }
-      throw new Error(payload?.detail || "Unable to refresh local JWT.");
-    }
-
-    return applyToken(payload);
-  })();
-
-  try {
-    return await refreshPromise;
-  } finally {
-    refreshPromise = null;
-  }
-}
-
 export async function getValidAccessToken() {
+  if (!shouldRefresh()) {
+    return accessToken;
+  }
+
   const nativeToken = await getNativeAccessToken();
   if (nativeToken) {
     return nativeToken;
   }
 
-  if (!shouldRefresh()) {
-    return accessToken;
+  const launchCapability = consumeLaunchCapability();
+  if (launchCapability) {
+    updateStoredAuth(launchCapability, Number.POSITIVE_INFINITY);
+    return launchCapability;
   }
-
-  try {
-    return await refreshAccessToken();
-  } catch {
-    // On transient failures the stored token survives and may still be
-    // valid for a few minutes; only a definitive 401 cleared it.
-    return accessToken;
-  }
+  return shouldRefresh() ? null : accessToken;
 }
 
 export async function getLocalAuthSession() {
-  const nativeToken = await getNativeAccessToken();
-  if (nativeToken) {
-    return {
-      ok: true,
-      loggedIn: true,
-    };
-  }
-
-  const response = await fetchLocal(LOCAL_SESSION_URL, {
-    headers: {
-      Accept: "application/json",
-    },
-  });
+  const token = await getValidAccessToken();
+  const headers = new Headers({ Accept: "application/json" });
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const response = await fetchLocal(LOCAL_SESSION_URL, { headers });
   const payload = await parseJson(response);
   return {
     ok: response.ok,
@@ -203,13 +158,15 @@ export async function getLocalAuthSession() {
 
 export async function logoutFromOpenbase() {
   try {
+    const token = await getValidAccessToken();
+    const headers = new Headers({ Accept: "application/json" });
+    if (token) headers.set("Authorization", `Bearer ${token}`);
     await fetchLocal(LOCAL_LOGOUT_URL, {
       method: "POST",
-      headers: {
-        Accept: "application/json",
-      },
+      headers,
     });
   } finally {
+    window.sessionStorage.removeItem(LOCAL_TOKEN_SESSION_KEY);
     clearStoredAuth();
   }
 }
