@@ -172,7 +172,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
       }
       const data = (await res.json()) as CodingBackendSettingsResponse;
       setSettings(data);
-      setSelectedBackend(data.backend);
+      setSelectedLocation(data.location);
       backendSaved = true;
 
       if (data.restart_required) {
