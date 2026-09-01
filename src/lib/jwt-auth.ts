@@ -1,4 +1,4 @@
-import { getBackendUrl } from "@/lib/runtime-config";
+import { getBackendUrl } from "./runtime-config";
 
 const LOCAL_SESSION_URL = "/api/auth/session/";
 const LOCAL_LOGOUT_URL = "/api/auth/logout/";
@@ -95,6 +95,21 @@ function consumeLaunchCapability() {
   );
   return token;
 }
+
+function initializeLaunchCapability() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const token = consumeLaunchCapability();
+  if (token) {
+    updateStoredAuth(token, Number.POSITIVE_INFINITY);
+  }
+}
+
+// BrowserRouter can replace the initial `/` location before React effects run,
+// which also drops the capability fragment. Consume it while this module is
+// loading so routing never gets a chance to erase the authenticated handoff.
+initializeLaunchCapability();
 
 async function getNativeAccessToken() {
   const bridge = window.__openbaseNativeAuth;
