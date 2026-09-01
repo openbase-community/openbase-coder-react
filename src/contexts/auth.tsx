@@ -65,7 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const session = await getLocalAuthSession();
     if (!session.loggedIn) {
       setToken(null);
-      throw new Error("Login required. Run 'openbase-coder login' first.");
+      throw new Error(
+        "This tab is not authenticated. Run 'openbase-coder auth open-console' in Terminal.",
+      );
     }
     await syncToken();
   }, [syncToken]);
