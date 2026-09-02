@@ -1,3 +1,32 @@
+export type LoopTriggerFilter = {
+  path: string;
+  op:
+    | "equals"
+    | "notEquals"
+    | "contains"
+    | "startsWith"
+    | "endsWith"
+    | "exists"
+    | "regex";
+  value?: unknown;
+};
+
+export type LoopTrigger = {
+  id: string;
+  type?: string | null;
+  enabled?: boolean | null;
+  description?: string | null;
+  token?: string | null;
+  hmacHeader?: string | null;
+  senderPath?: string | null;
+  senderAllowlist?: string[] | null;
+  filters?: LoopTriggerFilter[] | null;
+  createdAt?: string | null;
+  lastEventAt?: string | null;
+  lastEventId?: string | null;
+  eventCount?: number | null;
+};
+
 export type Routine = {
   name: string;
   kind?: "agent" | "command" | null;
@@ -24,6 +53,7 @@ export type Routine = {
   lastTurnId?: string | null;
   lastStatus?: string | null;
   lastError?: string | null;
+  triggers?: LoopTrigger[] | null;
   updatedAt?: string | null;
 };
 

@@ -27,7 +27,7 @@ import {
   extractError,
   formatDateTime,
   loopBodyText,
-  scheduleLabel,
+  whenLabel,
 } from "./helpers";
 import { defaultForm, type Routine, type RoutinesResponse } from "./types";
 
@@ -275,7 +275,7 @@ const Routines = () => {
                       {routine.kind ?? "agent"}
                     </span>
                     <span className="font-mono text-[10.5px] text-muted-foreground">
-                      {scheduleLabel(routine)}
+                      when {whenLabel(routine)}
                     </span>
                   </div>
                   <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10.5px] text-muted-foreground/75">
@@ -295,6 +295,7 @@ const Routines = () => {
                     {routine.reasoningEffort ? <span>effort {routine.reasoningEffort}</span> : null}
                   </div>
                   <p className="mt-2 line-clamp-2 font-mono text-[12px] text-muted-foreground">
+                    <span className="text-muted-foreground/60">then </span>
                     {loopBodyText(routine)}
                   </p>
                   {routine.lastError ? (
