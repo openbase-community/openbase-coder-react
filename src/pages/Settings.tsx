@@ -3,12 +3,15 @@ import { getRuntimeShell } from "@/lib/runtime-config";
 import {
   Bot,
   Cog,
+  LayoutPanelLeft,
   Radio,
   Settings2,
   ShieldCheck,
+  UserRound,
   type LucideIcon,
 } from "lucide-react";
-import React, { useState, type ReactNode } from "react";
+import React, { type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AuthenticationSettings } from "./settings/AuthenticationSettings";
 import { BackendModelSettings } from "./settings/BackendModelSettings";
 import { CodingBackendSettings } from "./settings/CodingBackendSettings";
@@ -24,47 +27,108 @@ import { SidebarItemsSettings } from "./settings/SidebarItemsSettings";
 import { useOpenbaseServices } from "./settings/useOpenbaseServices";
 
 type SettingsSectionId =
-  | "general"
+  | "account"
+  | "machine"
   | "agents"
   | "voice"
+  | "interface"
   | "safety"
   | "advanced";
 
+// Sections follow the user's mental model, not the implementation's: who I
+// am, this machine, how agents behave, voice, how the console looks, what
+// needs my approval, and expert escape hatches last.
 const SETTINGS_SECTIONS: Array<{
   id: SettingsSectionId;
   label: string;
   description: string;
   icon: LucideIcon;
 }> = [
-  { id: "general", label: "General", description: "Services and account", icon: Cog },
-  { id: "agents", label: "Agents", description: "Backend and model", icon: Bot },
-  { id: "voice", label: "Voice", description: "Dispatch and sharing", icon: Radio },
+  {
+    id: "account",
+    label: "Account",
+    description: "Sign-in and plan",
+    icon: UserRound,
+  },
+  {
+    id: "machine",
+    label: "This Machine",
+    description: "Local Openbase services",
+    icon: Cog,
+  },
+  {
+    id: "agents",
+    label: "Agents",
+    description: "Backend, model, and effort",
+    icon: Bot,
+  },
+  {
+    id: "voice",
+    label: "Voice",
+    description: "Calls and screen sharing",
+    icon: Radio,
+  },
+  {
+    id: "interface",
+    label: "Interface",
+    description: "Console layout",
+    icon: LayoutPanelLeft,
+  },
   {
     id: "safety",
     label: "Safety",
-    description: "Command confirmation",
+    description: "Approval requirements",
     icon: ShieldCheck,
   },
   {
     id: "advanced",
     label: "Advanced",
-    description: "Environment and tools",
+    description: "Environment and overrides",
     icon: Settings2,
   },
 ];
 
+const DEFAULT_SECTION: SettingsSectionId = "account";
+
+// Pre-redesign section ids that may live in bookmarks or docs links.
+const LEGACY_SECTION_IDS: Record<string, SettingsSectionId> = {
+  general: "machine",
+};
+
+function resolveSection(raw: string | null): SettingsSectionId {
+  if (raw && SETTINGS_SECTIONS.some((item) => item.id === raw)) {
+    return raw as SettingsSectionId;
+  }
+  if (raw && raw in LEGACY_SECTION_IDS) {
+    return LEGACY_SECTION_IDS[raw];
+  }
+  return DEFAULT_SECTION;
+}
+
 const Settings: React.FC = () => {
   const openbaseServices = useOpenbaseServices();
-  const [section, setSection] = useState<SettingsSectionId>("general");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const section = resolveSection(searchParams.get("section"));
   const isNativeShell = getRuntimeShell() === "electron";
 
+  const setSection = (next: SettingsSectionId) => {
+    setSearchParams(
+      (params) => {
+        const updated = new URLSearchParams(params);
+        if (next === DEFAULT_SECTION) {
+          updated.delete("section");
+        } else {
+          updated.set("section", next);
+        }
+        return updated;
+      },
+      { replace: true },
+    );
+  };
+
   const sectionContent: Record<SettingsSectionId, ReactNode> = {
-    general: (
-      <>
-        <OpenbaseServicesSettings controller={openbaseServices} />
-        <AuthenticationSettings />
-      </>
-    ),
+    account: <AuthenticationSettings />,
+    machine: <OpenbaseServicesSettings controller={openbaseServices} />,
     agents: (
       <>
         <CodingBackendSettings
@@ -85,12 +149,12 @@ const Settings: React.FC = () => {
         />
       </>
     ),
+    interface: <SidebarItemsSettings />,
     safety: <DangerousConfirmationSettings />,
     advanced: (
       <>
-        <SidebarItemsSettings />
-        <IgnoredLaunchctlSettings />
         <EnvSettings />
+        <IgnoredLaunchctlSettings />
       </>
     ),
   };
@@ -105,8 +169,8 @@ const Settings: React.FC = () => {
             Settings
           </h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Configure this machine, choose how agents work, and control what
-            requires approval.
+            Configure your account, this machine, and how agents work — and
+            control what requires approval.
           </p>
         </div>
 
