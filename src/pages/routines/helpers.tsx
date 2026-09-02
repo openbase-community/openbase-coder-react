@@ -32,6 +32,15 @@ export function loopBodyText(routine: Routine): string {
   return routine.kind === "command" ? routine.command || "" : routine.prompt;
 }
 
+export function whenLabel(routine: Routine): string {
+  const parts = [scheduleLabel(routine)];
+  const triggerCount = routine.triggers?.length ?? 0;
+  if (triggerCount > 0) {
+    parts.push(`${triggerCount} webhook trigger${triggerCount === 1 ? "" : "s"}`);
+  }
+  return parts.join(" · ");
+}
+
 export async function extractError(res: Response, fallback: string): Promise<string> {
   const body = await res.json().catch(() => ({}));
   return body.error || body.detail || fallback;

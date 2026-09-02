@@ -14,8 +14,9 @@ import {
   fieldLabelClass,
   formatDateTime,
   loopBodyText,
-  scheduleLabel,
+  whenLabel,
 } from "./helpers";
+import TriggersPanel from "./TriggersPanel";
 import type { Routine, RoutineResponse } from "./types";
 
 export const RoutineDetail = () => {
@@ -134,7 +135,7 @@ export const RoutineDetail = () => {
             </h1>
             {routine ? (
               <p className="mt-0.5 font-mono text-[12px] text-muted-foreground">
-                {routine.kind ?? "agent"} · {scheduleLabel(routine)}
+                {routine.kind ?? "agent"} · when {whenLabel(routine)}
               </p>
             ) : null}
           </div>
@@ -218,6 +219,8 @@ export const RoutineDetail = () => {
                 </div>
               ) : null}
 
+              <TriggersPanel routine={routine} onChanged={() => void fetchRoutine()} />
+
               {routine.lastError ? (
                 <ErrorBanner>
                   {routine.lastError}
@@ -230,7 +233,7 @@ export const RoutineDetail = () => {
                   {routine.enabled ? "enabled" : "disabled"}
                 </DetailField>
                 <DetailField label="Kind">{routine.kind ?? "agent"}</DetailField>
-                <DetailField label="Schedule">{scheduleLabel(routine)}</DetailField>
+                <DetailField label="When">{whenLabel(routine)}</DetailField>
                 <DetailField label="Next run">
                   {formatDateTime(routine.nextRunAt)}
                 </DetailField>
