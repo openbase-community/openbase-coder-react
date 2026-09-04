@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
+import { LoaderCircle } from "lucide-react";
 import { AuthProvider, useAuth } from "@/contexts/auth";
 import {
   getBackendBaseUrl,
@@ -40,16 +41,25 @@ import Status from "./pages/Status";
 import ToolDetail from "./pages/ToolDetail";
 import Tools from "./pages/Tools";
 
+function AuthLoadingScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center gap-2 text-sm font-medium text-muted-foreground">
+      <LoaderCircle className="h-4 w-4 animate-spin" />
+      Loading…
+    </div>
+  );
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
-  if (isLoading) return null;
+  if (isLoading) return <AuthLoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function AnonymousRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
-  if (isLoading) return null;
+  if (isLoading) return <AuthLoadingScreen />;
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
