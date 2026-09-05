@@ -1,0 +1,24 @@
+name: Public hygiene
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Operational reports are workspace-local and must never be tracked in
+      # this public repository. Tip-only by intent: historical occurrences on
+      # old branches were accepted without a history rewrite; this guard
+      # prevents re-introduction.
+      - name: No private paths tracked
+        run: |
+          hits=$(git ls-files -- '.reports' '**/.reports/**')
+          if [ -n "$hits" ]; then
+            echo "Private material must not be tracked in this public repository:" >&2
+            echo "$hits" >&2
+            exit 1
+          fi
