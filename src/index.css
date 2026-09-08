@@ -158,6 +158,19 @@
     text-wrap: balance;
   }
 
+  /* Cmd/Ctrl+F find-in-page match highlights (CSS Custom Highlight API,
+     driven by components/FindInPageBar). Inactive matches get a soft amber
+     wash; the active match is a stronger amber to stand out while stepping. */
+  ::highlight(ob-find) {
+    background-color: hsl(45 93% 58% / 0.35);
+    color: inherit;
+  }
+
+  ::highlight(ob-find-active) {
+    background-color: hsl(38 95% 55% / 0.85);
+    color: hsl(222 84% 5%);
+  }
+
   /* Subtle blue-white wash behind the shared app shell. Restrained: a soft
      gradient only, no heavy glass or noise, so page content stays crisp. */
   .ob-app-shell {

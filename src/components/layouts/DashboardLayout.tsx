@@ -1,3 +1,4 @@
+import FindInPageBar from "@/components/FindInPageBar";
 import HealthWarningsBanner from "@/components/HealthWarningsBanner";
 import UserProfile from "@/components/UserProfile";
 import dashboardWordmarkUrl from "@/assets/openbase-dashboard-wordmark.png";
@@ -267,6 +268,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             <UserProfile />
           </header>
           <HealthWarningsBanner />
+          <FindInPageBar />
           <main
             id="openbase-main"
             className={
