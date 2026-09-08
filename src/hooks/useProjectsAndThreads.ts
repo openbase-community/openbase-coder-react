@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { THREAD_LIST_REFRESH_INTERVAL_MS } from "@/lib/polling";
@@ -22,6 +22,8 @@ export const useProjectsAndThreads = () => {
   const [loadingMoreProjects, setLoadingMoreProjects] = useState(false);
   const [threadsError, setThreadsError] = useState<string | null>(null);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const threadPagination = useRef({ pages: 1, request: 0, loadingMore: false });
+  const projectPagination = useRef({ pages: 1, request: 0, loadingMore: false });
 
   const toErrorMessage = (err: unknown) =>
     err instanceof Error ? err.message : "Unable to reach the local API.";
@@ -62,30 +64,67 @@ export const useProjectsAndThreads = () => {
   );
 
   const fetchThreads = useCallback(async () => {
+    const pagination = threadPagination.current;
+    if (pagination.loadingMore) return;
+    const request = ++pagination.request;
     try {
-      const page = await fetchThreadPage(apiFetch);
-      setThreads(page.threads);
+      let page = await fetchThreadPage(apiFetch);
+      const items = [...page.threads];
+      let pages = 1;
+      while (
+        page.next &&
+        pages < pagination.pages &&
+        request === pagination.request
+      ) {
+        page = await fetchThreadPage(apiFetch, page.next);
+        items.push(...page.threads);
+        pages += 1;
+      }
+      if (request !== pagination.request) return;
+      pagination.pages = pages;
+      setThreads([
+        ...new Map(items.map((thread) => [thread.thread_id, thread])).values(),
+      ]);
       setTotalThreadCount(page.count);
       setNextThreadsUrl(page.next);
       setThreadsError(null);
     } catch (err) {
       // Runs on an interval, so surface via a persistent inline error state.
-      setThreadsError(toErrorMessage(err));
+      if (request === pagination.request) setThreadsError(toErrorMessage(err));
     } finally {
       setThreadsLoading(false);
     }
   }, []);
 
   const fetchProjects = useCallback(async () => {
+    const pagination = projectPagination.current;
+    if (pagination.loadingMore) return;
+    const request = ++pagination.request;
     try {
-      const page = await fetchProjectPage(apiFetch);
-      setProjects(page.projects);
+      let page = await fetchProjectPage(apiFetch);
+      const items = [...page.projects];
+      let pages = 1;
+      while (
+        page.next &&
+        pages < pagination.pages &&
+        request === pagination.request
+      ) {
+        page = await fetchProjectPage(apiFetch, page.next);
+        items.push(...page.projects);
+        pages += 1;
+      }
+      if (request !== pagination.request) return;
+      pagination.pages = pages;
+      const projects = [
+        ...new Map(items.map((project) => [project.path, project])).values(),
+      ];
+      setProjects(projects);
       setTotalProjectCount(page.count);
       setNextProjectsUrl(page.next);
       setProjectsError(null);
-      void refreshProjectStatuses(page.projects);
+      void refreshProjectStatuses(projects);
     } catch (err) {
-      setProjectsError(toErrorMessage(err));
+      if (request === pagination.request) setProjectsError(toErrorMessage(err));
     } finally {
       setProjectsLoading(false);
     }
@@ -96,11 +135,15 @@ export const useProjectsAndThreads = () => {
   }, [fetchProjects, fetchThreads]);
 
   const loadMoreThreads = useCallback(async () => {
-    if (!nextThreadsUrl || loadingMoreThreads) return;
+    const pagination = threadPagination.current;
+    if (!nextThreadsUrl || pagination.loadingMore) return;
 
+    pagination.loadingMore = true;
+    pagination.request += 1;
     setLoadingMoreThreads(true);
     try {
       const page = await fetchThreadPage(apiFetch, nextThreadsUrl);
+      pagination.pages += 1;
       setThreads((current) => {
         const seen = new Set(current.map((thread) => thread.thread_id));
         return [
@@ -113,16 +156,21 @@ export const useProjectsAndThreads = () => {
     } catch (err) {
       toast.error(toErrorMessage(err));
     } finally {
+      pagination.loadingMore = false;
       setLoadingMoreThreads(false);
     }
-  }, [loadingMoreThreads, nextThreadsUrl]);
+  }, [nextThreadsUrl]);
 
   const loadMoreProjects = useCallback(async () => {
-    if (!nextProjectsUrl || loadingMoreProjects) return;
+    const pagination = projectPagination.current;
+    if (!nextProjectsUrl || pagination.loadingMore) return;
 
+    pagination.loadingMore = true;
+    pagination.request += 1;
     setLoadingMoreProjects(true);
     try {
       const page = await fetchProjectPage(apiFetch, nextProjectsUrl);
+      pagination.pages += 1;
       setProjects((current) => {
         const seen = new Set(current.map((project) => project.path));
         return [
@@ -136,9 +184,10 @@ export const useProjectsAndThreads = () => {
     } catch (err) {
       toast.error(toErrorMessage(err));
     } finally {
+      pagination.loadingMore = false;
       setLoadingMoreProjects(false);
     }
-  }, [loadingMoreProjects, nextProjectsUrl, refreshProjectStatuses]);
+  }, [nextProjectsUrl, refreshProjectStatuses]);
 
   useEffect(() => {
     void fetchData();
