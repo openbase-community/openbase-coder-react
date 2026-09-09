@@ -14,7 +14,7 @@ import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { readJson } from "@/lib/api-errors";
 import { setReportTags } from "@/lib/item-tags";
-import { fetchAllProjectPages, projectName } from "@/lib/project-display";
+import { projectName } from "@/lib/project-display";
 import { groupReportItemsByDay } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
 import { useReportBrowser } from "@/hooks/useReportBrowser";
@@ -56,15 +56,6 @@ const clearItemParams = (params: URLSearchParams) => {
 
 const isItemRequested = (params: URLSearchParams) =>
   Boolean(params.get("project") && params.get("report"));
-
-const mergeProjects = (projects: Project[], globalProjects: Project[]) => {
-  const byPath = new Map<string, Project>();
-  [...projects, ...globalProjects].forEach((project) => {
-    const existing = byPath.get(project.path);
-    byPath.set(project.path, existing ? { ...project, ...existing } : project);
-  });
-  return Array.from(byPath.values());
-};
 
 const Reports = () => {
   const navigate = useNavigate();
@@ -212,58 +203,20 @@ const Reports = () => {
     setLoading(true);
     setError(null);
     try {
-      const [recentProjects, globalProjectsRes] = await Promise.all([
-        fetchAllProjectPages(apiFetch),
-        apiFetch("/api/projects/reports/global/"),
-      ]);
-      const globalProjectsData = await readJson(globalProjectsRes);
-
-      const projects = mergeProjects(
-        recentProjects,
-        globalProjectsRes.ok ? (globalProjectsData?.projects ?? []) : [],
-      );
-      const candidates = projects.filter(
-        (project) =>
-          typeof project.reports_count !== "number" ||
-          project.reports_count > 0,
-      );
-
-      let failedProjectCount = 0;
-      const loaded = await Promise.all(
-        candidates.map(async (project) => {
-          try {
-            const params = new URLSearchParams({ path: project.path });
-            const res = await apiFetch(`/api/projects/reports/?${params}`);
-            const data = await readJson(res);
-            if (!res.ok || !data) {
-              failedProjectCount += 1;
-              return [];
-            }
-            const files: ReportsFile[] = data.files ?? [];
-            return files.map((file) => ({ project, file }));
-          } catch {
-            failedProjectCount += 1;
-            return [];
-          }
-        }),
-      );
-      const partialFailures: string[] = [];
-      if (!globalProjectsRes.ok) {
-        partialFailures.push("Global report sources could not be loaded.");
-      }
-      if (failedProjectCount > 0) {
-        partialFailures.push(
-          `Reports could not be loaded for ${failedProjectCount} project${
-            failedProjectCount === 1 ? "" : "s"
-          }.`,
-        );
-      }
-      if (partialFailures.length > 0) {
-        setError(partialFailures.join(" "));
+      // One batch request: the server enumerates every recent and global
+      // report source, dedupes, and returns all report files. This replaces
+      // the former per-project fan-out (one request per project), which
+      // serialized in the single-worker local runtime.
+      const res = await apiFetch("/api/projects/reports/all/");
+      const data = await readJson(res);
+      if (!res.ok || !data) {
+        throw new Error(data?.error || "Reports could not be loaded.");
       }
 
-      const nextItems = loaded
-        .flat()
+      const rawItems: Array<{ project: Project; file: ReportsFile }> =
+        data.items ?? [];
+      const nextItems: ReportsItem[] = rawItems
+        .map((item) => ({ project: item.project, file: item.file }))
         .sort((a, b) => b.file.updated_at - a.file.updated_at);
 
       setItems(nextItems);
