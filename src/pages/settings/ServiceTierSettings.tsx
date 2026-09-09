@@ -21,7 +21,7 @@ import { ServiceTierChangeDialog } from "./ServiceTierChangeDialog";
 const SCOPES = [
   {
     key: "dispatcher_service_tier" as const,
-    label: "Voice dispatcher",
+    label: "Voice Dispatcher",
     detail: "Latency-sensitive dispatch turns. Fast is recommended.",
   },
   {

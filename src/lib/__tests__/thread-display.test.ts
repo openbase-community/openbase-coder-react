@@ -50,7 +50,7 @@ describe("shouldDeemphasizeThread", () => {
 });
 
 describe("threadDisplayName", () => {
-  it("uses dispatcher for dispatch threads instead of the Codex preview", () => {
+  it("uses Dispatcher for dispatch threads instead of the Codex preview", () => {
     expect(
       threadDisplayName(
         thread("idle", {
@@ -60,10 +60,10 @@ describe("threadDisplayName", () => {
           preview: "Hey, you're in there.",
         }),
       ),
-    ).toBe("dispatcher");
+    ).toBe("Dispatcher");
   });
 
-  it("uses API-provided names when a list contains multiple dispatchers", () => {
+  it("capitalizes Dispatcher names in thread lists", () => {
     const threads = [
       thread("idle", {
           thread_id: "dispatcher-a",
@@ -86,8 +86,8 @@ describe("threadDisplayName", () => {
 
     const names = threadListDisplayNames(threads);
 
-    expect(names.get("dispatcher-a")).toBe("dispatcher");
-    expect(names.get("dispatcher-b")).toBe("dispatcher");
+    expect(names.get("dispatcher-a")).toBe("Dispatcher");
+    expect(names.get("dispatcher-b")).toBe("Dispatcher");
     expect(names.get("normal")).toBe("Normal thread");
   });
 

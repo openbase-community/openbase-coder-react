@@ -15,7 +15,7 @@ function agentStateLabel(state: VoiceAgentState) {
     case "speaking":
       return "Dispatcher is speaking";
     default:
-      return "Waiting for the dispatcher…";
+      return "Waiting for the Dispatcher…";
   }
 }
 
@@ -43,7 +43,7 @@ const Call = () => {
             Call
           </h1>
           <p className="mt-0.5 text-[12px] text-muted-foreground">
-            Speak with the dispatcher, hands-free, like the iOS call tab
+            Speak with the Dispatcher, hands-free, like the iOS call tab
           </p>
         </div>
 
@@ -91,7 +91,7 @@ const Call = () => {
               <p className="mt-2 text-[12px] text-muted-foreground">
                 {connecting
                   ? "Connecting to the voice room…"
-                  : "Start a voice call with the dispatcher on this Mac."}
+                  : "Start a voice call with the Dispatcher on this Mac."}
               </p>
               <Button
                 variant="outline"

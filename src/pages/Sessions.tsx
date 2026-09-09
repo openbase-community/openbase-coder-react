@@ -206,7 +206,7 @@ const Sessions = () => {
                                 size="icon"
                                 className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-not-allowed"
                                 disabled
-                                title="Dispatch threads cannot be archived"
+                                title="Dispatcher threads cannot be archived"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <Archive className="h-3 w-3 text-muted-foreground" />

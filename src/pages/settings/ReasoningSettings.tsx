@@ -122,11 +122,11 @@ export const ReasoningSettings: React.FC = () => {
             Reasoning levels
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Set reasoning effort for dispatcher and Super Agent turns.
+            Set reasoning effort for Dispatcher and Super Agent turns.
           </p>
           {settings ? (
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Current: dispatcher{" "}
+              Current: Dispatcher{" "}
               {settings.effective.dispatcher_reasoning_effort}, Super Agents{" "}
               {settings.effective.super_agents_reasoning_effort}
             </p>

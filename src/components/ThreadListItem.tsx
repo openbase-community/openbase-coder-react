@@ -1,6 +1,7 @@
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   hasHistoricalVoice,
+  isDispatcherThread,
   shouldDeemphasizeThread,
   threadAgentVoiceName,
   threadDisplayName,
@@ -53,7 +54,7 @@ export const ThreadListItem = ({
       )}
     >
       <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
-      {onToggleFavorite ? (
+      {onToggleFavorite && !isDispatcherThread(thread) ? (
         <button
           type="button"
           className={cn(

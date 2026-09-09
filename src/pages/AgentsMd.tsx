@@ -66,7 +66,7 @@ const EXPECTED_TARGETS: Array<
     id: "dispatcher",
     label: "Dispatcher-only instructions",
     description:
-      "Affects only the LiveKit dispatcher that routes voice sessions and coordinates transfers.",
+      "Affects only the LiveKit Dispatcher that routes voice sessions and coordinates transfers.",
   },
 ];
 

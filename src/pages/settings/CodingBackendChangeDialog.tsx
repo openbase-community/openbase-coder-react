@@ -44,8 +44,8 @@ export const CodingBackendChangeDialog: React.FC<Props> = ({
             </p>
             <p>
               Openbase will restart its managed services and create a new
-              dispatcher thread. This interrupts any active voice call and may
-              interrupt in-progress coding turns. The current dispatcher
+              Dispatcher thread. This interrupts any active voice call and may
+              interrupt in-progress coding turns. The current Dispatcher
               conversation context will be cleared.
             </p>
             <p>

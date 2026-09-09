@@ -52,7 +52,7 @@ export const ServiceTierChangeDialog: React.FC<Props> = ({
             <div className="space-y-1">
               {currentDispatcherTier !== selectedDispatcherTier ? (
                 <p>
-                  Voice dispatcher: {tierLabel(currentDispatcherTier)} to{" "}
+                  Voice Dispatcher: {tierLabel(currentDispatcherTier)} to{" "}
                   {tierLabel(selectedDispatcherTier)}.
                 </p>
               ) : null}

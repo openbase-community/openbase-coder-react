@@ -37,7 +37,7 @@ const DispatchChat = () => {
       if (response.ok) {
         thread = (await response.json()) as ThreadInfo;
       } else {
-        // Older CLIs do not expose the dispatcher endpoint; fall back to
+        // Older CLIs do not expose the Dispatcher endpoint; fall back to
         // scanning the thread list before reporting a failure.
         thread = await fetchDispatchThreadFallback();
       }
@@ -72,10 +72,10 @@ const DispatchChat = () => {
       <div className="space-y-4">
         <div>
           <h1 className="text-base font-semibold tracking-tight text-foreground">
-            Dispatch
+            Dispatcher
           </h1>
           <p className="mt-0.5 text-[12px] text-muted-foreground">
-            Shared voice dispatch chat
+            Shared voice Dispatcher chat
           </p>
         </div>
 
@@ -88,7 +88,7 @@ const DispatchChat = () => {
         <div className="rounded border border-dashed border-border bg-surface px-4 py-8 text-center">
           <MessageSquare className="mx-auto h-5 w-5 text-muted-foreground/40" />
           <p className="mt-2 text-[12px] text-muted-foreground">
-            {loading ? "Looking for dispatch chat…" : "No dispatch chat found."}
+            {loading ? "Looking for Dispatcher chat…" : "No Dispatcher chat found."}
           </p>
           <Button
             variant="outline"

@@ -185,7 +185,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
             `Backend saved, but the automatic restart failed: ${await extractErrorMessage(
               restartRes,
               `restart request returned ${restartRes.status}`,
-            )}. Restart Openbase services and recreate the dispatcher before starting new work.`,
+            )}. Restart Openbase services and recreate the Dispatcher before starting new work.`,
           );
           setSaving(false);
           return;
@@ -194,13 +194,13 @@ export const CodingBackendSettings: React.FC<Props> = ({
           (await restartRes.json()) as OpenbaseServicesResponse;
         onRestartScheduled(restartData, 4000);
         setMessage(
-          "Backend saved. Restarting Openbase services and recreating the dispatcher.",
+          "Backend saved. Restarting Openbase services and recreating the Dispatcher.",
         );
       }
     } catch {
       setError(
         backendSaved
-          ? "Backend saved, but the automatic restart could not be scheduled. Restart Openbase services and recreate the dispatcher before starting new work."
+          ? "Backend saved, but the automatic restart could not be scheduled. Restart Openbase services and recreate the Dispatcher before starting new work."
           : "Unable to reach the local API.",
       );
     }
@@ -334,7 +334,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
           `Plugin setting changed, but the automatic restart failed: ${await extractErrorMessage(
             restartRes,
             `restart request returned ${restartRes.status}`,
-          )}. Recreate the dispatcher before starting new work.`,
+          )}. Recreate the Dispatcher before starting new work.`,
         );
         setSchedulingPluginRestart(false);
         return;
@@ -343,11 +343,11 @@ export const CodingBackendSettings: React.FC<Props> = ({
       onRestartScheduled(restartData, 4000);
       setPluginRestartOpen(false);
       setMessage(
-        "Recreating the dispatcher so the backend reloads plugin skills and tools.",
+        "Recreating the Dispatcher so the backend reloads plugin skills and tools.",
       );
     } catch {
       setError(
-        "Plugin setting changed, but the automatic restart could not be scheduled. Recreate the dispatcher before starting new work.",
+        "Plugin setting changed, but the automatic restart could not be scheduled. Recreate the Dispatcher before starting new work.",
       );
     }
     setSchedulingPluginRestart(false);
@@ -611,12 +611,12 @@ export const CodingBackendSettings: React.FC<Props> = ({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-base">
               <TriangleAlert className="h-4 w-4 text-warning" />
-              Recreate dispatcher?
+              Recreate Dispatcher?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-sm leading-5">
                 <p>
-                  The plugin setting changed. Recreate the dispatcher thread so
+                  The plugin setting changed. Recreate the Dispatcher thread so
                   the next voice session loads the updated plugin skills and
                   tools.
                 </p>
@@ -638,7 +638,7 @@ export const CodingBackendSettings: React.FC<Props> = ({
               }}
             >
               <PlugZap className="h-3 w-3" />
-              Recreate dispatcher
+              Recreate Dispatcher
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

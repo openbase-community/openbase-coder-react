@@ -229,7 +229,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
         const data = (await res.json()) as STTSettingsResponse;
         setSttSettings(data);
         setSttMessage(
-          "Saved. Recreate the dispatcher thread to apply STT changes.",
+          "Saved. Recreate the Dispatcher thread to apply STT changes.",
         );
       } catch {
         setSttError("Unable to reach the local API.");
@@ -259,7 +259,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
         setDispatcherVoiceError(
           await extractErrorMessage(
             res,
-            `Unable to save dispatcher voice: ${res.status}`,
+            `Unable to save Dispatcher voice: ${res.status}`,
           ),
         );
         setSavingDispatcherVoice(false);
@@ -271,7 +271,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
       setDispatcherVoice(data.dispatcher_voice);
       setSelectedDispatcherVoiceId(data.dispatcher_voice.id);
       setDispatcherVoiceMessage(
-        "Saved. Recreate the dispatcher thread to apply this provider and voice.",
+        "Saved. Recreate the Dispatcher thread to apply this provider and voice.",
       );
     } catch {
       setDispatcherVoiceError("Unable to reach the local API.");
@@ -323,8 +323,8 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
             Text-to-speech provider
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Select the provider and voice used by the dispatcher and Super
-            Agents. Recreate the dispatcher thread to apply a saved change.
+            Select the provider and voice used by the Dispatcher and Super
+            Agents. Recreate the Dispatcher thread to apply a saved change.
           </p>
           {dispatcherVoice ? (
             <p className="mt-1 truncate text-[11px] text-muted-foreground">
@@ -495,7 +495,7 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
             Dispatcher thread
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Create a fresh dispatcher thread and restart the LiveKit agent.
+            Create a fresh Dispatcher thread and restart the LiveKit agent.
           </p>
           {liveKitThreadMessage ? (
             <p className="mt-1 text-[12px] text-success">

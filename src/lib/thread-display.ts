@@ -28,6 +28,8 @@ export const threadRoutePath = (
 };
 
 export const threadDisplayName = (thread: ThreadInfo) => {
+  if (isDispatcherThread(thread)) return "Dispatcher";
+
   const provided = firstPresent(
     thread.display_name,
     thread.name,
@@ -64,11 +66,13 @@ export const shortModelLabel = (model: string | null | undefined) => {
 export const threadModelLabel = (thread: ThreadInfo) =>
   shortModelLabel(thread.model ?? thread.current_turn?.model ?? undefined);
 
-export const threadAgentVoiceName = (thread: ThreadInfo) =>
-  firstPresent(
+export const threadAgentVoiceName = (thread: ThreadInfo) => {
+  const name = firstPresent(
     thread.voice_assignment?.voice_name,
     thread.voice_assignment?.agent_name,
   );
+  return name?.toLowerCase() === "dispatcher" ? "Dispatcher" : name;
+};
 
 export const threadVoiceLabel = (thread: ThreadInfo) =>
   threadAgentVoiceName(thread) || "voice";

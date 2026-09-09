@@ -27,6 +27,7 @@ import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
 import { setThreadFavorite } from "@/lib/thread-favorites";
 import {
   groupThreadsByDay,
+  isDispatcherThread,
   shouldDeemphasizeThread,
   threadRoutePath,
   threadVoiceLabel,
@@ -300,6 +301,7 @@ const ProjectDetail = () => {
   };
 
   const toggleThreadFavorite = async (thread: ThreadInfo) => {
+    if (isDispatcherThread(thread)) return;
     try {
       await setThreadFavorite(thread.thread_id, !thread.is_favorite);
       await fetchThreads();
@@ -745,34 +747,36 @@ const ProjectDetail = () => {
                         )}
                       >
                         <Terminal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <button
-                          type="button"
-                          className={cn(
-                            "flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface hover:text-foreground",
-                            thread.is_favorite && "text-warning hover:text-warning",
-                          )}
-                          title={
-                            thread.is_favorite
-                              ? "Remove favorite"
-                              : "Favorite thread"
-                          }
-                          aria-label={
-                            thread.is_favorite
-                              ? "Remove favorite"
-                              : "Favorite thread"
-                          }
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void toggleThreadFavorite(thread);
-                          }}
-                        >
-                          <Star
+                        {!isDispatcherThread(thread) ? (
+                          <button
+                            type="button"
                             className={cn(
-                              "h-3 w-3",
-                              thread.is_favorite && "fill-current",
+                              "flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface hover:text-foreground",
+                              thread.is_favorite && "text-warning hover:text-warning",
                             )}
-                          />
-                        </button>
+                            title={
+                              thread.is_favorite
+                                ? "Remove favorite"
+                                : "Favorite thread"
+                            }
+                            aria-label={
+                              thread.is_favorite
+                                ? "Remove favorite"
+                                : "Favorite thread"
+                            }
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void toggleThreadFavorite(thread);
+                            }}
+                          >
+                            <Star
+                              className={cn(
+                                "h-3 w-3",
+                                thread.is_favorite && "fill-current",
+                              )}
+                            />
+                          </button>
+                        ) : null}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <StatusBadge
@@ -786,7 +790,7 @@ const ProjectDetail = () => {
                               </span>
                             ) : thread.voice_route?.role === "dispatcher" ? (
                               <span className="font-mono text-[10px] text-warning">
-                                dispatch
+                                Dispatcher
                               </span>
                             ) : null}
                           </div>

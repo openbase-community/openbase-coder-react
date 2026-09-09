@@ -29,6 +29,7 @@ import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { cliResumeCommands, type CliResumeCommand } from "@/lib/cli-resume";
 import {
+  isDispatcherThread,
   threadAgentVoiceName,
   threadDisplayName,
   threadModelLabel,
@@ -91,7 +92,7 @@ function agentStateLabel(state: VoiceAgentState): string {
     case "speaking":
       return "Dispatcher is speaking";
     default:
-      return "In call with the dispatcher";
+      return "In call with the Dispatcher";
   }
 }
 
@@ -304,7 +305,7 @@ const SessionDetail = ({
     if (!fromProjectPath) return;
     navigate(`/dashboard/project?path=${encodeURIComponent(fromProjectPath)}`);
   };
-  const isDispatchThread = thread?.voice_route?.role === "dispatcher";
+  const isDispatchThread = Boolean(thread && isDispatcherThread(thread));
   const agentVoiceName = thread ? threadAgentVoiceName(thread) : undefined;
   const resumeCommands =
     thread && thread.directory
@@ -337,7 +338,7 @@ const SessionDetail = ({
   };
 
   const toggleFavorite = async () => {
-    if (!thread) return;
+    if (!thread || isDispatchThread) return;
     try {
       await setThreadFavorite(thread.thread_id, !thread.is_favorite);
       await refreshThread();
@@ -367,24 +368,26 @@ const SessionDetail = ({
                 <h1 className="text-sm font-semibold text-foreground">
                   {threadDisplayName(thread)}
                 </h1>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleFavorite}
-                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  title={
-                    thread.is_favorite ? "Remove favorite" : "Favorite thread"
-                  }
-                  aria-label={
-                    thread.is_favorite ? "Remove favorite" : "Favorite thread"
-                  }
-                >
-                  <Star
-                    className={`h-3 w-3 ${
-                      thread.is_favorite ? "fill-current text-warning" : ""
-                    }`}
-                  />
-                </Button>
+                {!isDispatchThread ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleFavorite}
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    title={
+                      thread.is_favorite ? "Remove favorite" : "Favorite thread"
+                    }
+                    aria-label={
+                      thread.is_favorite ? "Remove favorite" : "Favorite thread"
+                    }
+                  >
+                    <Star
+                      className={`h-3 w-3 ${
+                        thread.is_favorite ? "fill-current text-warning" : ""
+                      }`}
+                    />
+                  </Button>
+                ) : null}
                 <StatusBadge
                   status={thread.status}
                   isLikelyStale={thread.is_likely_stale}
@@ -548,7 +551,7 @@ const SessionDetail = ({
                 <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-1.5 text-[12px]">
                   <span className="truncate text-muted-foreground">
                     {callConnecting
-                      ? "Connecting to the dispatcher…"
+                      ? "Connecting to the Dispatcher…"
                       : agentStateLabel(call.agentState)}
                   </span>
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -624,7 +627,7 @@ const SessionDetail = ({
                         ? "Steer the active turn…"
                         : "Queue a follow-up turn…"
                       : showCallButton
-                        ? "Message the dispatcher, or start a call…"
+                        ? "Message the Dispatcher, or start a call…"
                         : "Start a turn…"
                   }
                   className="flex-1 resize-none bg-transparent px-2 py-1.5 text-[12.5px] text-foreground focus:outline-none"
@@ -637,7 +640,7 @@ const SessionDetail = ({
                     size="icon"
                     className="h-8 w-8 shrink-0 rounded-full"
                     aria-label="Start voice call"
-                    title="Start voice call with the dispatcher"
+                    title="Start voice call with the Dispatcher"
                   >
                     <Phone className="h-4 w-4" />
                   </Button>
