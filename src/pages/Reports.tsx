@@ -17,6 +17,7 @@ import { setReportTags } from "@/lib/item-tags";
 import { projectName } from "@/lib/project-display";
 import { groupReportItemsByDay } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
+import { useMarkEntityRead } from "@/contexts/notifications";
 import { useReportBrowser } from "@/hooks/useReportBrowser";
 import type { ReportFileTarget } from "@/hooks/useReportFileActions";
 import { useTagOptions } from "@/hooks/useTagOptions";
@@ -135,6 +136,9 @@ const Reports = () => {
     findRequestedItem,
     onItemDeleted: handleItemDeleted,
   });
+
+  // Opening a report's content resolves its notification on every device.
+  useMarkEntityRead("report", activeItem ? itemKey(activeItem) : null);
 
   const saveItemContent = useCallback(
     async (item: ReportsItem, content: string) => {

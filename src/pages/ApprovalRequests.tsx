@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { useApprovalRequestsWebSocket } from "@/hooks/use-approval-requests-websocket";
+import { useMarkKindReadWhileMounted } from "@/contexts/notifications";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import type { ApprovalRequest } from "@/lib/approval-requests";
@@ -56,6 +57,9 @@ function formatReceivedAt(value?: string | null): string {
 }
 
 const ApprovalRequests = () => {
+  // Viewing the queue counts as reading approval notifications, including
+  // ones that arrive while the page is open.
+  useMarkKindReadWhileMounted("approval");
   const [requests, setRequests] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

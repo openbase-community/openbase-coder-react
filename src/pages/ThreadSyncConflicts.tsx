@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { useMarkKindReadWhileMounted } from "@/contexts/notifications";
 import { extractErrorMessage } from "@/lib/api-errors";
 import {
   AlertTriangle,
@@ -113,6 +114,8 @@ const SnapshotColumn = ({
 );
 
 const ThreadSyncConflicts = () => {
+  // Viewing the conflicts surface reads sync-conflict notifications.
+  useMarkKindReadWhileMounted("sync_conflict");
   const navigate = useNavigate();
   const [payload, setPayload] = useState<ThreadSyncConflictsPayload | null>(null);
   const [loading, setLoading] = useState(true);

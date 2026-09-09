@@ -1,5 +1,6 @@
 import FindInPageBar from "@/components/FindInPageBar";
 import HealthWarningsBanner from "@/components/HealthWarningsBanner";
+import NotificationsDropdown from "@/components/NotificationsDropdown";
 import UserProfile from "@/components/UserProfile";
 import dashboardWordmarkUrl from "@/assets/openbase-dashboard-wordmark.png";
 import {
@@ -265,7 +266,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             <div className="flex min-w-0 items-center gap-2">
               <SidebarTrigger className="md:hidden" />
             </div>
-            <UserProfile />
+            <div className="flex items-center gap-1">
+              <NotificationsDropdown />
+              <UserProfile />
+            </div>
           </header>
           <HealthWarningsBanner />
           <FindInPageBar />

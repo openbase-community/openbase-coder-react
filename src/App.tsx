@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { LoaderCircle } from "lucide-react";
 import { AuthProvider, useAuth } from "@/contexts/auth";
+import { NotificationsProvider } from "@/contexts/notifications";
 import {
   getBackendBaseUrl,
   getRouterBasename,
@@ -339,8 +340,10 @@ function App() {
     // Cloud headless workspaces); it stays "/" for normal installs.
     <RouterComponent basename={getRouterBasename()}>
       <AuthProvider>
-        <AppRoutes />
-        <Toaster />
+        <NotificationsProvider>
+          <AppRoutes />
+          <Toaster />
+        </NotificationsProvider>
       </AuthProvider>
     </RouterComponent>
   );

@@ -25,6 +25,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
+import { useMarkEntityRead } from "@/contexts/notifications";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { cliResumeCommands, type CliResumeCommand } from "@/lib/cli-resume";
@@ -192,6 +193,7 @@ const SessionDetail = ({
 }: SessionDetailProps = {}) => {
   const { threadId: routeThreadId } = useParams<{ threadId: string }>();
   const threadId = threadIdOverride ?? routeThreadId;
+  useMarkEntityRead("thread", threadId);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const {
