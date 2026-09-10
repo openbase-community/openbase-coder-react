@@ -13,12 +13,20 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useTagOptions } from "@/hooks/useTagOptions";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { setThreadTags } from "@/lib/item-tags";
+import { filterThreads } from "@/lib/thread-filters";
 import { setThreadFavorite } from "@/lib/thread-favorites";
 import {
   groupThreadsByDay,
@@ -26,7 +34,15 @@ import {
   threadRoutePath,
 } from "@/lib/thread-display";
 import { useProjectsAndThreads } from "@/hooks/useProjectsAndThreads";
-import { AlertTriangle, Archive, Plus, Terminal } from "lucide-react";
+import {
+  AlertTriangle,
+  Archive,
+  Plus,
+  Search,
+  Tag,
+  Terminal,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -45,6 +61,8 @@ const Sessions = () => {
   const { tagOptions, refreshTagOptions } = useTagOptions();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [syncConflictCount, setSyncConflictCount] = useState<number | null>(null);
+  const [threadSearch, setThreadSearch] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -124,15 +142,56 @@ const Sessions = () => {
     }
   };
 
-  const activeCount = threads.filter((t) => t.status === "running").length;
-  const sortedThreads = [...threads].sort(
-    (a, b) => +new Date(b.updated_at) - +new Date(a.updated_at),
+  const sortedThreads = useMemo(
+    () =>
+      [...threads].sort(
+        (a, b) => +new Date(b.updated_at) - +new Date(a.updated_at),
+      ),
+    [threads],
   );
-  const displayNames = threadListDisplayNames(sortedThreads);
-  const threadGroups = useMemo(
-    () => groupThreadsByDay(sortedThreads),
+  const displayNames = useMemo(
+    () => threadListDisplayNames(sortedThreads),
     [sortedThreads],
   );
+  const filteredThreads = useMemo(
+    () =>
+      filterThreads(
+        sortedThreads,
+        { search: threadSearch, tags: selectedTags },
+        displayNames,
+      ),
+    [displayNames, selectedTags, sortedThreads, threadSearch],
+  );
+  const activeCount = filteredThreads.filter(
+    (t) => t.status === "running",
+  ).length;
+  const threadGroups = useMemo(
+    () => groupThreadsByDay(filteredThreads),
+    [filteredThreads],
+  );
+  const availableTags = useMemo(() => {
+    const labels = new Map<string, string>();
+    const remember = (label: string) => {
+      const trimmed = label.trim();
+      if (trimmed) labels.set(trimmed.toLowerCase(), trimmed);
+    };
+    tagOptions.forEach((option) => remember(option.label));
+    threads.forEach((thread) => (thread.tags ?? []).forEach(remember));
+    return Array.from(labels.values()).sort((a, b) => a.localeCompare(b));
+  }, [tagOptions, threads]);
+  const filtersActive = Boolean(threadSearch.trim() || selectedTags.length > 0);
+  const toggleSelectedTag = (tag: string) => {
+    const key = tag.toLowerCase();
+    setSelectedTags((current) =>
+      current.some((item) => item.toLowerCase() === key)
+        ? current.filter((item) => item.toLowerCase() !== key)
+        : [...current, tag],
+    );
+  };
+  const clearFilters = () => {
+    setThreadSearch("");
+    setSelectedTags([]);
+  };
 
   return (
     <DashboardLayout>
@@ -143,7 +202,8 @@ const Sessions = () => {
               Threads
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              {activeCount} active · {threads.length}
+              {activeCount} active · {filteredThreads.length}
+              {filtersActive ? ` of ${threads.length}` : ""}
               {nextThreadsUrl ? "+" : ""} loaded
             </p>
           </div>
@@ -172,6 +232,72 @@ const Sessions = () => {
           </div>
         </div>
 
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={threadSearch}
+              onChange={(event) => setThreadSearch(event.target.value)}
+              placeholder="Search threads"
+              className="h-8 pl-8 text-[12px]"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={selectedTags.length ? "secondary" : "outline"}
+                  size="sm"
+                  className="h-8 px-2.5 text-[12px]"
+                >
+                  <Tag className="h-3.5 w-3.5" />
+                  {selectedTags.length
+                    ? `Tags · ${selectedTags.length}`
+                    : "Tags"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-64 p-2">
+                <div className="max-h-56 space-y-1 overflow-y-auto">
+                  {availableTags.length === 0 ? (
+                    <div className="px-2 py-2 text-[12px] text-muted-foreground">
+                      No tags
+                    </div>
+                  ) : (
+                    availableTags.map((tag) => {
+                      const checked = selectedTags.some(
+                        (item) => item.toLowerCase() === tag.toLowerCase(),
+                      );
+                      return (
+                        <label
+                          key={tag}
+                          className="flex min-w-0 cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[12px] hover:bg-surface-muted"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => toggleSelectedTag(tag)}
+                          />
+                          <span className="min-w-0 truncate">{tag}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+            {filtersActive ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-[12px]"
+                onClick={clearFilters}
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
         {listError ? (
           <ErrorBanner>
             {listError} — retrying automatically.
@@ -185,6 +311,13 @@ const Sessions = () => {
             <Terminal className="mx-auto h-4 w-4 text-muted-foreground/40" />
             <p className="mt-2 text-[12px] text-muted-foreground">
               No threads yet.
+            </p>
+          </div>
+        ) : filteredThreads.length === 0 ? (
+          <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
+            <Search className="mx-auto h-4 w-4 text-muted-foreground/40" />
+            <p className="mt-2 text-[12px] text-muted-foreground">
+              No matching threads.
             </p>
           </div>
         ) : (
