@@ -21,13 +21,11 @@ export const fetchTagOptions = async (): Promise<TagOption[]> => {
   return Array.isArray(data?.tags) ? data.tags : [];
 };
 
-export const setReportTags = async (
-  projectPath: string,
-  filePath: string,
+const updateItemTags = async (
+  url: string,
   tags: string[],
 ): Promise<TaggedItemPayload> => {
-  const params = new URLSearchParams({ path: projectPath, file: filePath });
-  const response = await apiFetch(`/api/projects/reports/tags/?${params}`, {
+  const response = await apiFetch(url, {
     method: "PATCH",
     body: JSON.stringify({ tags }),
   });
@@ -43,25 +41,14 @@ export const setReportTags = async (
   };
 };
 
-export const setThreadTags = async (
-  threadId: string,
+export const setReportTags = (
+  projectPath: string,
+  filePath: string,
   tags: string[],
 ): Promise<TaggedItemPayload> => {
-  const response = await apiFetch(
-    `/api/threads/${encodeURIComponent(threadId)}/tags/`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ tags }),
-    },
-  );
-  if (!response.ok) {
-    throw new Error(
-      await extractErrorMessage(response, "Failed to update tags"),
-    );
-  }
-  const data = await readJson<TaggedItemPayload>(response);
-  return {
-    tags: Array.isArray(data?.tags) ? data.tags : [],
-    tag_options: Array.isArray(data?.tag_options) ? data.tag_options : [],
-  };
+  const params = new URLSearchParams({ path: projectPath, file: filePath });
+  return updateItemTags(`/api/projects/reports/tags/?${params}`, tags);
 };
+
+export const setThreadTags = (threadId: string, tags: string[]) =>
+  updateItemTags(`/api/threads/${encodeURIComponent(threadId)}/tags/`, tags);

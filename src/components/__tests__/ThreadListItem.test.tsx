@@ -21,11 +21,12 @@ const thread: ThreadInfo = {
 describe("ThreadListItem", () => {
   it("lets a thread row add a new tag from the tag picker", async () => {
     const onTagsChange = vi.fn().mockResolvedValue(undefined);
+    const onClick = vi.fn();
 
     render(
       <ThreadListItem
         thread={thread}
-        onClick={() => undefined}
+        onClick={onClick}
         onTagsChange={onTagsChange}
         tagOptions={[{ slug: "openbase", label: "Openbase" }]}
       />,
@@ -35,7 +36,7 @@ describe("ThreadListItem", () => {
     fireEvent.change(await screen.findByPlaceholderText("New tag"), {
       target: { value: "Security" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
+    fireEvent.keyDown(screen.getByPlaceholderText("New tag"), { key: "Enter" });
 
     await waitFor(() => {
       expect(onTagsChange).toHaveBeenCalledWith(thread, [
@@ -43,5 +44,6 @@ describe("ThreadListItem", () => {
         "Security",
       ]);
     });
+    expect(onClick).not.toHaveBeenCalled();
   });
 });

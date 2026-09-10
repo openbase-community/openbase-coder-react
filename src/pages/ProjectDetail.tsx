@@ -1,4 +1,6 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { OpenInNewTabMenu } from "@/components/workspace/OpenInNewTabMenu";
+import { threadDisplayName } from "@/lib/thread-display";
 import {
   ReportFileDetailView,
   ReportFileListRow,
@@ -76,7 +78,8 @@ const ProjectDetail = () => {
   const [reportsFiles, setReportsFiles] = useState<ReportsFile[]>([]);
   // Reports are capped to an initial page and grown with "Load more", mirroring
   // the threads list, so a project with hundreds of reports stays scannable.
-  const [visibleReportsCount, setVisibleReportsCount] = useState(REPORTS_PAGE_SIZE);
+  const [visibleReportsCount, setVisibleReportsCount] =
+    useState(REPORTS_PAGE_SIZE);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [reportsError, setReportsError] = useState<string | null>(null);
   const [removingProject, setRemovingProject] = useState(false);
@@ -161,7 +164,8 @@ const ProjectDetail = () => {
     clearItemParams: clearReportParams,
     isItemRequested: isReportRequested,
     findRequestedItem: findRequestedReport,
-    loadErrorMessage: "Unable to load this file. The local API may need to restart.",
+    loadErrorMessage:
+      "Unable to load this file. The local API may need to restart.",
     onItemDeleted: handleReportDeleted,
   });
 
@@ -235,7 +239,9 @@ const ProjectDetail = () => {
         });
         void refreshTagOptions();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to update tags");
+        toast.error(
+          err instanceof Error ? err.message : "Failed to update tags",
+        );
       }
     },
     [projectPath, refreshTagOptions, setReportsPayloads],
@@ -297,7 +303,9 @@ const ProjectDetail = () => {
       const data = await res.json();
       navigate(`/dashboard/threads/${data.thread_id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create thread");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create thread",
+      );
     }
   };
 
@@ -382,15 +390,15 @@ const ProjectDetail = () => {
         </div>
 
         {listError ? (
-          <ErrorBanner>
-            {listError} — retrying automatically.
-          </ErrorBanner>
+          <ErrorBanner>{listError} — retrying automatically.</ErrorBanner>
         ) : null}
 
         <div className="grid gap-2 md:grid-cols-2">
           <div className="rounded border border-border bg-surface px-3 py-2">
             <div className="text-[11px] text-muted-foreground">Git</div>
-            <div className={`mt-1 flex items-center gap-2 text-[12px] ${gitStatus.text}`}>
+            <div
+              className={`mt-1 flex items-center gap-2 text-[12px] ${gitStatus.text}`}
+            >
               <span className={`h-2 w-2 rounded-full ${gitStatus.dot}`} />
               {gitStatus.label}
             </div>
@@ -408,7 +416,11 @@ const ProjectDetail = () => {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" className="h-7 px-2.5 text-[12px]" onClick={goToDiff}>
+          <Button
+            size="sm"
+            className="h-7 px-2.5 text-[12px]"
+            onClick={goToDiff}
+          >
             <GitBranch className="h-3 w-3" />
             Diff
           </Button>
@@ -446,7 +458,9 @@ const ProjectDetail = () => {
               <AlertDialogHeader>
                 <AlertDialogTitle>Stop tracking this project?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This only removes the project from the recent projects list. It will not delete the folder, repository, files, threads, reports, or user data.
+                  This only removes the project from the recent projects list.
+                  It will not delete the folder, repository, files, threads,
+                  reports, or user data.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -526,8 +540,7 @@ const ProjectDetail = () => {
                           </div>
                           <div className="truncate font-mono text-[10.5px] text-muted-foreground/75">
                             {formatReportDate(node.updated_at)} ·{" "}
-                            {formatReportBytes(node.size)} ·{" "}
-                            {node.path}/
+                            {formatReportBytes(node.size)} · {node.path}/
                           </div>
                         </div>
                       </button>
@@ -539,6 +552,7 @@ const ProjectDetail = () => {
                             const payload = reportsPayloads[file.path];
                             return (
                               <ReportFileListRow
+                                projectPath={projectPath}
                                 key={file.path}
                                 file={file}
                                 active={expanded}
@@ -574,6 +588,7 @@ const ProjectDetail = () => {
                 const payload = reportsPayloads[file.path];
                 return (
                   <ReportFileListRow
+                    projectPath={projectPath}
                     key={file.path}
                     file={file}
                     active={expanded}
@@ -603,11 +618,13 @@ const ProjectDetail = () => {
                     size="sm"
                     className="h-7 w-full text-[12px]"
                     onClick={() =>
-                      setVisibleReportsCount((count) => count + REPORTS_PAGE_SIZE)
+                      setVisibleReportsCount(
+                        (count) => count + REPORTS_PAGE_SIZE,
+                      )
                     }
                   >
-                    Load more reports ({reportsFiles.length - visibleReportsCount}{" "}
-                    more)
+                    Load more reports (
+                    {reportsFiles.length - visibleReportsCount} more)
                   </Button>
                 </div>
               ) : null}
@@ -624,7 +641,8 @@ const ProjectDetail = () => {
             metadata={
               <>
                 {formatReportDate(activeReportFile.updated_at)} ·{" "}
-                {formatReportBytes(activeReportFile.size)} · {activeReportFile.path}
+                {formatReportBytes(activeReportFile.size)} ·{" "}
+                {activeReportFile.path}
               </>
             }
             detailHeader={
@@ -654,7 +672,8 @@ const ProjectDetail = () => {
                     closeReport();
                     navigate(
                       `/dashboard/threads/${encodeURIComponent(
-                        reportsPayloads[activeReportFile.path]!.provenance!.thread_id!,
+                        reportsPayloads[activeReportFile.path]!.provenance!
+                          .thread_id!,
                       )}`,
                     );
                   }
@@ -669,7 +688,8 @@ const ProjectDetail = () => {
                         projectPath,
                         file: activeReportFile,
                       },
-                      reportsPayloads[activeReportFile.path]!.provenance!.thread_id!,
+                      reportsPayloads[activeReportFile.path]!.provenance!
+                        .thread_id!,
                       message,
                     )
                 : undefined
@@ -693,9 +713,7 @@ const ProjectDetail = () => {
           />
         ) : null}
 
-        <Panel
-          ref={threadsRef}
-        >
+        <Panel ref={threadsRef}>
           <div className="border-b border-border px-3 py-2 text-[13px] font-medium text-foreground">
             Threads
           </div>
@@ -732,90 +750,106 @@ const ProjectDetail = () => {
                     const isDeemphasized = shouldDeemphasizeThread(thread);
 
                     return (
-                      <div
+                      <OpenInNewTabMenu
                         key={thread.thread_id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() =>
-                          navigate(
-                            threadRoutePath(thread, { fromProject: projectPath }),
-                          )
-                        }
-                        onKeyDown={(event) => {
-                          if (event.key !== "Enter" && event.key !== " ") {
-                            return;
-                          }
-                          event.preventDefault();
-                          navigate(
-                            threadRoutePath(thread, { fromProject: projectPath }),
-                          );
+                        target={{
+                          path: threadRoutePath(thread, {
+                            fromProject: projectPath,
+                          }),
+                          title: threadDisplayName(thread),
                         }}
-                        className={cn(
-                          "group flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-muted",
-                          isDeemphasized &&
-                            "opacity-60 saturate-0 hover:opacity-80",
-                          idx > 0 && "border-t border-border",
-                        )}
                       >
-                        <Terminal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        {!isDispatcherThread(thread) ? (
-                          <button
-                            type="button"
-                            className={cn(
-                              "flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface hover:text-foreground",
-                              thread.is_favorite && "text-warning hover:text-warning",
-                            )}
-                            title={
-                              thread.is_favorite
-                                ? "Remove favorite"
-                                : "Favorite thread"
+                        <div
+                          key={thread.thread_id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() =>
+                            navigate(
+                              threadRoutePath(thread, {
+                                fromProject: projectPath,
+                              }),
+                            )
+                          }
+                          onKeyDown={(event) => {
+                            if (event.target !== event.currentTarget) return;
+                            if (event.key !== "Enter" && event.key !== " ") {
+                              return;
                             }
-                            aria-label={
-                              thread.is_favorite
-                                ? "Remove favorite"
-                                : "Favorite thread"
-                            }
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void toggleThreadFavorite(thread);
-                            }}
-                          >
-                            <Star
+                            event.preventDefault();
+                            navigate(
+                              threadRoutePath(thread, {
+                                fromProject: projectPath,
+                              }),
+                            );
+                          }}
+                          className={cn(
+                            "group flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-muted",
+                            isDeemphasized &&
+                              "opacity-60 saturate-0 hover:opacity-80",
+                            idx > 0 && "border-t border-border",
+                          )}
+                        >
+                          <Terminal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          {!isDispatcherThread(thread) ? (
+                            <button
+                              type="button"
                               className={cn(
-                                "h-3 w-3",
-                                thread.is_favorite && "fill-current",
+                                "flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface hover:text-foreground",
+                                thread.is_favorite &&
+                                  "text-warning hover:text-warning",
                               )}
-                            />
-                          </button>
-                        ) : null}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <StatusBadge
-                              status={thread.status}
-                              isLikelyStale={thread.is_likely_stale}
-                              statusWarning={thread.status_warning}
-                            />
-                            {thread.voice_route?.role === "active_target" ? (
-                              <span className="font-mono text-[10px] text-warning">
-                                {threadVoiceLabel(thread)}
-                              </span>
-                            ) : thread.voice_route?.role === "dispatcher" ? (
-                              <span className="font-mono text-[10px] text-warning">
-                                Dispatcher
-                              </span>
-                            ) : null}
+                              title={
+                                thread.is_favorite
+                                  ? "Remove favorite"
+                                  : "Favorite thread"
+                              }
+                              aria-label={
+                                thread.is_favorite
+                                  ? "Remove favorite"
+                                  : "Favorite thread"
+                              }
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void toggleThreadFavorite(thread);
+                              }}
+                            >
+                              <Star
+                                className={cn(
+                                  "h-3 w-3",
+                                  thread.is_favorite && "fill-current",
+                                )}
+                              />
+                            </button>
+                          ) : null}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <StatusBadge
+                                status={thread.status}
+                                isLikelyStale={thread.is_likely_stale}
+                                statusWarning={thread.status_warning}
+                              />
+                              {thread.voice_route?.role === "active_target" ? (
+                                <span className="font-mono text-[10px] text-warning">
+                                  {threadVoiceLabel(thread)}
+                                </span>
+                              ) : thread.voice_route?.role === "dispatcher" ? (
+                                <span className="font-mono text-[10px] text-warning">
+                                  Dispatcher
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="mt-1 truncate font-mono text-[10.5px] text-muted-foreground">
+                              {new Date(thread.updated_at).toLocaleString()}
+                            </div>
                           </div>
-                          <div className="mt-1 truncate font-mono text-[10.5px] text-muted-foreground">
-                            {new Date(thread.updated_at).toLocaleString()}
-                          </div>
+                          <TagPicker
+                            tags={thread.tags ?? []}
+                            options={tagOptions}
+                            onChange={(tags) => updateThreadTags(thread, tags)}
+                          />
+                          <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
                         </div>
-                        <TagPicker
-                          tags={thread.tags ?? []}
-                          options={tagOptions}
-                          onChange={(tags) => updateThreadTags(thread, tags)}
-                        />
-                        <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
-                      </div>
+                      </OpenInNewTabMenu>
                     );
                   })}
                 </section>

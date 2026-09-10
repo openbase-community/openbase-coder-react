@@ -2,6 +2,11 @@ import { Toaster } from "@/components/ui/sonner";
 import { LoaderCircle } from "lucide-react";
 import { AuthProvider, useAuth } from "@/contexts/auth";
 import { NotificationsProvider } from "@/contexts/notifications";
+import { WorkspaceTabsProvider, useWorkspace } from "@/contexts/workspace-tabs";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { WorkspaceSurface } from "@/components/workspace/WorkspaceSurface";
+import { WorkspaceUrlBridge } from "@/components/workspace/WorkspaceUrlBridge";
+import { ThreadConnectionsProvider } from "@/contexts/thread-connections";
 import {
   getBackendBaseUrl,
   getRouterBasename,
@@ -17,6 +22,7 @@ import {
   Routes,
   useParams,
   useSearchParams,
+  useLocation,
 } from "react-router-dom";
 import AgentsMd from "./pages/AgentsMd";
 import ApprovalRequests from "./pages/ApprovalRequests";
@@ -75,11 +81,7 @@ function LegacyRoutineDetailRedirect() {
   );
 }
 
-function PluginConsoleRoute({
-  page,
-}: {
-  page: PluginConsolePage;
-}) {
+function PluginConsoleRoute({ page }: { page: PluginConsolePage }) {
   const [searchParams] = useSearchParams();
   const projectPath = searchParams.get("path") || undefined;
   const stack = searchParams.get("stack") || undefined;
@@ -95,7 +97,7 @@ function PluginConsoleRoute({
     <iframe
       title={page.title}
       src={url.toString()}
-      className="h-screen w-full border-0"
+      className="h-full w-full border-0"
     />
   );
 }
@@ -216,10 +218,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/dashboard/diff"
-        element={<Diff />}
-      />
+      <Route path="/dashboard/diff" element={<Diff />} />
       <Route
         path="/mobile/diff"
         element={<Navigate to="/dashboard/diff?mobile=true" replace />}
@@ -332,20 +331,59 @@ function AppRoutes() {
   );
 }
 
-function App() {
-  const RouterComponent = getRuntimeShell() === "electron" ? HashRouter : Router;
+const workspaceComponents = { route: AppRoutes };
 
+function WorkspaceWindow() {
+  const { setHost } = useWorkspace();
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+  if (isLoading) return <AuthLoadingScreen />;
+  if (!isAuthenticated)
+    return location.pathname === "/login" ? (
+      <Login />
+    ) : (
+      <Navigate to="/login" replace />
+    );
+  if (
+    location.pathname === "/mobile/diff" ||
+    (location.pathname === "/dashboard/diff" &&
+      new URLSearchParams(location.search).get("mobile") === "true")
+  )
+    return <AppRoutes />;
   return (
-    // basename lets the console run behind a reverse-proxy subpath (Openbase
-    // Cloud headless workspaces); it stays "/" for normal installs.
-    <RouterComponent basename={getRouterBasename()}>
-      <AuthProvider>
-        <NotificationsProvider>
-          <AppRoutes />
-          <Toaster />
-        </NotificationsProvider>
-      </AuthProvider>
-    </RouterComponent>
+    <>
+      <WorkspaceUrlBridge />
+      <DashboardLayout noPadding>
+        <div ref={setHost} className="h-full min-h-0 w-full" />
+      </DashboardLayout>
+    </>
+  );
+}
+
+function WorkspaceApp() {
+  const RouterComponent =
+    getRuntimeShell() === "electron" ? HashRouter : Router;
+  const { isAuthenticated } = useAuth();
+  return (
+    <WorkspaceTabsProvider key={isAuthenticated ? "signed-in" : "signed-out"}>
+      <RouterComponent basename={getRouterBasename()}>
+        <WorkspaceWindow />
+      </RouterComponent>
+      <WorkspaceSurface components={workspaceComponents} />
+    </WorkspaceTabsProvider>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <NotificationsProvider>
+        <ThreadConnectionsProvider>
+          <WorkspaceApp />
+        </ThreadConnectionsProvider>
+        <Toaster />
+      </NotificationsProvider>
+    </AuthProvider>
   );
 }
 

@@ -1,4 +1,6 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { OpenInNewTabMenu } from "@/components/workspace/OpenInNewTabMenu";
+import { projectTabTarget } from "@/lib/workspace-tabs";
 import { NewThreadDialog } from "@/components/NewThreadDialog";
 import { ThreadListItem } from "@/components/ThreadListItem";
 import { Button } from "@/components/ui/button";
@@ -163,7 +165,8 @@ const Dashboard = () => {
                   No threads yet
                 </p>
                 <p className="mt-1 max-w-xs text-[12px] text-muted-foreground">
-                  Start a thread and it will appear here with its current status.
+                  Start a thread and it will appear here with its current
+                  status.
                 </p>
                 <Button
                   className="mt-4"
@@ -210,25 +213,30 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   recentProjects.map((project) => (
-                    <button
-                      className="group flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors hover:bg-surface-muted"
+                    <OpenInNewTabMenu
                       key={project.path}
-                      onClick={() => openProject(project)}
-                      type="button"
+                      target={projectTabTarget(project.path)}
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                        <Folder className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-medium text-foreground">
-                          {projectName(project.path)}
+                      <button
+                        className="group flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors hover:bg-surface-muted"
+                        key={project.path}
+                        onClick={() => openProject(project)}
+                        type="button"
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                          <Folder className="h-4 w-4" />
                         </span>
-                        <span className="mt-0.5 block truncate font-mono text-[10.5px] text-muted-foreground">
-                          {project.path}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13px] font-medium text-foreground">
+                            {projectName(project.path)}
+                          </span>
+                          <span className="mt-0.5 block truncate font-mono text-[10.5px] text-muted-foreground">
+                            {project.path}
+                          </span>
                         </span>
-                      </span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-                    </button>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                      </button>
+                    </OpenInNewTabMenu>
                   ))
                 )}
               </div>
@@ -259,7 +267,9 @@ const Dashboard = () => {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[13px] font-semibold text-foreground">
-                    {serviceWarning ? "Services need attention" : "System ready"}
+                    {serviceWarning
+                      ? "Services need attention"
+                      : "System ready"}
                   </span>
                   <span className="mt-1 block text-[12px] leading-5 text-muted-foreground">
                     {requiredServiceEntries.length === 0

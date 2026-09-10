@@ -1,5 +1,6 @@
 import { StatusBadge } from "@/components/StatusBadge";
 import { TagPicker } from "@/components/tags/TagPicker";
+import { OpenInNewTabMenu } from "@/components/workspace/OpenInNewTabMenu";
 import type { TagOption } from "@/lib/item-tags";
 import {
   hasHistoricalVoice,
@@ -9,6 +10,7 @@ import {
   threadDisplayName,
   threadModelLabel,
   threadProjectLabel,
+  threadRoutePath,
 } from "@/lib/thread-display";
 import { cn } from "@/lib/utils";
 import type { ThreadInfo } from "@/types/session";
@@ -53,87 +55,100 @@ export const ThreadListItem = ({
     thread.reasoning_effort ?? thread.current_turn?.reasoning_effort ?? null;
 
   return (
-    <div
-      onClick={onClick}
-      className={cn(
-        "group flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-surface-muted",
-        isDeemphasized && "opacity-60 saturate-0 hover:opacity-80",
-        showTopBorder && "border-t border-border",
-      )}
+    <OpenInNewTabMenu
+      target={{
+        path: threadRoutePath(thread),
+        title: displayName ?? threadDisplayName(thread),
+      }}
     >
-      <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
-      {onToggleFavorite && !isDispatcherThread(thread) ? (
-        <button
-          type="button"
-          className={cn(
-            "flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface hover:text-foreground",
-            thread.is_favorite && "text-warning hover:text-warning",
-          )}
-          title={thread.is_favorite ? "Remove favorite" : "Favorite thread"}
-          aria-label={
-            thread.is_favorite ? "Remove favorite" : "Favorite thread"
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onClick();
           }
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleFavorite(thread);
-          }}
-        >
-          <Star
+        }}
+        className={cn(
+          "group flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-surface-muted",
+          isDeemphasized && "opacity-60 saturate-0 hover:opacity-80",
+          showTopBorder && "border-t border-border",
+        )}
+      >
+        <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
+        {onToggleFavorite && !isDispatcherThread(thread) ? (
+          <button
+            type="button"
             className={cn(
-              "h-3 w-3",
-              thread.is_favorite && "fill-current",
+              "flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface hover:text-foreground",
+              thread.is_favorite && "text-warning hover:text-warning",
             )}
-          />
-        </button>
-      ) : null}
-      <div className="flex min-w-0 flex-1 items-baseline gap-2">
-        <span className="truncate text-[12.5px] font-medium text-foreground">
-          {displayName ?? threadDisplayName(thread)}
-        </span>
-        {agentVoiceName && thread.voice_route?.role === "active_target" ? (
-          <span className="shrink-0 font-mono text-[10px] text-warning">
-            {agentVoiceName}
+            title={thread.is_favorite ? "Remove favorite" : "Favorite thread"}
+            aria-label={
+              thread.is_favorite ? "Remove favorite" : "Favorite thread"
+            }
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleFavorite(thread);
+            }}
+          >
+            <Star
+              className={cn("h-3 w-3", thread.is_favorite && "fill-current")}
+            />
+          </button>
+        ) : null}
+        <div className="flex min-w-0 flex-1 items-baseline gap-2">
+          <span className="truncate text-[12.5px] font-medium text-foreground">
+            {displayName ?? threadDisplayName(thread)}
           </span>
-        ) : agentVoiceName && thread.voice_route?.role === "dispatcher" ? (
-          <span className="shrink-0 font-mono text-[10px] text-warning">
-            {agentVoiceName}
+          {agentVoiceName && thread.voice_route?.role === "active_target" ? (
+            <span className="shrink-0 font-mono text-[10px] text-warning">
+              {agentVoiceName}
+            </span>
+          ) : agentVoiceName && thread.voice_route?.role === "dispatcher" ? (
+            <span className="shrink-0 font-mono text-[10px] text-warning">
+              {agentVoiceName}
+            </span>
+          ) : agentVoiceName && hasHistoricalVoice(thread) ? (
+            <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+              {agentVoiceName}
+            </span>
+          ) : null}
+          <span className="truncate font-mono text-[11px] text-muted-foreground/70">
+            {threadProjectLabel(thread)}
           </span>
-        ) : agentVoiceName && hasHistoricalVoice(thread) ? (
-          <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-            {agentVoiceName}
+        </div>
+        {modelLabel ? (
+          <span
+            className="hidden shrink-0 font-mono text-[10px] text-muted-foreground md:inline"
+            title={`${thread.model ?? modelLabel}${reasoningEffort ? ` · ${reasoningEffort} reasoning` : ""}`}
+          >
+            {modelLabel}
+            {reasoningEffort ? ` · ${reasoningEffort}` : ""}
           </span>
         ) : null}
-        <span className="truncate font-mono text-[11px] text-muted-foreground/70">
-          {threadProjectLabel(thread)}
-        </span>
-      </div>
-      {modelLabel ? (
-        <span
-          className="hidden shrink-0 font-mono text-[10px] text-muted-foreground md:inline"
-          title={`${thread.model ?? modelLabel}${reasoningEffort ? ` · ${reasoningEffort} reasoning` : ""}`}
-        >
-          {modelLabel}
-          {reasoningEffort ? ` · ${reasoningEffort}` : ""}
-        </span>
-      ) : null}
-      {onTagsChange ? (
-        <TagPicker
-          tags={thread.tags ?? []}
-          options={tagOptions}
-          disabled={tagsDisabled}
-          onChange={(tags) => onTagsChange(thread, tags)}
+        {onTagsChange ? (
+          <TagPicker
+            tags={thread.tags ?? []}
+            options={tagOptions}
+            disabled={tagsDisabled}
+            onChange={(tags) => onTagsChange(thread, tags)}
+          />
+        ) : null}
+        <StatusBadge
+          status={thread.status}
+          isLikelyStale={thread.is_likely_stale}
+          statusWarning={thread.status_warning}
         />
-      ) : null}
-      <StatusBadge
-        status={thread.status}
-        isLikelyStale={thread.is_likely_stale}
-        statusWarning={thread.status_warning}
-      />
-      <span className="hidden shrink-0 font-mono text-[10.5px] text-muted-foreground tabular-nums sm:inline">
-        {formatUpdatedAt(thread.updated_at)}
-      </span>
-      {action}
-      <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
-    </div>
+        <span className="hidden shrink-0 font-mono text-[10.5px] text-muted-foreground tabular-nums sm:inline">
+          {formatUpdatedAt(thread.updated_at)}
+        </span>
+        {action}
+        <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
+      </div>
+    </OpenInNewTabMenu>
   );
 };

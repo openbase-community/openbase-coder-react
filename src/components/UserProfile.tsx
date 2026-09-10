@@ -85,7 +85,9 @@ const UserProfile = () => {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={`h-7 gap-1.5 rounded px-2 text-[12px] ${
+          size="icon"
+          aria-label={keepAwakeEnabled ? "Keep awake enabled" : "Sleep allowed"}
+          className={`h-7 w-7 shrink-0 rounded ${
             keepAwakeEnabled
               ? "bg-success/10 text-success hover:bg-success/15 hover:text-success"
               : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
@@ -97,9 +99,6 @@ const UserProfile = () => {
           }
         >
           <KeepAwakeIcon className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">
-            {keepAwakeEnabled ? "Keep awake" : "Sleep allowed"}
-          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={6} className="w-72 text-[13px]">

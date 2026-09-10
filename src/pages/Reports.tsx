@@ -343,6 +343,7 @@ const Reports = () => {
                           const childPayload = payloads[childKey];
                           return (
                             <ReportFileListRow
+                              projectPath={item.project.path}
                               key={childKey}
                               file={item.file}
                               active={childExpanded}
@@ -378,6 +379,7 @@ const Reports = () => {
               const payload = payloads[key];
               return (
                 <ReportFileListRow
+                  projectPath={item.project.path}
                   key={key}
                   file={item.file}
                   active={expanded}

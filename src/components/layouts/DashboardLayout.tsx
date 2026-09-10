@@ -2,6 +2,8 @@ import FindInPageBar from "@/components/FindInPageBar";
 import HealthWarningsBanner from "@/components/HealthWarningsBanner";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import UserProfile from "@/components/UserProfile";
+import { WorkspaceToolbar } from "@/components/workspace/WorkspaceToolbar";
+import { useWorkspacePanel } from "@/contexts/workspace-tabs";
 import dashboardWordmarkUrl from "@/assets/openbase-dashboard-wordmark.png";
 import {
   Collapsible,
@@ -50,7 +52,7 @@ interface DashboardLayoutProps {
 const groupLabelClass =
   "px-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/55";
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({
+const DashboardChrome: React.FC<DashboardLayoutProps> = ({
   children,
   noPadding,
 }) => {
@@ -129,7 +131,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         <SidebarMenuItem key={item.path}>
           <SidebarMenuButton
             isActive={
-              item.externalUrl ? false : isActive(item.path, item.exact ?? false)
+              item.externalUrl
+                ? false
+                : isActive(item.path, item.exact ?? false)
             }
             onClick={() => navigateToItem(item)}
             tooltip={title}
@@ -207,7 +211,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   <CollapsibleTrigger asChild>
                     <button
                       type="button"
-                      aria-label={systemOpen ? "Collapse system navigation" : "Expand system navigation"}
+                      aria-label={
+                        systemOpen
+                          ? "Collapse system navigation"
+                          : "Expand system navigation"
+                      }
                       className="flex h-7 w-full items-center rounded px-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     >
                       System
@@ -263,10 +271,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           className={`flex min-h-0 min-w-0 flex-1 flex-col ${noPadding ? "overflow-hidden" : "overflow-auto"}`}
         >
           <header className="sticky top-0 z-10 flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/85 px-3 backdrop-blur md:px-4">
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <SidebarTrigger className="md:hidden" />
+              <WorkspaceToolbar />
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1">
               <NotificationsDropdown />
               <UserProfile />
             </div>
@@ -289,4 +298,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   );
 };
 
-export default DashboardLayout;
+export default function DashboardLayout(props: DashboardLayoutProps) {
+  const panel = useWorkspacePanel();
+  if (panel)
+    return (
+      <div
+        className={`workspace-page ${props.noPadding ? "" : "workspace-page-padded"}`}
+      >
+        {props.children}
+      </div>
+    );
+  return <DashboardChrome {...props} />;
+}

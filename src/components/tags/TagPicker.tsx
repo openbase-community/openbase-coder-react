@@ -108,6 +108,7 @@ export const TagPicker = ({
           align={align}
           className="w-64 p-2"
           onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
         >
           <div className="max-h-48 space-y-1 overflow-y-auto">
             {mergedOptions.length === 0 ? (

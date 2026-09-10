@@ -1,0 +1,264 @@
+import { useAuth } from "@/contexts/auth";
+import { apiFetch } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api-errors";
+import { getValidAccessToken } from "@/lib/jwt-auth";
+import { getBackendWebSocketUrl } from "@/lib/runtime-config";
+import { reconcileThreadSnapshot } from "@/lib/thread-reconcile";
+import {
+  type ThreadTurnAction,
+  threadTurnActionMessage,
+  threadTurnActionPath,
+} from "@/lib/thread-turn-actions";
+import type { ThreadInfo } from "@/types/session";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+
+export function useThreadConnection(threadId: string | undefined) {
+  const { token } = useAuth();
+  const [thread, setThread] = useState<ThreadInfo | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectDelayRef = useRef(1000);
+  const connectAttemptRef = useRef(0);
+
+  const refreshThread = useCallback(async () => {
+    if (!threadId) return;
+    // This runs on an interval, so failures update a persistent inline error
+    // instead of toasting on every tick.
+    try {
+      const res = await apiFetch(`/api/threads/${threadId}/`);
+      if (!res.ok) {
+        setLoadError(
+          await extractErrorMessage(
+            res,
+            `Unable to load thread (HTTP ${res.status}).`,
+          ),
+        );
+        return;
+      }
+      const snapshot: ThreadInfo = await res.json();
+      setThread((prev) => reconcileThreadSnapshot(prev, snapshot));
+      setLoadError(null);
+    } catch {
+      setLoadError("Unable to reach the local API.");
+    }
+  }, [threadId]);
+
+  const connect = useCallback(async () => {
+    if (!threadId || !token) return;
+
+    // A token captured at mount goes stale across long sessions; every
+    // (re)connect attempt must authenticate with a currently valid token or
+    // the server rejects the socket forever once the old one expires.
+    const attempt = ++connectAttemptRef.current;
+    const freshToken = (await getValidAccessToken()) ?? token;
+    if (attempt !== connectAttemptRef.current) return;
+
+    const baseUrl = getBackendWebSocketUrl(`/ws/threads/${threadId}/`);
+    const url = `${baseUrl}?token=${freshToken}`;
+
+    const ws = new WebSocket(url);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      setIsConnected(true);
+      reconnectDelayRef.current = 1000;
+      void refreshThread();
+    };
+
+    ws.onclose = () => {
+      setIsConnected(false);
+      wsRef.current = null;
+      // Auto-reconnect with backoff
+      reconnectTimeoutRef.current = setTimeout(() => {
+        reconnectDelayRef.current = Math.min(
+          reconnectDelayRef.current * 2,
+          30000,
+        );
+        void connect();
+      }, reconnectDelayRef.current);
+    };
+
+    ws.onmessage = (event) => {
+      let msg;
+      try {
+        msg = JSON.parse(event.data);
+      } catch {
+        // Ignore malformed frames; the periodic refresh keeps state converging.
+        return;
+      }
+
+      switch (msg.type) {
+        case "thread_state":
+          setThread((prev) => reconcileThreadSnapshot(prev, msg.data));
+          break;
+
+        case "turn_started":
+          setThread((prev) => {
+            if (!prev) return prev;
+            if (prev.current_turn?.turn_id === msg.data.turn_id) return prev;
+            return {
+              ...prev,
+              current_turn: msg.data,
+              status: "running",
+            };
+          });
+          break;
+
+        case "output_update":
+          setThread((prev) => {
+            if (!prev?.current_turn) return prev;
+            if (
+              msg.data.turn_id &&
+              msg.data.turn_id !== prev.current_turn.turn_id
+            ) {
+              // Stale delta from a previous turn; never render it under the
+              // current turn.
+              return prev;
+            }
+            const field =
+              msg.data.stream === "stderr"
+                ? "accumulated_stderr"
+                : "accumulated_output";
+            const suffix =
+              msg.data.chunk === true ? msg.data.line : `${msg.data.line}\n`;
+            return {
+              ...prev,
+              current_turn: {
+                ...prev.current_turn,
+                [field]: (prev.current_turn[field] || "") + suffix,
+              },
+            };
+          });
+          break;
+
+        case "turn_completed":
+          setThread((prev) => reconcileThreadSnapshot(prev, msg.data));
+          break;
+
+        case "turn_queued":
+          toast.success(threadTurnActionMessage("queue", msg.data ?? {}));
+          void refreshThread();
+          break;
+
+        case "turn_steered":
+          toast.success(threadTurnActionMessage("steer", msg.data ?? {}));
+          void refreshThread();
+          break;
+
+        case "error": {
+          const message = msg.data?.message ?? "Server error";
+          toast.error(message);
+          break;
+        }
+      }
+    };
+  }, [threadId, token, refreshThread]);
+
+  useEffect(() => {
+    void connect();
+
+    const interval = window.setInterval(refreshThread, 5000);
+    const handleFocus = () => {
+      void refreshThread();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshThread();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      connectAttemptRef.current++;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.onclose = null;
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [connect, refreshThread]);
+
+  const submitTurn = useCallback(
+    async (action: ThreadTurnAction, prompt: string) => {
+      if (!threadId) return false;
+      try {
+        const res = await apiFetch(threadTurnActionPath(threadId, action), {
+          method: "POST",
+          body: JSON.stringify({ prompt }),
+        });
+        if (!res.ok) {
+          toast.error(
+            await extractErrorMessage(
+              res,
+              `Unable to ${action} turn (HTTP ${res.status}).`,
+            ),
+          );
+          return false;
+        }
+        const result = (await res.json()) as Record<string, unknown>;
+        toast.success(threadTurnActionMessage(action, result));
+        await refreshThread();
+        return true;
+      } catch {
+        toast.error("Unable to reach the local API.");
+        return false;
+      }
+    },
+    [refreshThread, threadId],
+  );
+
+  const startTurn = useCallback(
+    (prompt: string) => submitTurn("start", prompt),
+    [submitTurn],
+  );
+  const queueTurn = useCallback(
+    (prompt: string) => submitTurn("queue", prompt),
+    [submitTurn],
+  );
+  const steerTurn = useCallback(
+    (prompt: string) => submitTurn("steer", prompt),
+    [submitTurn],
+  );
+
+  const interruptTurn = useCallback(() => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) {
+      toast.error("Thread is not connected yet");
+      return;
+    }
+    wsRef.current.send(JSON.stringify({ action: "interrupt_turn" }));
+  }, []);
+
+  return useMemo(
+    () => ({
+      thread,
+      isConnected,
+      loadError,
+      startTurn,
+      queueTurn,
+      steerTurn,
+      interruptTurn,
+      refreshThread,
+    }),
+    [
+      thread,
+      isConnected,
+      loadError,
+      startTurn,
+      queueTurn,
+      steerTurn,
+      interruptTurn,
+      refreshThread,
+    ],
+  );
+}

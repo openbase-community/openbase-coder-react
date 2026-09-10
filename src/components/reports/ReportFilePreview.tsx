@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Save } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useWorkspaceDraft } from "@/contexts/workspace-tabs";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -23,9 +24,10 @@ export const ReportFilePreview = ({
   saving: boolean;
   onSaveContent?: (content: string) => Promise<ReportFilePayload | null> | ReportFilePayload | null;
 }) => {
-  const [mode, setMode] = useState<"write" | "preview">("preview");
-  const [draft, setDraft] = useState("");
   const content = payload?.content ?? "";
+  const draftKey = JSON.stringify([projectPath, payload?.file.path]);
+  const [mode, setMode] = useWorkspaceDraft(`report-mode:${draftKey}`, "preview");
+  const [draft, setDraft] = useWorkspaceDraft(`report-edit:${draftKey}`, content);
   const canEdit = payload?.file.kind === "markdown" && Boolean(onSaveContent);
   const dirty = draft !== content;
   const reportPath = payload?.file.path;
@@ -41,10 +43,6 @@ export const ReportFilePreview = ({
     }),
     [projectPath, reportPath],
   );
-
-  useEffect(() => {
-    setDraft(content);
-  }, [content, payload?.file.path]);
 
   if (loading) {
     return <div className="text-[12px] text-muted-foreground">{loadingLabel}</div>;
@@ -98,7 +96,7 @@ export const ReportFilePreview = ({
                   variant="ghost"
                   className="h-7 px-2 text-[12px]"
                   disabled={saving}
-                  onClick={() => setDraft(content)}
+                  onClick={() => setDraft(undefined)}
                 >
                   Revert
                 </Button>
@@ -111,6 +109,7 @@ export const ReportFilePreview = ({
                 onClick={async () => {
                   const result = await onSaveContent?.(draft);
                   if (result) {
+                    setDraft(undefined);
                     setMode("preview");
                   }
                 }}

@@ -1,0 +1,64 @@
+.workspace-surface {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  --flexlayout-color-text: hsl(var(--foreground));
+  --flexlayout-color-background: hsl(var(--background));
+  --flexlayout-color-base: hsl(var(--background));
+  --flexlayout-color-1: hsl(var(--background));
+  --flexlayout-color-2: hsl(var(--muted));
+  --flexlayout-color-3: hsl(var(--border));
+  --flexlayout-color-4: hsl(var(--border));
+  --flexlayout-color-tabset-background: hsl(var(--background));
+  --flexlayout-color-tabset-background-selected: hsl(var(--muted));
+  --flexlayout-color-tab-selected: hsl(var(--foreground));
+  --flexlayout-color-tab-unselected: hsl(var(--muted-foreground));
+  --flexlayout-font-size: 12px;
+  --flexlayout-splitter-size: 5px;
+}
+.workspace-panel {
+  position: relative;
+  isolation: isolate;
+  contain: layout;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  container-type: inline-size;
+}
+.workspace-page {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+.workspace-page-padded {
+  padding: 16px;
+}
+.workspace-panel .flexlayout__tab {
+  overflow: hidden;
+}
+.workspace-surface .flexlayout__tab_button {
+  max-width: 240px;
+  min-width: 72px;
+  letter-spacing: 0;
+}
+.workspace-surface .flexlayout__tab_button_content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-surface .flexlayout__tabset-selected {
+  border-top: 2px solid hsl(var(--primary));
+}
+.workspace-surface .flexlayout__splitter:hover {
+  background: hsl(var(--primary) / 0.35);
+}
+@container (max-width: 600px) {
+  .workspace-panel .md\:inline,
+  .workspace-panel .md\:flex {
+    display: none;
+  }
+}

@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useWorkspaceDraft, useWorkspaceTabTitle } from "@/contexts/workspace-tabs";
 import { RunDetail } from "@/components/RunDetail";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TurnBody, UserBubble } from "@/components/TurnBody";
@@ -210,7 +211,8 @@ const SessionDetail = ({
     refreshThread,
   } = useThreadWebSocket(threadId);
   const { tagOptions, refreshTagOptions } = useTagOptions();
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useWorkspaceDraft(`thread-prompt:${threadId}`);
+  useWorkspaceTabTitle(thread ? threadDisplayName(thread) : undefined);
   const [isSubmittingPrompt, setIsSubmittingPrompt] = useState(false);
   const [activePromptMode, setActivePromptMode] = useState<"steer" | "queue">(
     "steer",

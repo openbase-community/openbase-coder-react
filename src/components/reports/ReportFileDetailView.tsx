@@ -1,17 +1,16 @@
 import { TagPicker } from "@/components/tags/TagPicker";
+import {
+  useWorkspaceDraft,
+  useWorkspaceTabTitle,
+  useWorkspacePanel,
+} from "@/contexts/workspace-tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { TagOption } from "@/lib/item-tags";
 import { reportDetailKeyboardAction } from "@/lib/reportDetailKeyboard";
 import { reportDisplayName } from "@/lib/reportTitle";
 import type { ReportsFile } from "@/types/session";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  Play,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Play, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
@@ -40,7 +39,9 @@ type ReportFileDetailViewProps = {
   onSendFollowUp?: (message: string) => Promise<boolean> | boolean;
   onDownload: () => void;
   onDelete: () => void;
-  onSaveContent?: (content: string) => Promise<ReportFilePayload | null> | ReportFilePayload | null;
+  onSaveContent?: (
+    content: string,
+  ) => Promise<ReportFilePayload | null> | ReportFilePayload | null;
   onTagsChange?: (tags: string[]) => Promise<void> | void;
   actioning?: boolean;
   downloading?: boolean;
@@ -86,10 +87,18 @@ export const ReportFileDetailView = ({
   onScrollTopChange,
 }: ReportFileDetailViewProps) => {
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  const panel = useWorkspacePanel();
   const detailRef = useRef<HTMLDivElement | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [followUpDraft, setFollowUpDraft] = useState("");
+  const [followUpDraft, setFollowUpDraft] = useWorkspaceDraft(
+    `report-follow-up:${JSON.stringify([projectPath, file.path])}`,
+  );
   const displayName = title ?? reportDisplayName(file, payload);
+  useWorkspaceTabTitle(
+    typeof displayName === "string"
+      ? displayName
+      : reportDisplayName(file, payload),
+  );
   const provenance = payload?.provenance;
   const hasThreadProvenance = Boolean(provenance?.thread_id);
   const hasDisplayProvenance = Boolean(
@@ -104,23 +113,26 @@ export const ReportFileDetailView = ({
   }, [file.path, scrollTop]);
 
   useEffect(() => {
+    if (panel && panel.root?.dataset.focused !== "true") return;
     detailRef.current?.focus();
-  }, [file.path]);
+  }, [file.path, panel?.root]);
 
   useEffect(() => {
     setDeleteConfirmOpen(false);
   }, [file.path]);
 
   useEffect(() => {
+    if (panel) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, []);
+  }, [panel?.id]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (panel && panel.root?.dataset.focused !== "true") return;
       const action = reportDetailKeyboardAction({
         key: event.key,
         hasPrevious,
@@ -157,16 +169,24 @@ export const ReportFileDetailView = ({
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [deleteConfirmOpen, hasNext, hasPrevious, onClose, onNext, onPrevious]);
+  }, [
+    deleteConfirmOpen,
+    hasNext,
+    hasPrevious,
+    onClose,
+    onNext,
+    onPrevious,
+    panel?.root,
+  ]);
 
   const detail = (
     <div
       ref={detailRef}
       role="dialog"
-      aria-modal="true"
+      aria-modal={panel ? undefined : true}
       aria-label={`Report detail: ${file.name}`}
       tabIndex={-1}
-      className="fixed inset-0 z-40 flex h-[100dvh] w-screen max-w-none flex-col bg-background outline-none"
+      className={`${panel ? "absolute inset-0" : "fixed inset-0"} z-40 flex min-h-0 max-w-none flex-col bg-background outline-none`}
     >
       <div className="flex min-h-0 shrink-0 flex-col border-b border-border bg-surface">
         <div className="flex min-h-[52px] items-center gap-2 px-3 py-2">
@@ -293,7 +313,9 @@ export const ReportFileDetailView = ({
                     : "Generating thread unavailable"}
               </span>
               {provenance?.agent_name ? (
-                <span className="text-muted-foreground">{provenance.agent_name}</span>
+                <span className="text-muted-foreground">
+                  {provenance.agent_name}
+                </span>
               ) : null}
               {provenance?.thread_name ? (
                 <span className="truncate text-muted-foreground">
@@ -341,7 +363,9 @@ export const ReportFileDetailView = ({
                 type="button"
                 size="sm"
                 className="h-7 px-2 text-[12px]"
-                disabled={!canFollowUp || !followUpDraft.trim() || followUpSending}
+                disabled={
+                  !canFollowUp || !followUpDraft.trim() || followUpSending
+                }
                 onClick={async () => {
                   const sent = await onSendFollowUp?.(followUpDraft.trim());
                   if (sent) {
@@ -362,5 +386,6 @@ export const ReportFileDetailView = ({
     return detail;
   }
 
-  return createPortal(detail, document.body);
+  if (panel && !panel.root) return null;
+  return createPortal(detail, panel?.root ?? document.body);
 };

@@ -21,7 +21,7 @@ const navButtonClass =
 const SEARCH_ROOT_ID = "openbase-main";
 
 function getSearchRoot(): Node {
-  return document.getElementById(SEARCH_ROOT_ID) ?? document.body;
+  return document.querySelector('[data-workspace-panel][data-focused="true"]') ?? document.getElementById(SEARCH_ROOT_ID) ?? document.body;
 }
 
 /**
