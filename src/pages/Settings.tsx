@@ -13,6 +13,7 @@ import {
 import React, { type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AuthenticationSettings } from "./settings/AuthenticationSettings";
+import { AppearanceSettings } from "./settings/AppearanceSettings";
 import { BackendModelSettings } from "./settings/BackendModelSettings";
 import { CodingBackendSettings } from "./settings/CodingBackendSettings";
 import { DangerousConfirmationSettings } from "./settings/DangerousConfirmationSettings";
@@ -71,7 +72,7 @@ const SETTINGS_SECTIONS: Array<{
   {
     id: "interface",
     label: "Interface",
-    description: "Console layout",
+    description: "Appearance and layout",
     icon: LayoutPanelLeft,
   },
   {
@@ -149,7 +150,12 @@ const Settings: React.FC = () => {
         />
       </>
     ),
-    interface: <SidebarItemsSettings />,
+    interface: (
+      <>
+        <AppearanceSettings />
+        <SidebarItemsSettings />
+      </>
+    ),
     safety: <DangerousConfirmationSettings />,
     advanced: (
       <>

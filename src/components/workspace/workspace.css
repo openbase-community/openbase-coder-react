@@ -11,6 +11,10 @@
   --flexlayout-color-2: hsl(var(--muted));
   --flexlayout-color-3: hsl(var(--border));
   --flexlayout-color-4: hsl(var(--border));
+  --flexlayout-color-5: hsl(var(--muted));
+  --flexlayout-color-6: hsl(var(--border));
+  --flexlayout-color-icon: hsl(var(--muted-foreground));
+  --flexlayout-color-focus: hsl(var(--ring));
   --flexlayout-color-tabset-background: hsl(var(--background));
   --flexlayout-color-tabset-background-selected: hsl(var(--muted));
   --flexlayout-color-tab-selected: hsl(var(--foreground));

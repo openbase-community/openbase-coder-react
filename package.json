@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     "./App": "./src/App.tsx",
+    "./appearance": "./src/appearance.tsx",
     "./brand": "./src/components/OpenbaseWordmark.tsx",
     "./product-analytics": "./src/product-analytics.ts",
     "./plugin-registry": "./src/plugin-registry.tsx",
