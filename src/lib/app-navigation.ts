@@ -15,6 +15,7 @@ export const WORKSPACE_ORDER = [
   "approvals",
   "routines",
   "skills",
+  "memories",
   "templates",
 ] as const;
 

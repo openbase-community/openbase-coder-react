@@ -33,6 +33,7 @@ import Reports from "./pages/Reports";
 import Diff from "./pages/Diff";
 import Devices from "./pages/Devices";
 import Login from "./pages/Login";
+import Memories from "./pages/Memories";
 import NotFound from "./pages/NotFound";
 import ProjectDetail from "./pages/ProjectDetail";
 import Projects from "./pages/Projects";
@@ -228,6 +229,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Skills />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/memories"
+        element={
+          <ProtectedRoute>
+            <Memories />
           </ProtectedRoute>
         }
       />

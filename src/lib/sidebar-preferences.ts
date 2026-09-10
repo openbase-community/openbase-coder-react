@@ -1,5 +1,6 @@
 import {
   Activity,
+  Brain,
   CalendarClock,
   Cloud,
   FilePenLine,
@@ -92,6 +93,13 @@ export const BUILT_IN_SIDEBAR_ITEMS: SidebarItem[] = [
     path: "/dashboard/skills",
     icon: Zap,
     title: "Skills",
+    section: "workspace",
+  },
+  {
+    key: "memories",
+    path: "/dashboard/memories",
+    icon: Brain,
+    title: "Memories",
     section: "workspace",
   },
   {
