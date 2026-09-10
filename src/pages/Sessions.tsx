@@ -57,6 +57,7 @@ const Sessions = () => {
     loadingMoreThreads,
     fetchData,
     loadMoreThreads,
+    updateThread,
   } = useProjectsAndThreads();
   const { tagOptions, refreshTagOptions } = useTagOptions();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -134,9 +135,9 @@ const Sessions = () => {
 
   const updateThreadTags = async (threadId: string, tags: string[]) => {
     try {
-      await setThreadTags(threadId, tags);
+      const saved = await setThreadTags(threadId, tags);
+      updateThread(threadId, { tags: saved.tags });
       void refreshTagOptions();
-      void fetchData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update tags");
     }

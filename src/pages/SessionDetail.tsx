@@ -372,7 +372,7 @@ const SessionDetail = ({
         {thread ? (
           <header className="shrink-0 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {fromProjectPath ? (
                   <Button
                     variant="ghost"
@@ -384,7 +384,7 @@ const SessionDetail = ({
                     Back
                   </Button>
                 ) : null}
-                <h1 className="text-sm font-semibold text-foreground">
+                <h1 className="workspace-thread-title min-w-0 max-w-full break-words text-sm font-semibold text-foreground">
                   {threadDisplayName(thread)}
                 </h1>
                 {!isDispatchThread ? (

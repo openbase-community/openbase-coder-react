@@ -5,6 +5,7 @@ import {
   GroupAction,
   Model,
   TabNode,
+  TabSetNode,
   type Action,
   type IJsonModel,
   type IJsonRowNode,
@@ -16,7 +17,8 @@ import { layoutTabIds, validPanelPath } from "./layout-storage";
 const defaults = {
   tabEnablePopout: false,
   tabEnableRename: false,
-  tabSetEnableClose: false,
+  // Empty panes must remain removable; only hide the bulk-close control.
+  tabSetEnableClose: true,
   tabSetEnableCloseButton: false,
   tabSetMinWidth: 220,
   tabSetMinHeight: 140,
@@ -112,6 +114,13 @@ export class WorkspaceController {
 
   private attachModel() {
     this.model.doAction(Actions.updateModelAttributes(defaults));
+    const emptyPanes: string[] = [];
+    this.model.visitNodes((node) => {
+      if (node instanceof TabSetNode && node.getChildren().length === 0)
+        emptyPanes.push(node.getId());
+    });
+    for (const id of emptyPanes)
+      this.model.doAction(Actions.deleteTabset(id));
     this.normalize();
     this.model.addChangeListener({
       onBeforeAction: (action) => {
@@ -292,6 +301,8 @@ export class WorkspaceController {
     action: Action,
     confirmDiscard: () => boolean,
   ): Action | undefined {
+    // Tabs close individually so draft checks cannot be bypassed by bulk close.
+    if (action.type === Actions.DELETE_TABSET) return undefined;
     if (action instanceof GroupAction) {
       return action.actions.every((child) =>
         this.allowAction(child, confirmDiscard),

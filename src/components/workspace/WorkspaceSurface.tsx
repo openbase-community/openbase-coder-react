@@ -11,6 +11,7 @@ import { Layout, TabNode, TabSetNode } from "flexlayout-react";
 import { Maximize2, Minimize2, Pin, X } from "lucide-react";
 import { useWorkspace, WorkspacePanelContext } from "@/contexts/workspace-tabs";
 import { WorkspaceToolbar } from "./WorkspaceToolbar";
+import { useWorkspaceKeyboard } from "./useWorkspaceKeyboard";
 import { confirmDiscardDrafts, showWorkspaceTabMenu } from "./WorkspaceTabMenu";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { getRouterBasename, getRuntimeShell } from "@/lib/runtime-config";
@@ -49,6 +50,7 @@ function WorkspacePanel({
         data-workspace-panel={node.getId()}
         data-focused={focused}
         className="workspace-panel"
+        tabIndex={-1}
         onPointerDownCapture={focus}
         onFocusCapture={focus}
       >
@@ -68,6 +70,7 @@ export function WorkspaceSurface({
   components: Record<string, ComponentType>;
 }) {
   const { controller, host } = useWorkspace();
+  useWorkspaceKeyboard(controller, host);
   useEffect(() => {
     if (!host) return;
     const update = () => controller.setCompact(host.clientWidth < 640);

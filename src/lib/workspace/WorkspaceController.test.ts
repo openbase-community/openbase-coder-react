@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Actions, DockLocation } from "flexlayout-react";
+import { Actions, DockLocation, Model } from "flexlayout-react";
 import { WorkspaceController } from "./WorkspaceController";
 import { workspaceItemHref } from "./urls";
 import { readWorkspaceLayout, saveWorkspaceLayout } from "./layout-storage";
@@ -49,6 +49,7 @@ describe("workspace navigation and layout", () => {
       Actions.moveNode(first, otherGroup, DockLocation.CENTER, -1),
     );
     expect(workspace.runtime(first)).toBe(runtime);
+    expect(workspace.model.getRootRow().getChildren()).toHaveLength(1);
     workspace.undo();
     expect(workspace.tabs).toHaveLength(2);
     expect(workspace.runtime(first).drafts.get("thread-prompt:one")).toBe(
@@ -74,6 +75,50 @@ describe("workspace navigation and layout", () => {
     workspace.close(workspace.focused!.getId(), () => true);
     expect(workspace.tabs).toHaveLength(1);
     expect(workspace.model.toJson().global?.tabSetEnableTabStrip).toBe(false);
+  });
+
+  it("removes an empty split and restores it through undo", () => {
+    const workspace = new WorkspaceController();
+    workspace.split(DockLocation.RIGHT);
+    const second = workspace.focused!.getId();
+    workspace.close(second, () => true);
+    expect(workspace.model.getRootRow().getChildren()).toHaveLength(1);
+    expect(workspace.model.toJson().global?.tabSetEnableTabStrip).toBe(false);
+    workspace.undo();
+    expect(workspace.model.getRootRow().getChildren()).toHaveLength(2);
+    workspace.redo();
+    expect(workspace.model.getRootRow().getChildren()).toHaveLength(1);
+  });
+
+  it("cleans empty panes saved by older layouts without allowing bulk close", () => {
+    const workspace = new WorkspaceController(
+      Model.fromJson({
+        global: { tabSetEnableClose: false },
+        layout: {
+          type: "row",
+          children: [
+            {
+              type: "tabset",
+              children: [{
+                type: "tab",
+                component: "route",
+                name: "Overview",
+                config: { path: "/dashboard" },
+              }],
+            },
+            { type: "tabset", children: [] },
+          ],
+        },
+      }),
+    );
+    expect(workspace.model.getRootRow().getChildren()).toHaveLength(1);
+    expect(
+      workspace.allowAction(
+        Actions.deleteTabset(workspace.focused!.getParent()!.getId()),
+        () => true,
+      ),
+    ).toBeUndefined();
+    expect(workspace.tabs).toHaveLength(1);
   });
 
   it("restores layout independently of URLs and rejects damaged or external destinations", () => {

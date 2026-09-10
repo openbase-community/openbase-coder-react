@@ -279,7 +279,7 @@ const Projects = () => {
                             <span className="h-5 w-5 shrink-0" />
                           )}
 
-                          <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                          <div className="workspace-project-label flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
                             <span className="truncate text-[13px] font-medium text-foreground">
                               {projectName(rowProject.path)}
                             </span>
@@ -296,7 +296,7 @@ const Projects = () => {
                             ) : null}
                           </div>
 
-                          <div className="hidden shrink-0 flex-wrap items-center justify-end gap-0.5 sm:flex">
+                          <div className="workspace-project-actions hidden shrink-0 flex-wrap items-center justify-end gap-0.5 sm:flex">
                             <Button
                               size="sm"
                               variant="ghost"

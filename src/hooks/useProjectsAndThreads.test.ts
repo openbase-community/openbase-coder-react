@@ -108,6 +108,24 @@ describe.each(["threads", "projects"] as const)("%s pagination", (kind) => {
     expect(result.current[nextKey]).toBeNull();
   });
 
+  it("does not let interval polling starve a slow refresh", async () => {
+    items[0] = { ...items[0], name: "Updated during slow request" };
+    blockedPage = 1;
+    let pending: Promise<void>;
+    await act(async () => {
+      pending = result.current.fetchData();
+    });
+    await refresh();
+    await refresh();
+    await act(async () => {
+      releasePage();
+      await pending;
+    });
+    expect(result.current[kind][0]).toEqual(
+      expect.objectContaining({ name: "Updated during slow request" }),
+    );
+  });
+
   it("preserves the list and cursor when a later refresh page fails", async () => {
     await loadMore();
     failedPage = 2;
@@ -121,6 +139,30 @@ describe.each(["threads", "projects"] as const)("%s pagination", (kind) => {
     await refresh();
     expect(result.current.error).toBeNull();
   });
+
+  it.skipIf(kind !== "threads").each(["refresh", "load more"])(
+    "preserves a saved thread mutation while %s is in flight",
+    async (operation) => {
+      blockedPage = operation === "refresh" ? 1 : 2;
+      let pending: Promise<void>;
+      await act(async () => {
+        pending =
+          operation === "refresh"
+            ? result.current.fetchThreads()
+            : result.current.loadMoreThreads();
+      });
+      act(() => result.current.updateThread("0", { tags: ["Manual tag"] }));
+      expect(result.current.threads[0].tags).toEqual(["Manual tag"]);
+      await act(async () => {
+        releasePage();
+        await pending;
+      });
+      expect(result.current.threads[0].tags).toEqual(["Manual tag"]);
+      expect(result.current.threads).toHaveLength(
+        operation === "refresh" ? 25 : 50,
+      );
+    },
+  );
 
   it.each(["refresh", "load more"])(
     "handles %s starting first during overlapping requests",

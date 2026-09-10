@@ -22,8 +22,31 @@ export const useProjectsAndThreads = () => {
   const [loadingMoreProjects, setLoadingMoreProjects] = useState(false);
   const [threadsError, setThreadsError] = useState<string | null>(null);
   const [projectsError, setProjectsError] = useState<string | null>(null);
-  const threadPagination = useRef({ pages: 1, request: 0, loadingMore: false });
-  const projectPagination = useRef({ pages: 1, request: 0, loadingMore: false });
+  const threadPagination = useRef({
+    pages: 1,
+    request: 0,
+    loadingMore: false,
+    refreshing: false,
+  });
+  const projectPagination = useRef({
+    pages: 1,
+    request: 0,
+    loadingMore: false,
+    refreshing: false,
+  });
+
+  const updateThread = useCallback(
+    (threadId: string, changes: Partial<ThreadInfo>) => {
+      // A refresh started before this saved mutation must not overwrite it.
+      threadPagination.current.request += 1;
+      setThreads((current) =>
+        current.map((thread) =>
+          thread.thread_id === threadId ? { ...thread, ...changes } : thread,
+        ),
+      );
+    },
+    [],
+  );
 
   const toErrorMessage = (err: unknown) =>
     err instanceof Error ? err.message : "Unable to reach the local API.";
@@ -65,7 +88,8 @@ export const useProjectsAndThreads = () => {
 
   const fetchThreads = useCallback(async () => {
     const pagination = threadPagination.current;
-    if (pagination.loadingMore) return;
+    if (pagination.loadingMore || pagination.refreshing) return;
+    pagination.refreshing = true;
     const request = ++pagination.request;
     try {
       let page = await fetchThreadPage(apiFetch);
@@ -92,13 +116,15 @@ export const useProjectsAndThreads = () => {
       // Runs on an interval, so surface via a persistent inline error state.
       if (request === pagination.request) setThreadsError(toErrorMessage(err));
     } finally {
+      pagination.refreshing = false;
       setThreadsLoading(false);
     }
   }, []);
 
   const fetchProjects = useCallback(async () => {
     const pagination = projectPagination.current;
-    if (pagination.loadingMore) return;
+    if (pagination.loadingMore || pagination.refreshing) return;
+    pagination.refreshing = true;
     const request = ++pagination.request;
     try {
       let page = await fetchProjectPage(apiFetch);
@@ -126,6 +152,7 @@ export const useProjectsAndThreads = () => {
     } catch (err) {
       if (request === pagination.request) setProjectsError(toErrorMessage(err));
     } finally {
+      pagination.refreshing = false;
       setProjectsLoading(false);
     }
   }, [refreshProjectStatuses]);
@@ -216,5 +243,6 @@ export const useProjectsAndThreads = () => {
     fetchProjects,
     loadMoreThreads,
     loadMoreProjects,
+    updateThread,
   };
 };

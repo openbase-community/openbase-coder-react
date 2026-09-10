@@ -20,9 +20,10 @@ export function showWorkspaceTabMenu(
 ) {
   if (!(node instanceof TabNode) && !(node instanceof TabSetNode)) return;
   event.preventDefault();
+  event.stopPropagation();
   const tab = node instanceof TabNode ? node : node.getSelectedNode();
   if (!(tab instanceof TabNode)) return;
-  const items = new ContextMenuBuilder(node, {
+  const items = new ContextMenuBuilder(tab, {
     onAction: (action) => {
       const allowed = controller.allowAction(action, confirmDiscardDrafts);
       if (allowed) controller.model.doAction(allowed);
