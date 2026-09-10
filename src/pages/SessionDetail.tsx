@@ -2,6 +2,7 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { RunDetail } from "@/components/RunDetail";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TurnBody, UserBubble } from "@/components/TurnBody";
+import { TagPicker } from "@/components/tags/TagPicker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,11 +25,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useThreadWebSocket } from "@/hooks/use-session-websocket";
 import { useMarkEntityRead } from "@/contexts/notifications";
+import { useThreadWebSocket } from "@/hooks/use-session-websocket";
+import { useTagOptions } from "@/hooks/useTagOptions";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { cliResumeCommands, type CliResumeCommand } from "@/lib/cli-resume";
+import { setThreadTags } from "@/lib/item-tags";
 import {
   isDispatcherThread,
   threadAgentVoiceName,
@@ -206,6 +209,7 @@ const SessionDetail = ({
     interruptTurn,
     refreshThread,
   } = useThreadWebSocket(threadId);
+  const { tagOptions, refreshTagOptions } = useTagOptions();
   const [prompt, setPrompt] = useState("");
   const [isSubmittingPrompt, setIsSubmittingPrompt] = useState(false);
   const [activePromptMode, setActivePromptMode] = useState<"steer" | "queue">(
@@ -349,6 +353,17 @@ const SessionDetail = ({
     }
   };
 
+  const updateTags = async (tags: string[]) => {
+    if (!thread) return;
+    try {
+      await setThreadTags(thread.thread_id, tags);
+      void refreshTagOptions();
+      await refreshThread();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update tags");
+    }
+  };
+
   return (
     <DashboardLayout noPadding>
       <div className="flex h-full min-h-0 flex-col">
@@ -409,6 +424,11 @@ const SessionDetail = ({
                     {agentVoiceName}
                   </span>
                 ) : null}
+                <TagPicker
+                  tags={thread.tags ?? []}
+                  options={tagOptions}
+                  onChange={updateTags}
+                />
                 <Button
                   variant="ghost"
                   size="sm"

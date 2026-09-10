@@ -4,6 +4,7 @@ import {
   ReportFileListRow,
 } from "@/components/reports/ReportFileRow";
 import { StatusBadge } from "@/components/StatusBadge";
+import { TagPicker } from "@/components/tags/TagPicker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +21,7 @@ import { ErrorBanner } from "@/components/ui/error-banner";
 import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage, readJson } from "@/lib/api-errors";
-import { setReportTags } from "@/lib/item-tags";
+import { setReportTags, setThreadTags } from "@/lib/item-tags";
 import { GIT_STATUS, projectName } from "@/lib/project-display";
 import { groupReportItems } from "@/lib/reportGroups";
 import { formatReportBytes, formatReportDate } from "@/lib/reportFormatting";
@@ -307,6 +308,16 @@ const ProjectDetail = () => {
       await fetchThreads();
     } catch {
       toast.error("Failed to update favorite");
+    }
+  };
+
+  const updateThreadTags = async (thread: ThreadInfo, tags: string[]) => {
+    try {
+      await setThreadTags(thread.thread_id, tags);
+      void refreshTagOptions();
+      await fetchThreads();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update tags");
     }
   };
 
@@ -798,6 +809,11 @@ const ProjectDetail = () => {
                             {new Date(thread.updated_at).toLocaleString()}
                           </div>
                         </div>
+                        <TagPicker
+                          tags={thread.tags ?? []}
+                          options={tagOptions}
+                          onChange={(tags) => updateThreadTags(thread, tags)}
+                        />
                         <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
                       </div>
                     );

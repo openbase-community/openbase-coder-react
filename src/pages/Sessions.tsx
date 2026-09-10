@@ -15,8 +15,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Panel } from "@/components/ui/panel";
+import { useTagOptions } from "@/hooks/useTagOptions";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
+import { setThreadTags } from "@/lib/item-tags";
 import { setThreadFavorite } from "@/lib/thread-favorites";
 import {
   groupThreadsByDay,
@@ -40,6 +42,7 @@ const Sessions = () => {
     fetchData,
     loadMoreThreads,
   } = useProjectsAndThreads();
+  const { tagOptions, refreshTagOptions } = useTagOptions();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [syncConflictCount, setSyncConflictCount] = useState<number | null>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -108,6 +111,16 @@ const Sessions = () => {
       void fetchData();
     } catch {
       toast.error("Failed to update favorite");
+    }
+  };
+
+  const updateThreadTags = async (threadId: string, tags: string[]) => {
+    try {
+      await setThreadTags(threadId, tags);
+      void refreshTagOptions();
+      void fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update tags");
     }
   };
 
@@ -198,6 +211,10 @@ const Sessions = () => {
                               item.thread_id,
                               !item.is_favorite,
                             )
+                          }
+                          tagOptions={tagOptions}
+                          onTagsChange={(item, tags) =>
+                            updateThreadTags(item.thread_id, tags)
                           }
                           action={
                             isDispatchThread ? (

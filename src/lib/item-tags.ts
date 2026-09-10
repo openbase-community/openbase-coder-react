@@ -42,3 +42,26 @@ export const setReportTags = async (
     tag_options: Array.isArray(data?.tag_options) ? data.tag_options : [],
   };
 };
+
+export const setThreadTags = async (
+  threadId: string,
+  tags: string[],
+): Promise<TaggedItemPayload> => {
+  const response = await apiFetch(
+    `/api/threads/${encodeURIComponent(threadId)}/tags/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ tags }),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      await extractErrorMessage(response, "Failed to update tags"),
+    );
+  }
+  const data = await readJson<TaggedItemPayload>(response);
+  return {
+    tags: Array.isArray(data?.tags) ? data.tags : [],
+    tag_options: Array.isArray(data?.tag_options) ? data.tag_options : [],
+  };
+};

@@ -1,4 +1,6 @@
 import { StatusBadge } from "@/components/StatusBadge";
+import { TagPicker } from "@/components/tags/TagPicker";
+import type { TagOption } from "@/lib/item-tags";
 import {
   hasHistoricalVoice,
   isDispatcherThread,
@@ -19,6 +21,9 @@ interface ThreadListItemProps {
   showTopBorder?: boolean;
   onClick: () => void;
   onToggleFavorite?: (thread: ThreadInfo) => void;
+  onTagsChange?: (thread: ThreadInfo, tags: string[]) => Promise<void> | void;
+  tagOptions?: TagOption[];
+  tagsDisabled?: boolean;
   action?: ReactNode;
 }
 
@@ -36,6 +41,9 @@ export const ThreadListItem = ({
   showTopBorder = false,
   onClick,
   onToggleFavorite,
+  onTagsChange,
+  tagOptions = [],
+  tagsDisabled = false,
   action,
 }: ThreadListItemProps) => {
   const isDeemphasized = shouldDeemphasizeThread(thread);
@@ -107,6 +115,14 @@ export const ThreadListItem = ({
           {modelLabel}
           {reasoningEffort ? ` · ${reasoningEffort}` : ""}
         </span>
+      ) : null}
+      {onTagsChange ? (
+        <TagPicker
+          tags={thread.tags ?? []}
+          options={tagOptions}
+          disabled={tagsDisabled}
+          onChange={(tags) => onTagsChange(thread, tags)}
+        />
       ) : null}
       <StatusBadge
         status={thread.status}
