@@ -16,6 +16,7 @@ type TagPickerProps = {
   tags: string[];
   options: TagOption[];
   disabled?: boolean;
+  showBadges?: boolean;
   align?: "start" | "center" | "end";
   onChange: (tags: string[]) => Promise<void> | void;
 };
@@ -26,6 +27,7 @@ export const TagPicker = ({
   tags,
   options,
   disabled = false,
+  showBadges = true,
   align = "end",
   onChange,
 }: TagPickerProps) => {
@@ -66,26 +68,28 @@ export const TagPicker = ({
 
   return (
     <div className="flex min-w-0 items-center gap-1.5">
-      <div className="hidden min-w-0 flex-wrap gap-1 sm:flex">
-        {tags.slice(0, 3).map((tag) => (
-          <Badge
-            key={tag}
-            variant="outline"
-            className="max-w-28 truncate rounded px-1.5 py-0 text-[10px] font-medium"
-            title={tag}
-          >
-            {tag}
-          </Badge>
-        ))}
-        {tags.length > 3 ? (
-          <Badge
-            variant="outline"
-            className="rounded px-1.5 py-0 text-[10px] font-medium"
-          >
-            +{tags.length - 3}
-          </Badge>
-        ) : null}
-      </div>
+      {showBadges ? (
+        <div className="hidden min-w-0 flex-wrap gap-1 sm:flex">
+          {tags.slice(0, 3).map((tag) => (
+            <Badge
+              key={tag}
+              variant="outline"
+              className="max-w-28 truncate rounded px-1.5 py-0 text-[10px] font-medium"
+              title={tag}
+            >
+              {tag}
+            </Badge>
+          ))}
+          {tags.length > 3 ? (
+            <Badge
+              variant="outline"
+              className="rounded px-1.5 py-0 text-[10px] font-medium"
+            >
+              +{tags.length - 3}
+            </Badge>
+          ) : null}
+        </div>
+      ) : null}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button

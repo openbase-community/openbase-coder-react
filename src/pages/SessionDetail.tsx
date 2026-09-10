@@ -1,64 +1,34 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { useWorkspaceDraft, useWorkspaceTabTitle } from "@/contexts/workspace-tabs";
 import { RunDetail } from "@/components/RunDetail";
-import { StatusBadge } from "@/components/StatusBadge";
+import { ThreadHeader } from "@/components/ThreadHeader";
 import { TurnBody, UserBubble } from "@/components/TurnBody";
-import { TagPicker } from "@/components/tags/TagPicker";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import type {
   VoiceAgentState,
   VoiceCallStatus,
 } from "@/hooks/use-voice-call";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useMarkEntityRead } from "@/contexts/notifications";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
 import { useTagOptions } from "@/hooks/useTagOptions";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
-import { cliResumeCommands, type CliResumeCommand } from "@/lib/cli-resume";
 import { setThreadTags } from "@/lib/item-tags";
 import {
   isDispatcherThread,
-  threadAgentVoiceName,
   threadDisplayName,
-  threadModelLabel,
-  threadProjectLabel,
   threadRoutePath,
 } from "@/lib/thread-display";
 import { setThreadFavorite } from "@/lib/thread-favorites";
 import { promptAfterThreadTurnSubmission } from "@/lib/thread-turn-actions";
 import {
-  Archive,
-  ArrowLeft,
   ArrowUp,
-  Check,
-  Copy,
-  FolderOpen,
   Mic,
   MicOff,
   Phone,
   PhoneOff,
   Square,
-  Star,
-  Terminal,
-  Wifi,
-  WifiOff,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -100,69 +70,6 @@ function agentStateLabel(state: VoiceAgentState): string {
       return "In call with the Dispatcher";
   }
 }
-
-const ResumeFromCliButton = ({
-  resumeCommand,
-}: {
-  resumeCommand: CliResumeCommand;
-}) => {
-  const [copied, setCopied] = useState(false);
-
-  const copyCommand = async () => {
-    try {
-      await navigator.clipboard.writeText(resumeCommand.command);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error("Failed to copy command");
-    }
-  };
-
-  return (
-    <Popover onOpenChange={() => setCopied(false)}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-        >
-          <Terminal className="h-3 w-3" />
-          {resumeCommand.label}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto max-w-[28rem] p-3">
-        <div className="space-y-2">
-          <p className="text-[11px] text-muted-foreground">
-            {resumeCommand.description}
-          </p>
-          <div className="flex items-center gap-1.5">
-            <code className="max-w-[22rem] overflow-x-auto whitespace-nowrap rounded bg-muted px-2 py-1.5 font-mono text-[11px]">
-              {resumeCommand.command}
-            </code>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={copyCommand}
-              className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
-              title="Copy command"
-              aria-label="Copy command"
-            >
-              {copied ? (
-                <Check className="h-3 w-3 text-success" />
-              ) : (
-                <Copy className="h-3 w-3" />
-              )}
-            </Button>
-          </div>
-          <p className="text-[10.5px] text-muted-foreground">
-            Avoid steering this agent (voice or console) while the CLI session
-            is open — two writers can fork the conversation.
-          </p>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-};
 
 const scrollToBottomInstantly = (target: HTMLElement | null) => {
   const scrollRoot = findScrollContainer(target);
@@ -314,16 +221,6 @@ const SessionDetail = ({
     navigate(`/dashboard/project?path=${encodeURIComponent(fromProjectPath)}`);
   };
   const isDispatchThread = Boolean(thread && isDispatcherThread(thread));
-  const agentVoiceName = thread ? threadAgentVoiceName(thread) : undefined;
-  const resumeCommands =
-    thread && thread.directory
-      ? cliResumeCommands({
-          backend: thread.backend,
-          backendSessionId: thread.backend_session_id,
-          directory: thread.directory,
-          threadId: thread.thread_id,
-        })
-      : [];
 
   const archiveThread = async () => {
     if (!thread) return;
@@ -370,134 +267,17 @@ const SessionDetail = ({
     <DashboardLayout noPadding>
       <div className="flex h-full min-h-0 flex-col">
         {thread ? (
-          <header className="shrink-0 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                {fromProjectPath ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={goBackToProject}
-                    className="h-6 px-2 text-[11px]"
-                  >
-                    <ArrowLeft className="h-3 w-3" />
-                    Back
-                  </Button>
-                ) : null}
-                <h1 className="workspace-thread-title min-w-0 max-w-full break-words text-sm font-semibold text-foreground">
-                  {threadDisplayName(thread)}
-                </h1>
-                {!isDispatchThread ? (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleFavorite}
-                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                    title={
-                      thread.is_favorite ? "Remove favorite" : "Favorite thread"
-                    }
-                    aria-label={
-                      thread.is_favorite ? "Remove favorite" : "Favorite thread"
-                    }
-                  >
-                    <Star
-                      className={`h-3 w-3 ${
-                        thread.is_favorite ? "fill-current text-warning" : ""
-                      }`}
-                    />
-                  </Button>
-                ) : null}
-                <StatusBadge
-                  status={thread.status}
-                  isLikelyStale={thread.is_likely_stale}
-                  statusWarning={thread.status_warning}
-                />
-                {threadModelLabel(thread) ? (
-                  <span
-                    className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
-                    title={`${thread.model ?? ""}${thread.reasoning_effort ? ` · ${thread.reasoning_effort} reasoning` : ""}`}
-                  >
-                    {threadModelLabel(thread)}
-                    {thread.reasoning_effort ? ` · ${thread.reasoning_effort}` : ""}
-                  </span>
-                ) : null}
-                {agentVoiceName ? (
-                  <span className="font-mono text-[10px] text-warning">
-                    {agentVoiceName}
-                  </span>
-                ) : null}
-                <TagPicker
-                  tags={thread.tags ?? []}
-                  options={tagOptions}
-                  onChange={updateTags}
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={openProject}
-                  className="h-6 max-w-[16rem] gap-1 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-                  title={thread.directory}
-                >
-                  <FolderOpen className="h-3 w-3 shrink-0" />
-                  <span className="truncate font-mono">
-                    {threadProjectLabel(thread)}
-                  </span>
-                </Button>
-                {resumeCommands.map((resumeCommand) => (
-                  <ResumeFromCliButton
-                    key={resumeCommand.target}
-                    resumeCommand={resumeCommand}
-                  />
-                ))}
-                {!isDispatchThread ? (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-                      >
-                        <Archive className="h-3 w-3" />
-                        Archive
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Archive thread?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This hides the thread from active thread lists. If it
-                          is running, the current turn will be interrupted
-                          first.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={archiveThread}>
-                          Archive
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                ) : null}
-                <span className="ml-auto flex items-center gap-1 font-mono text-[10.5px]">
-                  {isConnected ? (
-                    <>
-                      <Wifi className="h-3 w-3 text-success" />
-                      <span className="text-success">Connected</span>
-                    </>
-                  ) : (
-                    <>
-                      <WifiOff className="h-3 w-3 text-destructive" />
-                      <span className="text-destructive">Disconnected</span>
-                    </>
-                  )}
-                </span>
-              </div>
-              <p className="truncate font-mono text-[10.5px] text-muted-foreground/60">
-                {thread.thread_id}
-              </p>
-            </div>
-          </header>
+          <ThreadHeader
+            key={thread.thread_id}
+            thread={thread}
+            isConnected={isConnected}
+            tagOptions={tagOptions}
+            onUpdateTags={updateTags}
+            onToggleFavorite={toggleFavorite}
+            onArchive={archiveThread}
+            onOpenProject={openProject}
+            onBack={fromProjectPath ? goBackToProject : undefined}
+          />
         ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
