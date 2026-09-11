@@ -18,7 +18,7 @@ export function WorkspaceToolbar({
 }) {
   const { controller } = useWorkspace();
   return (
-    <div className="flex shrink-0 items-center gap-0.5">
+    <div className="flex shrink-0 items-center gap-1">
       <Button
         size="icon"
         variant="ghost"

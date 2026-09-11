@@ -53,7 +53,8 @@ const NotificationsDropdown = () => {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-7 gap-1.5 rounded px-2 text-[12px] text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+          size="icon"
+          className="relative h-7 w-7 shrink-0 rounded text-muted-foreground hover:bg-surface-muted hover:text-foreground"
           title="Notifications"
           aria-label={
             unreadCount
