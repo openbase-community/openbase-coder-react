@@ -16,6 +16,8 @@ import { confirmDiscardDrafts, showWorkspaceTabMenu } from "./WorkspaceTabMenu";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { getRouterBasename, getRuntimeShell } from "@/lib/runtime-config";
 import { workspaceItemHref } from "@/lib/workspace/urls";
+import { useTabPosition } from "@/hooks/useTabPosition";
+import { VerticalTabs } from "./VerticalTabs";
 import "flexlayout-react/style/light.css";
 import "./workspace.css";
 
@@ -70,6 +72,11 @@ export function WorkspaceSurface({
   components: Record<string, ComponentType>;
 }) {
   const { controller, host } = useWorkspace();
+  const [tabPosition] = useTabPosition();
+  useEffect(
+    () => controller.setTabPosition(tabPosition),
+    [controller, tabPosition],
+  );
   useWorkspaceKeyboard(controller, host);
   useEffect(() => {
     if (!host) return;
@@ -95,48 +102,55 @@ export function WorkspaceSurface({
   // has an independent router, while sharing auth and backend services.
   return createPortal(
     <div className="workspace-surface">
-      <Layout
-        model={controller.model}
-        factory={factory}
-        supportsPopout={false}
-        realtimeResize
-        invalidateTabContentOnParentRender={false}
-        onAction={(action) =>
-          controller.allowAction(action, confirmDiscardDrafts)
-        }
-        onContextMenu={(node, event) =>
-          showWorkspaceTabMenu(node, event, controller)
-        }
-        onRenderTab={(node, values) => {
-          if (controller.hasDrafts(node.getId()))
-            values.leading = (
-              <span
-                title="Unfinished text"
-                className="mr-1 block h-1.5 w-1.5 rounded-full bg-warning"
-              />
-            );
-        }}
-        icons={{
-          close: <X size={13} />,
-          maximize: <Maximize2 size={13} />,
-          restore: <Minimize2 size={13} />,
-          pin: <Pin size={13} />,
-        }}
-        onRenderTabSet={(node, values) => {
-          if (node instanceof TabSetNode)
-            values.stickyButtons.push(
-              <WorkspaceToolbar
-                key="workspace"
-                tabId={(node.getSelectedNode() as TabNode | undefined)?.getId()}
-                compact
-              />,
-            );
-        }}
-        onAuxMouseClick={(node, event) => {
-          if (event.button === 1 && node instanceof TabNode)
-            controller.close(node.getId(), confirmDiscardDrafts);
-        }}
-      />
+      {controller.verticalTabs && controller.tabs.length > 1 && (
+        <VerticalTabs />
+      )}
+      <div className="workspace-layout">
+        <Layout
+          model={controller.model}
+          factory={factory}
+          supportsPopout={false}
+          realtimeResize
+          invalidateTabContentOnParentRender={false}
+          onAction={(action) =>
+            controller.allowAction(action, confirmDiscardDrafts)
+          }
+          onContextMenu={(node, event) =>
+            showWorkspaceTabMenu(node, event, controller)
+          }
+          onRenderTab={(node, values) => {
+            if (controller.hasDrafts(node.getId()))
+              values.leading = (
+                <span
+                  title="Unfinished text"
+                  className="mr-1 block h-1.5 w-1.5 rounded-full bg-warning"
+                />
+              );
+          }}
+          icons={{
+            close: <X size={13} />,
+            maximize: <Maximize2 size={13} />,
+            restore: <Minimize2 size={13} />,
+            pin: <Pin size={13} />,
+          }}
+          onRenderTabSet={(node, values) => {
+            if (node instanceof TabSetNode)
+              values.buttons.push(
+                <WorkspaceToolbar
+                  key="workspace"
+                  tabId={(
+                    node.getSelectedNode() as TabNode | undefined
+                  )?.getId()}
+                  compact
+                />,
+              );
+          }}
+          onAuxMouseClick={(node, event) => {
+            if (event.button === 1 && node instanceof TabNode)
+              controller.close(node.getId(), confirmDiscardDrafts);
+          }}
+        />
+      </div>
     </div>,
     host,
   );

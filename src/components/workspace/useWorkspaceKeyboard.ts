@@ -4,6 +4,7 @@ import {
   runWorkspaceShortcut,
   workspaceShortcut,
 } from "@/lib/workspace/keyboard";
+import { confirmDiscardDrafts } from "./WorkspaceTabMenu";
 
 export function useWorkspaceKeyboard(
   controller: WorkspaceController,
@@ -26,7 +27,7 @@ export function useWorkspaceKeyboard(
       if (event.defaultPrevented || event.repeat) return;
       if (
         document.querySelector(
-          '[role="dialog"], [role="alertdialog"], [role="menu"][data-state="open"]',
+          '[role="dialog"], [role="alertdialog"], [role="menu"]:not([data-state="closed"]):not([hidden])',
         )
       )
         return;
@@ -34,7 +35,7 @@ export function useWorkspaceKeyboard(
       if (!shortcut) return;
       event.preventDefault();
       event.stopPropagation();
-      runWorkspaceShortcut(controller, shortcut);
+      runWorkspaceShortcut(controller, shortcut, confirmDiscardDrafts);
       window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
         const id = controller.focused?.getId();

@@ -39,24 +39,42 @@ describe("workspace shortcuts", () => {
       key({ key: "\\", metaKey: true, isComposing: true }),
     ).toBeUndefined();
     expect(key({ key: "a", metaKey: true })).toBeUndefined();
+    expect(key({ key: "1", metaKey: true })).toEqual({
+      action: "select-tab",
+      index: 0,
+    });
+    expect(key({ key: "w", metaKey: true })).toEqual({ action: "close-tab" });
+    expect(key({ key: "w", ctrlKey: true }, false)).toEqual({
+      action: "close-tab",
+    });
+    expect(key({ key: "w", metaKey: true, shiftKey: true })).toBeUndefined();
+    expect(key({ key: "2", ctrlKey: true }, false)).toEqual({
+      action: "select-tab",
+      index: 1,
+    });
   });
 
-  it("wraps within the focused pane and focuses pane numbers without creating tabs", () => {
+  it("selects numbered tabs in the focused pane, with 9 selecting the last tab", () => {
     const controller = new WorkspaceController();
     const first = controller.focused!;
     controller.openTab({ path: "/dashboard/reports", title: "Reports" });
     const second = controller.focused!;
     controller.split(DockLocation.RIGHT);
     const third = controller.focused!;
-    runWorkspaceShortcut(controller, { action: "focus-pane", index: 0 });
+    controller.focus(first.getId());
+    runWorkspaceShortcut(controller, { action: "select-tab", index: 1 });
     expect(controller.focused).toBe(second);
     runWorkspaceShortcut(controller, { action: "cycle-tab", offset: 1 });
     expect(controller.focused).toBe(first);
     runWorkspaceShortcut(controller, { action: "cycle-tab", offset: -1 });
     expect(controller.focused).toBe(second);
-    runWorkspaceShortcut(controller, { action: "focus-pane", index: 1 });
+    runWorkspaceShortcut(controller, { action: "select-tab", index: 0 });
+    expect(controller.focused).toBe(first);
+    runWorkspaceShortcut(controller, { action: "select-tab", index: 8 });
+    expect(controller.focused).toBe(second);
+    controller.focus(third.getId());
+    runWorkspaceShortcut(controller, { action: "select-tab", index: 1 });
     expect(controller.focused).toBe(third);
-    runWorkspaceShortcut(controller, { action: "focus-pane", index: 8 });
     expect(controller.tabs).toHaveLength(3);
   });
 
@@ -87,10 +105,11 @@ describe("workspace shortcuts", () => {
     );
     editors[0].focus();
     editors[1].focus();
-    const cycle = () => {
+    const cycle = (
+      options: KeyboardEventInit = { key: "Tab", ctrlKey: true },
+    ) => {
       const event = new KeyboardEvent("keydown", {
-        key: "Tab",
-        ctrlKey: true,
+        ...options,
         bubbles: true,
         cancelable: true,
       });
@@ -101,14 +120,54 @@ describe("workspace shortcuts", () => {
     expect(cycle()).toBe(true);
     expect(controller.focused!.getId()).toBe(first);
     expect(document.activeElement).toBe(editors[0]);
+    expect(cycle({ key: "2", metaKey: true })).toBe(true);
+    expect(controller.focused!.getId()).toBe(second);
+    expect(document.activeElement).toBe(editors[1]);
+    expect(cycle({ key: "1", metaKey: true })).toBe(true);
+    expect(controller.focused!.getId()).toBe(first);
     const menu = document.createElement("div");
     menu.role = "menu";
     menu.dataset.state = "open";
     document.body.append(menu);
     expect(cycle()).toBe(false);
     expect(controller.focused!.getId()).toBe(first);
+    delete menu.dataset.state;
+    expect(cycle({ key: "w", metaKey: true })).toBe(false);
+    expect(controller.tabs).toHaveLength(2);
     menu.remove();
     unmount();
     expect(cycle()).toBe(false);
+  });
+
+  it("closes the focused tab through draft confirmation and retains the final tab", () => {
+    vi.spyOn(window.navigator, "platform", "get").mockReturnValue("MacIntel");
+    const controller = new WorkspaceController();
+    controller.openTab({ path: "/dashboard/reports", title: "Reports" });
+    controller
+      .runtime(controller.focused!.getId())
+      .drafts.set("prompt", "unfinished");
+    const host = document.createElement("div");
+    document.body.append(host);
+    renderHook(() => useWorkspaceKeyboard(controller, host));
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const close = () =>
+      act(() =>
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "w",
+            metaKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        ),
+      );
+    close();
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(controller.tabs).toHaveLength(2);
+    confirm.mockReturnValue(true);
+    close();
+    expect(controller.tabs).toHaveLength(1);
+    close();
+    expect(controller.tabs).toHaveLength(1);
   });
 });

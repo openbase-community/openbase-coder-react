@@ -11,7 +11,11 @@ import {
   type IJsonRowNode,
   type IJsonTabSetNode,
 } from "flexlayout-react";
-import { workspaceTabTitle, type WorkspaceTabTarget } from "../workspace-tabs";
+import {
+  workspaceTabTitle,
+  type WorkspaceTabTarget,
+  type TabPosition,
+} from "../workspace-tabs";
 import { layoutTabIds, validPanelPath } from "./layout-storage";
 
 const defaults = {
@@ -73,6 +77,7 @@ export class WorkspaceController {
   private beforeLayout?: IJsonModel;
   urlChange: "push" | "replace" = "replace";
   compact = false;
+  tabPosition: TabPosition = "horizontal";
   private previousMaximized?: string;
 
   constructor(model = freshWorkspace()) {
@@ -119,8 +124,7 @@ export class WorkspaceController {
       if (node instanceof TabSetNode && node.getChildren().length === 0)
         emptyPanes.push(node.getId());
     });
-    for (const id of emptyPanes)
-      this.model.doAction(Actions.deleteTabset(id));
+    for (const id of emptyPanes) this.model.doAction(Actions.deleteTabset(id));
     this.normalize();
     this.model.addChangeListener({
       onBeforeAction: (action) => {
@@ -156,7 +160,7 @@ export class WorkspaceController {
     const multiple = this.tabs.length > 1;
     this.model.doAction(
       Actions.updateModelAttributes({
-        tabSetEnableTabStrip: multiple,
+        tabSetEnableTabStrip: multiple && !this.verticalTabs,
         tabEnableClose: multiple,
       }),
     );
@@ -188,6 +192,17 @@ export class WorkspaceController {
         this.model.doAction(Actions.maximizeToggle(this.previousMaximized));
     }
     this.compact = compact;
+    this.normalize();
+    this.changed();
+  }
+
+  get verticalTabs() {
+    return this.tabPosition === "vertical" && !this.compact;
+  }
+
+  setTabPosition(position: TabPosition) {
+    if (position === this.tabPosition) return;
+    this.tabPosition = position;
     this.normalize();
     this.changed();
   }

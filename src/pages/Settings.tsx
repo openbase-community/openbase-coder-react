@@ -14,6 +14,7 @@ import React, { type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AuthenticationSettings } from "./settings/AuthenticationSettings";
 import { AppearanceSettings } from "./settings/AppearanceSettings";
+import { TabSettings } from "./settings/TabSettings";
 import { BackendModelSettings } from "./settings/BackendModelSettings";
 import { CodingBackendSettings } from "./settings/CodingBackendSettings";
 import { DangerousConfirmationSettings } from "./settings/DangerousConfirmationSettings";
@@ -153,6 +154,7 @@ const Settings: React.FC = () => {
     interface: (
       <>
         <AppearanceSettings />
+        <TabSettings />
         <SidebarItemsSettings />
       </>
     ),
@@ -180,18 +182,18 @@ const Settings: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <aside className="lg:sticky lg:top-16 lg:self-start">
+        <div className="workspace-settings-grid grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <aside className="workspace-settings-navigation min-w-0 lg:sticky lg:top-16 lg:self-start">
             <nav
               aria-label="Settings categories"
-              className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
+              className="workspace-settings-categories flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
             >
               {SETTINGS_SECTIONS.map((item) => {
                 const isCurrent = section === item.id;
                 return (
                   <button
                     aria-current={isCurrent ? "page" : undefined}
-                    className={`group flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-left transition-colors lg:w-full ${
+                    className={`workspace-settings-category group flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-left transition-colors lg:w-full ${
                       isCurrent
                         ? "bg-surface text-primary shadow-sm ring-1 ring-border"
                         : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
@@ -205,7 +207,7 @@ const Settings: React.FC = () => {
                       <span className="block text-[13px] font-medium">
                         {item.label}
                       </span>
-                      <span className="hidden truncate text-[11px] font-normal opacity-70 lg:block">
+                      <span className="workspace-settings-description hidden truncate text-[11px] font-normal opacity-70 lg:block">
                         {item.description}
                       </span>
                     </span>

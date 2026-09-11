@@ -182,7 +182,7 @@ export const ReportFileDetailView = ({
   const detail = (
     <div
       ref={detailRef}
-      role="dialog"
+      role={panel ? "region" : "dialog"}
       aria-modal={panel ? undefined : true}
       aria-label={`Report detail: ${file.name}`}
       tabIndex={-1}

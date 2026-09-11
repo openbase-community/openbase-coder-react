@@ -273,9 +273,9 @@ const DashboardChrome: React.FC<DashboardLayoutProps> = ({
           <header className="sticky top-0 z-10 flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/85 px-3 backdrop-blur md:px-4">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <SidebarTrigger className="md:hidden" />
-              <WorkspaceToolbar />
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              <WorkspaceToolbar />
               <NotificationsDropdown />
               <UserProfile />
             </div>

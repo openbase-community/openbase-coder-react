@@ -1,9 +1,10 @@
-import { DockLocation, TabNode } from "flexlayout-react";
+import { DockLocation } from "flexlayout-react";
 import type { WorkspaceController } from "./WorkspaceController";
 
 export type WorkspaceShortcut =
   | { action: "cycle-tab"; offset: number }
-  | { action: "focus-pane"; index: number }
+  | { action: "select-tab"; index: number }
+  | { action: "close-tab" }
   | { action: "split"; direction: "right" | "down" };
 
 export function workspaceShortcut(
@@ -34,28 +35,27 @@ export function workspaceShortcut(
     return { action: "cycle-tab", offset: key === "ArrowLeft" ? -1 : 1 };
   const primary = mac ? metaKey && !ctrlKey : ctrlKey && !metaKey;
   if (!primary || shiftKey) return;
+  if (!altKey && key.toLowerCase() === "w") return { action: "close-tab" };
   if (event.code === "Backslash" || key === "\\")
     return { action: "split", direction: altKey ? "down" : "right" };
   if (!altKey && /^[1-9]$/.test(key))
-    return { action: "focus-pane", index: Number(key) - 1 };
+    return { action: "select-tab", index: Number(key) - 1 };
 }
 
 export function runWorkspaceShortcut(
   controller: WorkspaceController,
   shortcut: WorkspaceShortcut,
+  confirmDiscard: () => boolean = () => false,
 ) {
+  if (shortcut.action === "close-tab") {
+    const id = controller.focused?.getId();
+    if (id) controller.close(id, confirmDiscard);
+    return;
+  }
   if (shortcut.action === "split") {
     controller.split(
       shortcut.direction === "right" ? DockLocation.RIGHT : DockLocation.BOTTOM,
     );
-    return;
-  }
-  if (shortcut.action === "focus-pane") {
-    const groups = [...new Set(controller.tabs.map((tab) => tab.getParent()))];
-    const tab = groups[shortcut.index]
-      ?.getChildren()
-      .find((node) => node instanceof TabNode && node.isSelected());
-    if (tab) controller.focus(tab.getId());
     return;
   }
   const active = controller.focused;
@@ -63,6 +63,11 @@ export function runWorkspaceShortcut(
     (tab) => tab.getParent() === active?.getParent(),
   );
   const index = tabs.findIndex((tab) => tab === active);
+  if (shortcut.action === "select-tab") {
+    const tab = shortcut.index === 8 ? tabs.at(-1) : tabs[shortcut.index];
+    if (tab) controller.focus(tab.getId());
+    return;
+  }
   if (tabs.length > 1)
     controller.focus(
       tabs[(index + shortcut.offset + tabs.length) % tabs.length].getId(),

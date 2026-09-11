@@ -1,4 +1,5 @@
 .workspace-surface {
+  display: flex;
   position: relative;
   width: 100%;
   height: 100%;
@@ -21,6 +22,70 @@
   --flexlayout-color-tab-unselected: hsl(var(--muted-foreground));
   --flexlayout-font-size: 12px;
   --flexlayout-splitter-size: 5px;
+}
+.workspace-layout {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.workspace-vertical-tabs {
+  flex: 0 0 190px;
+  min-width: 0;
+  overflow: auto;
+  border-right: 1px solid hsl(var(--border));
+  background: hsl(var(--surface));
+  padding-top: 4px;
+}
+.workspace-vertical-tab-row {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  border-left: 2px solid transparent;
+  color: hsl(var(--muted-foreground));
+}
+.workspace-vertical-tab-row:hover,
+.workspace-vertical-tab-row[data-selected="true"] {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+.workspace-vertical-tab-row[data-focused="true"] {
+  border-left-color: hsl(var(--primary));
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+.workspace-vertical-tab-row[data-drop="before"] {
+  box-shadow: inset 0 2px hsl(var(--primary));
+}
+.workspace-vertical-tab-row[data-drop="after"] {
+  box-shadow: inset 0 -2px hsl(var(--primary));
+}
+.workspace-vertical-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 6px 0 10px;
+  text-align: left;
+  font-size: 12px;
+}
+.workspace-vertical-tab-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 26px;
+  height: 26px;
+  margin-right: 3px;
+  border-radius: 4px;
+}
+.workspace-vertical-tab-close:hover {
+  background: hsl(var(--border));
+}
+.workspace-vertical-tab:focus-visible,
+.workspace-vertical-tab-close:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
 }
 .workspace-panel {
   position: relative;
@@ -61,6 +126,23 @@
   background: hsl(var(--primary) / 0.35);
 }
 @container (max-width: 600px) {
+  .workspace-panel .workspace-settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .workspace-panel .workspace-settings-navigation {
+    position: static;
+  }
+  .workspace-panel .workspace-settings-categories {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .workspace-panel .workspace-settings-category {
+    width: auto;
+  }
+  .workspace-panel .workspace-settings-description {
+    display: none;
+  }
   .workspace-project-label {
     flex-direction: column;
     align-items: stretch;

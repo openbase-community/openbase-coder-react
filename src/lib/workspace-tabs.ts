@@ -3,6 +3,7 @@ import { projectName } from "./project-display";
 import { BUILT_IN_SIDEBAR_ITEMS } from "./sidebar-preferences";
 
 export type WorkspaceTabTarget = { path: string; title: string };
+export type TabPosition = "horizontal" | "vertical";
 
 export function workspaceTabTitle(path: string): string {
   const [pathname, search] = path.split("?");
