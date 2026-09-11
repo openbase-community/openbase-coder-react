@@ -1,3 +1,4 @@
+import { ApprovalRequestParameters } from "@/components/approvals/ApprovalRequestParameters";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
   ResourceEmptyState,
@@ -29,23 +30,13 @@ function stringValue(value: unknown): string | null {
 function requestLabel(request: ApprovalRequest): string {
   const params = request.params ?? {};
   return (
-    stringValue(params.command) ??
     stringValue(params.description) ??
+    stringValue(params.command) ??
     stringValue(params.toolName) ??
     stringValue(params.tool_name) ??
     stringValue(params.name) ??
     request.method ??
     "Approval request"
-  );
-}
-
-function requestDetail(request: ApprovalRequest): string | null {
-  const params = request.params ?? {};
-  return (
-    stringValue(params.justification) ??
-    stringValue(params.reason) ??
-    stringValue(params.path) ??
-    stringValue(params.cwd)
   );
 }
 
@@ -167,7 +158,6 @@ const ApprovalRequests = () => {
           <Panel>
             {sortedRequests.map((request, idx) => {
               const requestId = String(request.id);
-              const detail = requestDetail(request);
               return (
                 <div
                   key={requestId}
@@ -206,15 +196,8 @@ const ApprovalRequests = () => {
                         <span className="truncate">{request.method}</span>
                       ) : null}
                     </div>
-                    {detail ? (
-                      <p className="mt-2 line-clamp-2 text-[12px] text-muted-foreground">
-                        {detail}
-                      </p>
-                    ) : null}
                     {request.params ? (
-                      <pre className="mt-2 max-h-28 overflow-auto rounded border border-border bg-background px-2 py-1.5 font-mono text-[10.5px] text-muted-foreground">
-                        {JSON.stringify(request.params, null, 2)}
-                      </pre>
+                      <ApprovalRequestParameters params={request.params} />
                     ) : null}
                   </div>
 
