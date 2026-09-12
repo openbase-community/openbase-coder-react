@@ -7,7 +7,15 @@ export default defineConfig({
     jsxImportSource: "react",
   },
   resolve: {
-    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "boilersync-react": fileURLToPath(
+        new URL("../boilersync-react/src/index.ts", import.meta.url),
+      ),
+      "multi-react": fileURLToPath(
+        new URL("../multi-react/src/index.ts", import.meta.url),
+      ),
+    },
   },
   test: {
     environment: "node",
