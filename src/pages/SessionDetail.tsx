@@ -13,6 +13,7 @@ import { useMarkEntityRead } from "@/contexts/notifications";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
 import { useTagOptions } from "@/hooks/useTagOptions";
 import { apiFetch } from "@/lib/api";
+import { fleetApiPath } from "@/lib/fleet";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { setThreadTags } from "@/lib/item-tags";
 import {
@@ -225,9 +226,10 @@ const SessionDetail = ({
   const archiveThread = async () => {
     if (!thread) return;
     try {
-      const res = await apiFetch(`/api/threads/${thread.thread_id}/`, {
-        method: "DELETE",
-      });
+      const res = await apiFetch(
+        fleetApiPath(thread.origin_host, `/api/threads/${thread.thread_id}/`),
+        { method: "DELETE" },
+      );
       if (!res.ok) {
         throw new Error(
           await extractErrorMessage(res, "Failed to archive thread"),

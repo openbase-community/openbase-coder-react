@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import { fleetApiPath } from "@/lib/fleet";
 import { readJson } from "@/lib/api-errors";
 import type { ReportsFile } from "@/types/session";
 
@@ -10,10 +11,9 @@ export const downloadReportFile = async (
     path: projectPath,
     file: file.path,
   });
-  if (file.origin_device) {
-    params.set("device", file.origin_device);
-  }
-  const res = await apiFetch(`/api/projects/reports/download/?${params}`);
+  const res = await apiFetch(
+    fleetApiPath(file.origin_host, `/api/projects/reports/download/?${params}`),
+  );
 
   if (!res.ok) {
     const data = await readJson(res);

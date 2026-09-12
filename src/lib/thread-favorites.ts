@@ -1,14 +1,19 @@
 import { apiFetch } from "@/lib/api";
+import { fleetApiPath } from "@/lib/fleet";
 import type { ThreadInfo } from "@/types/session";
 
 export const setThreadFavorite = async (
   threadId: string,
   isFavorite: boolean,
+  originHost?: string | null,
 ): Promise<Pick<ThreadInfo, "thread_id" | "is_favorite" | "favorited_at">> => {
-  const response = await apiFetch(`/api/threads/${threadId}/favorite/`, {
-    method: "PATCH",
-    body: JSON.stringify({ is_favorite: isFavorite }),
-  });
+  const response = await apiFetch(
+    fleetApiPath(originHost, `/api/threads/${threadId}/favorite/`),
+    {
+      method: "PATCH",
+      body: JSON.stringify({ is_favorite: isFavorite }),
+    },
+  );
   if (!response.ok) {
     throw new Error("Failed to update favorite");
   }

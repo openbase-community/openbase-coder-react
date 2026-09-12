@@ -50,6 +50,8 @@ export interface ThreadInfo {
   updated_at: string;
   /** Device this thread was served from when it only exists on a peer. */
   origin_device?: string | null;
+  /** MagicDNS host of that device, for direct REST/WebSocket connections. */
+  origin_host?: string | null;
   current_turn: TurnInfo | null;
   turn_history: TurnInfo[];
   queued_turns?: QueuedTurn[];
@@ -116,6 +118,8 @@ export interface ReportsFile {
   tags?: string[];
   /** Device this report lives on when it only exists on a peer. */
   origin_device?: string | null;
+  /** MagicDNS host of that device, for direct file reads. */
+  origin_host?: string | null;
 }
 
 export interface ServiceStatus {

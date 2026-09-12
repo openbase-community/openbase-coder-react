@@ -221,12 +221,17 @@ const Reports = () => {
         project: Project;
         file: ReportsFile;
         origin_device?: string | null;
+        origin_host?: string | null;
       }> = data.items ?? [];
       const nextItems: ReportsItem[] = rawItems
         .map((item) => ({
           project: item.project,
           file: item.origin_device
-            ? { ...item.file, origin_device: item.origin_device }
+            ? {
+                ...item.file,
+                origin_device: item.origin_device,
+                origin_host: item.origin_host ?? null,
+              }
             : item.file,
         }))
         .sort((a, b) => b.file.updated_at - a.file.updated_at);

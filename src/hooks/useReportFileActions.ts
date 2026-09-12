@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import { fleetApiPath } from "@/lib/fleet";
 import { readJson } from "@/lib/api-errors";
 import { downloadReportFile } from "@/lib/reportFiles";
 import type { ReportFilePayload } from "@/components/reports/ReportFileRow";
@@ -48,10 +49,12 @@ export const useReportFileActions = ({
           path: target.projectPath,
           file: target.file.path,
         });
-        if (target.file.origin_device) {
-          params.set("device", target.file.origin_device);
-        }
-        const res = await apiFetch(`/api/projects/reports/file/?${params}`);
+        const res = await apiFetch(
+          fleetApiPath(
+            target.file.origin_host,
+            `/api/projects/reports/file/?${params}`,
+          ),
+        );
         const data = await readJson(res);
         setPayloads((current) => ({
           ...current,
@@ -86,9 +89,13 @@ export const useReportFileActions = ({
           path: target.projectPath,
           file: target.file.path,
         });
-        const res = await apiFetch(`/api/projects/reports/file/?${params}`, {
-          method: "DELETE",
-        });
+        const res = await apiFetch(
+          fleetApiPath(
+            target.file.origin_host,
+            `/api/projects/reports/file/?${params}`,
+          ),
+          { method: "DELETE" },
+        );
         const data = await readJson(res);
 
         if (!res.ok) {
@@ -139,10 +146,13 @@ export const useReportFileActions = ({
           path: target.projectPath,
           file: target.file.path,
         });
-        res = await apiFetch(`/api/projects/reports/file/?${params}`, {
-          method: "PATCH",
-          body: JSON.stringify({ content }),
-        });
+        res = await apiFetch(
+          fleetApiPath(
+            target.file.origin_host,
+            `/api/projects/reports/file/?${params}`,
+          ),
+          { method: "PATCH", body: JSON.stringify({ content }) },
+        );
         data = await readJson(res);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to save report");

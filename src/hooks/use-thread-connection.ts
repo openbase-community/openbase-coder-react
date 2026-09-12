@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/auth";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { getValidAccessToken } from "@/lib/jwt-auth";
+import { fleetApiPath, peerWebSocketUrl } from "@/lib/fleet";
 import { getBackendWebSocketUrl } from "@/lib/runtime-config";
 import { reconcileThreadSnapshot } from "@/lib/thread-reconcile";
 import {
@@ -16,6 +17,11 @@ import { toast } from "sonner";
 export function useThreadConnection(threadId: string | undefined) {
   const { token } = useAuth();
   const [thread, setThread] = useState<ThreadInfo | null>(null);
+  // A thread that only exists on a peer device is streamed and mutated by
+  // connecting DIRECTLY to that device. The first fleet-scoped detail fetch
+  // discovers the origin host; once known it sticks for the page's lifetime
+  // (the socket and every action then bypass the selected backend).
+  const [originHost, setOriginHost] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -28,7 +34,9 @@ export function useThreadConnection(threadId: string | undefined) {
     // This runs on an interval, so failures update a persistent inline error
     // instead of toasting on every tick.
     try {
-      const res = await apiFetch(`/api/threads/${threadId}/?scope=fleet`);
+      const res = await apiFetch(
+        fleetApiPath(originHost, `/api/threads/${threadId}/?scope=fleet`),
+      );
       if (!res.ok) {
         setLoadError(
           await extractErrorMessage(
@@ -39,12 +47,13 @@ export function useThreadConnection(threadId: string | undefined) {
         return;
       }
       const snapshot: ThreadInfo = await res.json();
+      if (snapshot.origin_host) setOriginHost(snapshot.origin_host);
       setThread((prev) => reconcileThreadSnapshot(prev, snapshot));
       setLoadError(null);
     } catch {
       setLoadError("Unable to reach the local API.");
     }
-  }, [threadId]);
+  }, [threadId, originHost]);
 
   const connect = useCallback(async () => {
     if (!threadId || !token) return;
@@ -56,7 +65,9 @@ export function useThreadConnection(threadId: string | undefined) {
     const freshToken = (await getValidAccessToken()) ?? token;
     if (attempt !== connectAttemptRef.current) return;
 
-    const baseUrl = getBackendWebSocketUrl(`/ws/threads/${threadId}/`);
+    const baseUrl = originHost
+      ? peerWebSocketUrl(originHost, `/ws/threads/${threadId}/`)
+      : getBackendWebSocketUrl(`/ws/threads/${threadId}/`);
     const url = `${baseUrl}?token=${freshToken}`;
 
     const ws = new WebSocket(url);
@@ -155,7 +166,7 @@ export function useThreadConnection(threadId: string | undefined) {
         }
       }
     };
-  }, [threadId, token, refreshThread]);
+  }, [threadId, token, originHost, refreshThread]);
 
   useEffect(() => {
     void connect();
@@ -193,10 +204,13 @@ export function useThreadConnection(threadId: string | undefined) {
     async (action: ThreadTurnAction, prompt: string) => {
       if (!threadId) return false;
       try {
-        const res = await apiFetch(threadTurnActionPath(threadId, action), {
-          method: "POST",
-          body: JSON.stringify({ prompt }),
-        });
+        const res = await apiFetch(
+          fleetApiPath(originHost, threadTurnActionPath(threadId, action)),
+          {
+            method: "POST",
+            body: JSON.stringify({ prompt }),
+          },
+        );
         if (!res.ok) {
           toast.error(
             await extractErrorMessage(
@@ -215,7 +229,7 @@ export function useThreadConnection(threadId: string | undefined) {
         return false;
       }
     },
-    [refreshThread, threadId],
+    [refreshThread, threadId, originHost],
   );
 
   const startTurn = useCallback(

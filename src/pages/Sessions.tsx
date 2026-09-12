@@ -27,6 +27,8 @@ import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { setThreadTags } from "@/lib/item-tags";
 import { filterThreads } from "@/lib/thread-filters";
+import { fleetApiPath } from "@/lib/fleet";
+import type { ThreadInfo } from "@/types/session";
 import { setThreadFavorite } from "@/lib/thread-favorites";
 import {
   groupThreadsByDay,
@@ -107,11 +109,12 @@ const Sessions = () => {
     return () => observer.disconnect();
   }, [loadMoreThreads, nextThreadsUrl]);
 
-  const deleteThread = async (threadId: string) => {
+  const deleteThread = async (thread: ThreadInfo) => {
     try {
-      const res = await apiFetch(`/api/threads/${threadId}/`, {
-        method: "DELETE",
-      });
+      const res = await apiFetch(
+        fleetApiPath(thread.origin_host, `/api/threads/${thread.thread_id}/`),
+        { method: "DELETE" },
+      );
       if (!res.ok) {
         throw new Error(
           await extractErrorMessage(res, "Failed to archive thread"),
@@ -124,9 +127,9 @@ const Sessions = () => {
     }
   };
 
-  const toggleThreadFavorite = async (threadId: string, isFavorite: boolean) => {
+  const toggleThreadFavorite = async (item: ThreadInfo, isFavorite: boolean) => {
     try {
-      await setThreadFavorite(threadId, isFavorite);
+      await setThreadFavorite(item.thread_id, isFavorite, item.origin_host);
       void fetchData();
     } catch {
       toast.error("Failed to update favorite");
@@ -341,10 +344,7 @@ const Sessions = () => {
                           showTopBorder={idx > 0}
                           onClick={() => navigate(threadRoutePath(thread))}
                           onToggleFavorite={(item) =>
-                            void toggleThreadFavorite(
-                              item.thread_id,
-                              !item.is_favorite,
-                            )
+                            void toggleThreadFavorite(item, !item.is_favorite)
                           }
                           tagOptions={tagOptions}
                           onTagsChange={(item, tags) =>
@@ -393,9 +393,7 @@ const Sessions = () => {
                                       Cancel
                                     </AlertDialogCancel>
                                     <AlertDialogAction
-                                      onClick={() =>
-                                        deleteThread(thread.thread_id)
-                                      }
+                                      onClick={() => deleteThread(thread)}
                                     >
                                       Archive
                                     </AlertDialogAction>
