@@ -75,6 +75,14 @@ export const ReportFileListRow = ({
                 <span className="truncate text-[13px] font-medium text-foreground">
                   {displayName}
                 </span>
+                {file.origin_device ? (
+                  <span
+                    className="shrink-0 rounded-sm bg-surface-muted px-1 font-mono text-[10px] text-muted-foreground"
+                    title={`Only on ${file.origin_device}`}
+                  >
+                    {file.origin_device}
+                  </span>
+                ) : null}
                 {subtitle ? (
                   <span className="truncate text-[11px] text-muted-foreground">
                     {subtitle}

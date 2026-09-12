@@ -48,6 +48,8 @@ export interface ThreadInfo {
   tags?: string[];
   created_at: string;
   updated_at: string;
+  /** Device this thread was served from when it only exists on a peer. */
+  origin_device?: string | null;
   current_turn: TurnInfo | null;
   turn_history: TurnInfo[];
   queued_turns?: QueuedTurn[];
@@ -112,6 +114,8 @@ export interface ReportsFile {
   size: number;
   updated_at: number;
   tags?: string[];
+  /** Device this report lives on when it only exists on a peer. */
+  origin_device?: string | null;
 }
 
 export interface ServiceStatus {

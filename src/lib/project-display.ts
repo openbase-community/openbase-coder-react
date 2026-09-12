@@ -42,7 +42,7 @@ export const PROJECT_PAGE_SIZE = 25;
 
 export const fetchThreadPage = async (
   fetcher: (input: string) => Promise<Response>,
-  path = `/api/threads/?page_size=${THREAD_PAGE_SIZE}`,
+  path = `/api/threads/?page_size=${THREAD_PAGE_SIZE}&scope=fleet`,
 ): Promise<ThreadListResponse> => {
   const response = await fetcher(path);
   if (!response.ok) {

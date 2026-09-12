@@ -211,16 +211,24 @@ const Reports = () => {
       // report source, dedupes, and returns all report files. This replaces
       // the former per-project fan-out (one request per project), which
       // serialized in the single-worker local runtime.
-      const res = await apiFetch("/api/projects/reports/all/");
+      const res = await apiFetch("/api/projects/reports/all/?scope=fleet");
       const data = await readJson(res);
       if (!res.ok || !data) {
         throw new Error(data?.error || "Reports could not be loaded.");
       }
 
-      const rawItems: Array<{ project: Project; file: ReportsFile }> =
-        data.items ?? [];
+      const rawItems: Array<{
+        project: Project;
+        file: ReportsFile;
+        origin_device?: string | null;
+      }> = data.items ?? [];
       const nextItems: ReportsItem[] = rawItems
-        .map((item) => ({ project: item.project, file: item.file }))
+        .map((item) => ({
+          project: item.project,
+          file: item.origin_device
+            ? { ...item.file, origin_device: item.origin_device }
+            : item.file,
+        }))
         .sort((a, b) => b.file.updated_at - a.file.updated_at);
 
       setItems(nextItems);

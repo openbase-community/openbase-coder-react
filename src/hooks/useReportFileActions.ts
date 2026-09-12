@@ -48,6 +48,9 @@ export const useReportFileActions = ({
           path: target.projectPath,
           file: target.file.path,
         });
+        if (target.file.origin_device) {
+          params.set("device", target.file.origin_device);
+        }
         const res = await apiFetch(`/api/projects/reports/file/?${params}`);
         const data = await readJson(res);
         setPayloads((current) => ({

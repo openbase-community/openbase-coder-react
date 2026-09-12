@@ -10,6 +10,9 @@ export const downloadReportFile = async (
     path: projectPath,
     file: file.path,
   });
+  if (file.origin_device) {
+    params.set("device", file.origin_device);
+  }
   const res = await apiFetch(`/api/projects/reports/download/?${params}`);
 
   if (!res.ok) {

@@ -28,7 +28,7 @@ export function useThreadConnection(threadId: string | undefined) {
     // This runs on an interval, so failures update a persistent inline error
     // instead of toasting on every tick.
     try {
-      const res = await apiFetch(`/api/threads/${threadId}/`);
+      const res = await apiFetch(`/api/threads/${threadId}/?scope=fleet`);
       if (!res.ok) {
         setLoadError(
           await extractErrorMessage(
