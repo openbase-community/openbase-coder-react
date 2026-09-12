@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 
 import { ReportDeleteButton } from "./ReportDeleteButton";
 import { ReportFilePreview } from "./ReportFilePreview";
+import { ReportShareDialog } from "./ReportShareDialog";
 import { isEditingTarget, isInsideAlertDialog } from "./reportDetailHelpers";
 import type { ReportFilePayload } from "./reportFileTypes";
 
@@ -255,6 +256,11 @@ export const ReportFileDetailView = ({
                 <Play className="h-3.5 w-3.5" />
                 Implement
               </Button>
+            ) : null}
+            {projectPath ? (
+              <ReportShareDialog
+                target={{ projectPath, file: file.path }}
+              />
             ) : null}
             <Button
               type="button"
