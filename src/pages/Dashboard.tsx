@@ -78,15 +78,15 @@ const Dashboard = () => {
   const requiredServiceEntries = serviceEntries.filter(
     ([, service]) => !service.optional,
   );
-  const runningServices = requiredServiceEntries.filter(
+  const healthyServices = requiredServiceEntries.filter(
     ([, service]) => service.running,
   );
-  const stoppedServices = requiredServiceEntries.filter(
+  const unhealthyServices = requiredServiceEntries.filter(
     ([, service]) => !service.running,
   );
   const serviceWarning =
     requiredServiceEntries.length > 0 &&
-    runningServices.length !== requiredServiceEntries.length;
+    healthyServices.length !== requiredServiceEntries.length;
   const openProject = (project: Project) =>
     navigate(`/dashboard/project?path=${encodeURIComponent(project.path)}`);
   const toggleThreadFavorite = async (thread: ThreadInfo) => {
@@ -274,9 +274,9 @@ const Dashboard = () => {
                   <span className="mt-1 block text-[12px] leading-5 text-muted-foreground">
                     {requiredServiceEntries.length === 0
                       ? "Open Status to review local services."
-                      : `${runningServices.length} of ${requiredServiceEntries.length} required services running${
-                          stoppedServices.length
-                            ? ` · ${stoppedServices
+                      : `${healthyServices.length} of ${requiredServiceEntries.length} required checks healthy${
+                          unhealthyServices.length
+                            ? ` · ${unhealthyServices
                                 .map(([, service]) => service.name)
                                 .join(", ")}`
                             : ""

@@ -46,7 +46,7 @@ const Status = () => {
 
   const entries = Object.entries(services);
   const requiredEntries = entries.filter(([, s]) => !s.optional && s.enabled !== false);
-  const runningCount = requiredEntries.filter(([, s]) => s.running).length;
+  const healthyCount = requiredEntries.filter(([, s]) => s.running).length;
 
   return (
     <DashboardLayout>
@@ -57,7 +57,7 @@ const Status = () => {
               Service status
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              {runningCount}/{requiredEntries.length} required running ·
+              {healthyCount}/{requiredEntries.length} required healthy ·
               auto-refresh 30s
             </p>
           </div>
@@ -90,10 +90,10 @@ const Status = () => {
               const statusLabel = disabled
                 ? "disabled"
                 : svc.running
-                  ? "running"
+                  ? "healthy"
                   : svc.optional
                     ? "optional"
-                    : "stopped";
+                    : "unhealthy";
               const muted = disabled || svc.optional;
               return (
                 <div
