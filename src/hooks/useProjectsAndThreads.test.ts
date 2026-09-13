@@ -185,3 +185,57 @@ describe.each(["threads", "projects"] as const)("%s pagination", (kind) => {
     },
   );
 });
+
+describe("worktree status enrichment", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it("polls statuses for worktree paths and merges them into the nested tree", async () => {
+    const statusRequests: string[][] = [];
+    vi.mocked(apiFetch).mockImplementation(async (input) => {
+      const url = new URL(input, "http://localhost");
+      if (url.pathname === "/api/projects/recent/") {
+        return Response.json({
+          projects: [
+            {
+              path: "/ws",
+              worktrees: [{ path: "/ws-worktrees/a", source: "worktree" }],
+            },
+          ],
+          count: 1,
+          page: 1,
+          page_size: 25,
+          next: null,
+        });
+      }
+      if (url.pathname === "/api/projects/status/") {
+        statusRequests.push(url.searchParams.getAll("path"));
+        return Response.json({
+          projects: [
+            { path: "/ws", git_status: "clean" },
+            { path: "/ws-worktrees/a", git_status: "dirty" },
+          ],
+        });
+      }
+      return Response.json({});
+    });
+
+    let result: { current: ReturnType<typeof useProjectsAndThreads> };
+    await act(async () => {
+      ({ result } = renderHook(() => useProjectsAndThreads()));
+    });
+
+    expect(statusRequests[0]).toEqual(["/ws", "/ws-worktrees/a"]);
+    const project = result!.current.projects[0];
+    expect(project.git_status).toBe("clean");
+    expect(project.worktrees?.[0]?.git_status).toBe("dirty");
+    expect(project.worktrees?.[0]?.source).toBe("worktree");
+  });
+});

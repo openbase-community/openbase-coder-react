@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  flattenWorktreePaths,
+  mergeWorktreeStatusUpdates,
+} from "multi-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { THREAD_LIST_REFRESH_INTERVAL_MS } from "@/lib/polling";
@@ -53,17 +57,7 @@ export const useProjectsAndThreads = () => {
 
   const mergeProjectUpdates = useCallback((updates: Project[]) => {
     if (updates.length === 0) return;
-    setProjects((current) => {
-      const byPath = new Map(updates.map((project) => [project.path, project]));
-      return current.map((project) => ({
-        ...project,
-        ...(byPath.get(project.path) ?? {}),
-        worktrees: project.worktrees?.map((worktree) => ({
-          ...worktree,
-          ...(byPath.get(worktree.path) ?? {}),
-        })),
-      }));
-    });
+    setProjects((current) => mergeWorktreeStatusUpdates(current, updates));
   }, []);
 
   const refreshProjectStatuses = useCallback(
@@ -73,10 +67,7 @@ export const useProjectsAndThreads = () => {
       try {
         const updates = await fetchProjectStatuses(
           apiFetch,
-          items.flatMap((project) => [
-            project.path,
-            ...(project.worktrees ?? []).map((worktree) => worktree.path),
-          ]),
+          flattenWorktreePaths(items),
         );
         mergeProjectUpdates(updates);
       } catch {

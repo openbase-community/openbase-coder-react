@@ -25,6 +25,7 @@ import {
   Zap,
   GitFork,
 } from "lucide-react";
+import { useCollapsedPaths, worktreeDisplayName } from "multi-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -44,8 +45,9 @@ const Projects = () => {
   } = useProjectsAndThreads();
   const [newPath, setNewPath] = useState("");
   const [query, setQuery] = useState("");
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
-    () => new Set(),
+  // Worktrees show expanded by default; only collapses are remembered.
+  const { isCollapsed, toggleCollapsed } = useCollapsedPaths(
+    "openbase-coder:collapsed-worktrees",
   );
 
   const getActiveThreads = (path: string) =>
@@ -110,18 +112,6 @@ const Projects = () => {
       return matchesProject || matchesWorktree;
     });
   }, [projects, query]);
-
-  const toggleExpanded = (path: string) => {
-    setExpandedProjects((current) => {
-      const next = new Set(current);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      return next;
-    });
-  };
 
   const activeCount = threads.filter((t) => t.status === "running").length;
 
@@ -192,11 +182,12 @@ const Projects = () => {
           <Panel>
             {filtered.map((project, idx) => {
               const rows = [
-                { project, depth: 0 },
-                ...(expandedProjects.has(project.path) || query.trim()
+                { project, depth: 0, trunk: undefined as Project | undefined },
+                ...(!isCollapsed(project.path) || query.trim()
                   ? (project.worktrees ?? []).map((worktree) => ({
                       project: worktree,
                       depth: 1,
+                      trunk: project as Project | undefined,
                     }))
                   : []),
               ];
@@ -205,12 +196,18 @@ const Projects = () => {
                   key={project.path}
                   className={`${idx > 0 ? "border-t border-border" : ""}`}
                 >
-                  {rows.map(({ project: rowProject, depth }, rowIndex) => {
+                  {rows.map(({ project: rowProject, depth, trunk }, rowIndex) => {
                     const active = getActiveThreads(rowProject.path);
                     const gs = GIT_STATUS[rowProject.git_status ?? "unknown"];
                     const worktrees = rowProject.worktrees ?? [];
                     const hasWorktrees = depth === 0 && worktrees.length > 0;
-                    const expanded = expandedProjects.has(rowProject.path);
+                    const expanded = !isCollapsed(rowProject.path);
+                    const displayName = trunk
+                      ? worktreeDisplayName(
+                          projectName(rowProject.path),
+                          projectName(trunk.path),
+                        )
+                      : projectName(rowProject.path);
                     return (
                       <OpenInNewTabMenu
                         key={rowProject.path}
@@ -256,7 +253,7 @@ const Projects = () => {
                                     className="h-5 w-5 shrink-0"
                                     onClick={(event) => {
                                       event.stopPropagation();
-                                      toggleExpanded(rowProject.path);
+                                      toggleCollapsed(rowProject.path);
                                     }}
                                   >
                                     <ChevronRight
@@ -281,7 +278,7 @@ const Projects = () => {
 
                           <div className="workspace-project-label flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
                             <span className="truncate text-[13px] font-medium text-foreground">
-                              {projectName(rowProject.path)}
+                              {displayName}
                             </span>
                             <span className="truncate font-mono text-[11px] text-muted-foreground/70">
                               {rowProject.path}
