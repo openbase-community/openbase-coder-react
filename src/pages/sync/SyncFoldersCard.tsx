@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
-import { FolderPlus, Plus, X } from "lucide-react";
+import { ChevronDown, ChevronRight, FolderPlus, Plus, X } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import {
   displayRelpath,
@@ -23,6 +23,8 @@ const stateBadgeVariant = (
 
 const formatPercent = (value: number) => `${Math.round(value)}%`;
 
+const INLINE_RULE_LIMIT = 6;
+
 const FolderIgnores: React.FC<{
   folder: SyncFolderSettings;
   busy: boolean;
@@ -34,12 +36,17 @@ const FolderIgnores: React.FC<{
 }> = ({ folder, busy, onAddIgnore, onRemoveIgnore }) => {
   const [input, setInput] = useState("");
   const [adding, setAdding] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   // Only genuine rules are chips — comment lines (`// …`) and blanks are
   // .stignore formatting, not removable rules, and must never render as tags.
   const rules = folder.extra_ignores.filter(
     (rule) => rule.trim().length > 0 && !rule.trim().startsWith("//"),
   );
+
+  // A handful of rules reads fine as inline chips; past that the chips would
+  // swallow the whole card, so long lists collapse behind a count toggle.
+  const collapsible = rules.length > INLINE_RULE_LIMIT;
 
   const pattern = input.trim();
   const duplicate = folder.extra_ignores.includes(pattern);
@@ -55,19 +62,64 @@ const FolderIgnores: React.FC<{
 
   return (
     <div className="mt-0.5 flex flex-col gap-1.5">
-      {rules.length > 0 ? (
+      {collapsible ? (
+        <div className="flex flex-col">
+          <button
+            type="button"
+            className="flex items-center gap-1 self-start text-[11px] text-muted-foreground hover:text-foreground"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded ? (
+              <ChevronDown className="h-3 w-3" />
+            ) : (
+              <ChevronRight className="h-3 w-3" />
+            )}
+            {rules.length} custom ignore rules
+          </button>
+          {expanded ? (
+            <div className="mt-1 max-h-44 overflow-y-auto rounded border border-border">
+              {rules.map((rule) => (
+                <div
+                  key={rule}
+                  className="flex items-center justify-between gap-2 px-2 py-0.5 hover:bg-muted"
+                >
+                  <span
+                    className="min-w-0 truncate font-mono text-[11px] text-muted-foreground"
+                    title={rule}
+                  >
+                    {rule}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ignore rule ${rule}`}
+                    title="Remove this ignore rule"
+                    className="shrink-0 text-muted-foreground hover:text-destructive disabled:opacity-50"
+                    disabled={busy}
+                    onClick={() => onRemoveIgnore(folder, rule)}
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : rules.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1">
           {rules.map((rule) => (
             <span
               key={rule}
-              className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 font-mono text-[10.5px] text-muted-foreground"
+              className="inline-flex max-w-full items-center gap-1 rounded bg-muted px-1.5 py-0.5 font-mono text-[10.5px] text-muted-foreground"
             >
-              {rule}
+              <span className="min-w-0 truncate" title={rule}>
+                {rule}
+              </span>
               <button
                 type="button"
                 aria-label={`Remove ignore rule ${rule}`}
                 title="Remove this ignore rule"
-                className="text-muted-foreground hover:text-destructive disabled:opacity-50"
+                className="shrink-0 text-muted-foreground hover:text-destructive disabled:opacity-50"
                 disabled={busy}
                 onClick={() => onRemoveIgnore(folder, rule)}
               >
