@@ -14,6 +14,7 @@ import {
   revokeShareGrant,
   shareReport,
   unshareReport,
+  type ShareSecretFinding,
   type ShareState,
   type ShareTarget,
 } from "@/lib/reportSharing";
@@ -31,6 +32,9 @@ export const ReportShareDialog = ({ target }: ReportShareDialogProps) => {
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [secretFindings, setSecretFindings] = useState<
+    ShareSecretFinding[] | null
+  >(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -54,6 +58,12 @@ export const ReportShareDialog = ({ target }: ReportShareDialogProps) => {
       setBusy(true);
       setError(null);
       const next = await operation();
+      if (next.reason === "possible_secrets") {
+        setSecretFindings(next.findings ?? []);
+        setBusy(false);
+        return;
+      }
+      setSecretFindings(null);
       setState(next);
       if (next.error) {
         setError(next.error);
@@ -132,7 +142,14 @@ export const ReportShareDialog = ({ target }: ReportShareDialogProps) => {
                     key={grant.id}
                     className="flex items-center justify-between rounded border border-border px-2 py-1 text-sm"
                   >
-                    <span className="truncate">{grant.grantee_email}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">{grant.grantee_email}</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        {grant.last_accessed_at
+                          ? `Opened ${new Date(grant.last_accessed_at).toLocaleString()}`
+                          : "Not opened yet"}
+                      </span>
+                    </span>
                     <Button
                       type="button"
                       size="sm"
@@ -179,15 +196,41 @@ export const ReportShareDialog = ({ target }: ReportShareDialogProps) => {
               content (and referenced images) to your Openbase Cloud account
               so people you choose can view it.
             </p>
-            <Button
-              type="button"
-              size="sm"
-              disabled={busy}
-              onClick={() => void run(() => shareReport(target))}
-            >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Share this report
-            </Button>
+            {secretFindings ? (
+              <div className="flex flex-col gap-2 rounded border border-destructive/50 bg-destructive/10 p-2">
+                <p className="text-sm font-medium text-destructive">
+                  This report appears to contain secrets:
+                </p>
+                <ul className="text-xs text-destructive">
+                  {secretFindings.map((finding) => (
+                    <li key={`${finding.rule}-${finding.line}`}>
+                      line {finding.line}: {finding.rule}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(() => shareReport(target, { confirmSecrets: true }))
+                  }
+                >
+                  Share anyway
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                disabled={busy}
+                onClick={() => void run(() => shareReport(target))}
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Share this report
+              </Button>
+            )}
           </div>
         )}
         {error ? <p className="text-sm text-destructive">{error}</p> : null}

@@ -11,6 +11,13 @@ export type ShareGrant = {
   role: string;
   revoked_at: string | null;
   created_at: string;
+  last_accessed_at?: string | null;
+  access_count?: number;
+};
+
+export type ShareSecretFinding = {
+  rule: string;
+  line: number;
 };
 
 export type ShareItem = {
@@ -26,6 +33,8 @@ export type ShareState = {
   item?: ShareItem;
   grants?: ShareGrant[];
   error?: string;
+  reason?: string;
+  findings?: ShareSecretFinding[];
 };
 
 const shareQuery = (target: ShareTarget) =>
@@ -36,7 +45,12 @@ const asShareState = async (res: Response): Promise<ShareState> => {
     | (ShareState & { error?: string })
     | null;
   if (!res.ok) {
-    return { shared: false, error: payload?.error ?? `HTTP ${res.status}` };
+    return {
+      shared: false,
+      error: payload?.error ?? `HTTP ${res.status}`,
+      reason: payload?.reason,
+      findings: payload?.findings,
+    };
   }
   return payload ?? { shared: false, error: "Empty response" };
 };
@@ -46,10 +60,17 @@ export async function fetchShareState(target: ShareTarget): Promise<ShareState> 
   return asShareState(res);
 }
 
-export async function shareReport(target: ShareTarget): Promise<ShareState> {
+export async function shareReport(
+  target: ShareTarget,
+  options?: { confirmSecrets?: boolean },
+): Promise<ShareState> {
   const res = await apiFetch(`/api/projects/reports/share/`, {
     method: "POST",
-    body: JSON.stringify({ path: target.projectPath, file: target.file }),
+    body: JSON.stringify({
+      path: target.projectPath,
+      file: target.file,
+      confirm_secrets: options?.confirmSecrets ?? false,
+    }),
   });
   return asShareState(res);
 }
