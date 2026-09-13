@@ -9,6 +9,15 @@ declare global {
        */
       routerBasename?: string;
       shell?: "web" | "electron";
+      /**
+       * Desktop-only onboarding flags. Unused by the shared console but kept in
+       * this shared `Window` augmentation so it stays structurally identical to
+       * the desktop app's `RuntimeConfig` (desktop/src/onboarding/types.ts) —
+       * two differing augmentations of the same global property are a TS2717
+       * error when the desktop build typechecks coder-react alongside its own.
+       */
+      developerDashboardOnly?: boolean;
+      nonDeveloperInstall?: boolean;
     };
   }
 }
