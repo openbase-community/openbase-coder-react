@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   availableInstallScopes,
   installRequest,
+  skillDisplayName,
   type MarketplaceSkill,
 } from "./marketplaceTypes";
 
@@ -45,5 +46,20 @@ describe("marketplace install contract", () => {
       targets: ["home"],
       confirmed: true,
     });
+  });
+});
+
+describe("skillDisplayName", () => {
+  it("title-cases hyphenated and lowercase names", () => {
+    expect(skillDisplayName({ ...skill, name: "deep-research" })).toBe(
+      "Deep Research",
+    );
+    expect(skillDisplayName({ ...skill, name: "safe skill" })).toBe(
+      "Safe Skill",
+    );
+  });
+
+  it("falls back to the slug when the name is blank", () => {
+    expect(skillDisplayName({ ...skill, name: "  " })).toBe("Safe Skill");
   });
 });

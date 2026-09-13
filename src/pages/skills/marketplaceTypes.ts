@@ -58,6 +58,15 @@ export interface MarketplaceCatalog<T> {
   read_only?: boolean;
 }
 
+export function skillDisplayName(skill: MarketplaceSkill): string {
+  const raw = skill.name.trim() || skill.slug;
+  return raw
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 export function availableInstallScopes(
   skill: MarketplaceSkill,
 ): MarketplaceScope[] {

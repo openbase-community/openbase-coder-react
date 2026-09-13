@@ -3,15 +3,22 @@ import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
-import { BookOpen, Download, ExternalLink, RefreshCw, Search } from "lucide-react";
+import {
+  BookOpen,
+  Download,
+  ExternalLink,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { MarketplaceInstallDialog } from "./MarketplaceInstallDialog";
-import type {
-  MarketplaceRoutine,
-  MarketplaceScope,
-  MarketplaceSkill,
+import {
+  skillDisplayName,
+  type MarketplaceRoutine,
+  type MarketplaceScope,
+  type MarketplaceSkill,
 } from "./marketplaceTypes";
 import {
   installMarketplaceSkill,
@@ -142,11 +149,10 @@ function SkillCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <h2 className="font-mono text-[13px] font-semibold text-foreground">
-              /{skill.slug}
+            <h2 className="text-[13px] font-semibold text-foreground">
+              {skillDisplayName(skill)}
             </h2>
             <Badge variant="outline">{skill.kind}</Badge>
-            {skill.featured ? <Badge>featured</Badge> : null}
           </div>
           <p className="mt-1 text-[12px] text-foreground">{skill.tagline}</p>
         </div>
@@ -206,9 +212,7 @@ function RoutineCard({ routine }: { routine: MarketplaceRoutine }) {
             </h2>
             <Badge variant="outline">{routine.kind}</Badge>
           </div>
-          <p className="mt-1 text-[12px] text-foreground">
-            {routine.tagline}
-          </p>
+          <p className="mt-1 text-[12px] text-foreground">{routine.tagline}</p>
         </div>
         <Badge variant="secondary">template</Badge>
       </div>

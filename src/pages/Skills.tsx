@@ -17,9 +17,7 @@ const Skills = () => {
   const editingScope = searchParams.get("scope") || "home";
   const requestedView = searchParams.get("view");
   const view =
-    !projectPath && (requestedView === "catalog" || requestedView === "routines")
-      ? requestedView
-      : "installed";
+    !projectPath && requestedView === "catalog" ? requestedView : "installed";
   const [collapsedSections, setCollapsedSections] = useState<
     Record<string, boolean>
   >({});
@@ -62,7 +60,7 @@ const Skills = () => {
   }, [searchParams, setSearchParams]);
 
   const setView = useCallback(
-    (nextView: "installed" | "catalog" | "routines") => {
+    (nextView: "installed" | "catalog") => {
       const params = new URLSearchParams(searchParams);
       params.delete("skill");
       params.delete("scope");
@@ -141,7 +139,6 @@ const Skills = () => {
               [
                 ["installed", "Installed"],
                 ["catalog", "Catalog"],
-                ["routines", "Routine templates"],
               ] as const
             ).map(([key, label]) => (
               <button
@@ -186,7 +183,7 @@ const Skills = () => {
           />
         ) : (
           <MarketplaceCatalog
-            kind={view === "catalog" ? "skills" : "routines"}
+            kind="skills"
             onInstalled={skillsData.fetchSkills}
           />
         )}
