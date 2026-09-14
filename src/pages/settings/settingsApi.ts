@@ -113,6 +113,7 @@ export type BackendModelOption = {
   description: string;
   engine: string;
   available: boolean;
+  is_default?: boolean;
 };
 
 export type BackendModelRoleEntry = {

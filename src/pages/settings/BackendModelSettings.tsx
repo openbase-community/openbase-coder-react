@@ -143,6 +143,9 @@ export const BackendModelSettings: React.FC = () => {
         const saving = savingRole === role;
         const currentModel =
           settings?.roles?.[role]?.model ?? settings?.models[role] ?? null;
+        const currentOption = options.find(
+          (option) => option.id === currentModel,
+        );
         const currentEngine = settings?.roles?.[role]?.engine ?? null;
         const canSave =
           Boolean(settings) &&
@@ -163,7 +166,9 @@ export const BackendModelSettings: React.FC = () => {
               </p>
               {settings ? (
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  Current: {currentModel ?? "backend default"}
+                  Current:{" "}
+                  {currentOption?.label ?? currentModel ?? "backend default"}
+                  {currentOption?.is_default ? " (default)" : ""}
                   {currentEngine
                     ? ` (${ENGINE_LABELS[currentEngine] ?? currentEngine})`
                     : ""}
@@ -208,6 +213,7 @@ export const BackendModelSettings: React.FC = () => {
                             disabled={!option.available}
                           >
                             {option.label}
+                            {option.is_default ? " (default)" : ""}
                             {option.available ? "" : " (unavailable on Cloud)"}
                           </SelectItem>
                         ))}
