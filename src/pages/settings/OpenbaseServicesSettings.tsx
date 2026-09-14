@@ -23,10 +23,18 @@ export const OpenbaseServicesSettings: React.FC<Props> = ({ controller }) => {
     runServiceAction,
     restartAll,
   } = controller;
-  const runningCount = services.filter((service) => service.running).length;
+  const requiredServices = services.filter((service) => !service.optional);
+  const requiredRunningCount = requiredServices.filter((service) => service.running).length;
+  const optionalStoppedCount = services.filter(
+    (service) => service.optional && !service.running,
+  ).length;
   const serviceSummary =
     services.length > 0
-      ? `${runningCount}/${services.length} running`
+      ? requiredRunningCount === requiredServices.length
+        ? `All ${requiredServices.length} required services running${
+            optionalStoppedCount > 0 ? ` · ${optionalStoppedCount} optional off` : ""
+          }`
+        : `${requiredRunningCount}/${requiredServices.length} required services running`
       : "No services found";
 
   return (
@@ -124,6 +132,11 @@ export const OpenbaseServicesSettings: React.FC<Props> = ({ controller }) => {
                       <p className="truncate text-[12.5px] font-medium text-foreground">
                         {service.description}
                       </p>
+                      {service.optional ? (
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                          Optional
+                        </span>
+                      ) : null}
                       <span className="font-mono text-[10.5px] text-muted-foreground/70">
                         {service.port != null ? `:${service.port}` : "launchd"}
                       </span>
