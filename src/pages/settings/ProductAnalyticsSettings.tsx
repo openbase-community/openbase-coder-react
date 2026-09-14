@@ -21,8 +21,8 @@ export function ProductAnalyticsSettings() {
             Share anonymous product usage
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Off until you opt in. Never includes prompts, code, audio, file
-            paths, repository content, email addresses, or usernames.
+            On by default. Never includes prompts, code, audio, file paths,
+            repository content, email addresses, or usernames.
           </p>
         </div>
         <Switch
