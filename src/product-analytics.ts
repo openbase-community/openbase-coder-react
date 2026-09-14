@@ -1,5 +1,8 @@
 export {
   configureProductAnalytics,
+  isProductAnalyticsEnabled,
+  productAnalyticsPreferenceAvailable,
+  setProductAnalyticsEnabled,
   trackProductAnalytics,
   type ProductAnalyticsEventName,
   type ProductAnalyticsProperties,

@@ -12,6 +12,8 @@ export type ProductAnalyticsProperties = Record<
 >;
 
 export interface ProductAnalyticsSink {
+  isEnabled?(): boolean;
+  setEnabled?(enabled: boolean): void;
   track(
     eventType: ProductAnalyticsEventName,
     properties?: ProductAnalyticsProperties,
@@ -39,6 +41,18 @@ export function configureProductAnalytics(
   nextSink: ProductAnalyticsSink | null,
 ): void {
   sink = nextSink;
+}
+
+export function productAnalyticsPreferenceAvailable(): boolean {
+  return Boolean(sink?.isEnabled && sink?.setEnabled);
+}
+
+export function isProductAnalyticsEnabled(): boolean {
+  return sink?.isEnabled?.() ?? false;
+}
+
+export function setProductAnalyticsEnabled(enabled: boolean): void {
+  sink?.setEnabled?.(enabled);
 }
 
 export function trackProductAnalytics(

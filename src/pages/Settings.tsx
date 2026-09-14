@@ -23,6 +23,7 @@ import { EnvSettings } from "./settings/EnvSettings";
 import { IgnoredLaunchctlSettings } from "./settings/IgnoredLaunchctlSettings";
 import { LiveKitCompanionSettings } from "./settings/LiveKitCompanionSettings";
 import { OpenbaseServicesSettings } from "./settings/OpenbaseServicesSettings";
+import { ProductAnalyticsSettings } from "./settings/ProductAnalyticsSettings";
 import { ReasoningSettings } from "./settings/ReasoningSettings";
 import { ServiceTierSettings } from "./settings/ServiceTierSettings";
 import { SidebarItemsSettings } from "./settings/SidebarItemsSettings";
@@ -129,7 +130,12 @@ const Settings: React.FC = () => {
   };
 
   const sectionContent: Record<SettingsSectionId, ReactNode> = {
-    account: <AuthenticationSettings />,
+    account: (
+      <>
+        <AuthenticationSettings />
+        <ProductAnalyticsSettings />
+      </>
+    ),
     machine: <OpenbaseServicesSettings controller={openbaseServices} />,
     agents: (
       <>
