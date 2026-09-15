@@ -101,4 +101,41 @@ describe("reconcileThreadSnapshot", () => {
     expect(result.current_turn).toBeNull();
     expect(result.status).toBe("completed");
   });
+
+  it("preserves older pages when the latest page refreshes", () => {
+    const older = turn("turn-older", "completed", {
+      started_at: "2026-07-10T09:00:00Z",
+    });
+    const latest = turn("turn-latest", "completed", {
+      started_at: "2026-07-10T10:00:00Z",
+    });
+    const prev = thread(null, [older, latest], {
+      history_next_cursor: "older-cursor",
+    });
+    const next = thread(null, [latest], { history_next_cursor: "page-2" });
+
+    const result = reconcileThreadSnapshot(prev, next);
+
+    expect(result.turn_history.map((item) => item.turn_id)).toEqual([
+      "turn-older",
+      "turn-latest",
+    ]);
+    expect(result.history_next_cursor).toBe("older-cursor");
+  });
+
+  it("replaces an equal-sized bounded page instead of accumulating turns", () => {
+    const prev = thread(null, [turn("turn-old", "completed")], {
+      history_next_cursor: "old-cursor",
+    });
+    const next = thread(null, [turn("turn-new", "completed")], {
+      history_next_cursor: "new-cursor",
+    });
+
+    const result = reconcileThreadSnapshot(prev, next);
+
+    expect(result.turn_history.map((item) => item.turn_id)).toEqual([
+      "turn-new",
+    ]);
+    expect(result.history_next_cursor).toBe("new-cursor");
+  });
 });

@@ -54,6 +54,7 @@ export interface ThreadInfo {
   origin_host?: string | null;
   current_turn: TurnInfo | null;
   turn_history: TurnInfo[];
+  history_next_cursor?: string | null;
   queued_turns?: QueuedTurn[];
   status: ThreadStatus;
   voice_route?: {

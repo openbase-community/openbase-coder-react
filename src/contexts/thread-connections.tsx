@@ -19,6 +19,8 @@ const emptyConnection: Connection = {
   steerTurn: async () => false,
   interruptTurn: () => {},
   refreshThread: async () => {},
+  loadOlderTurns: async () => false,
+  isLoadingOlderTurns: false,
 };
 const Context = createContext<{
   connections: Record<string, Connection>;

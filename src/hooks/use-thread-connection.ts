@@ -4,7 +4,10 @@ import { extractErrorMessage } from "@/lib/api-errors";
 import { getValidAccessToken } from "@/lib/jwt-auth";
 import { fleetApiPath, peerWebSocketUrl } from "@/lib/fleet";
 import { getBackendWebSocketUrl } from "@/lib/runtime-config";
-import { reconcileThreadSnapshot } from "@/lib/thread-reconcile";
+import {
+  mergeThreadTurnHistory,
+  reconcileThreadSnapshot,
+} from "@/lib/thread-reconcile";
 import {
   type ThreadTurnAction,
   threadTurnActionMessage,
@@ -24,6 +27,7 @@ export function useThreadConnection(threadId: string | undefined) {
   const [originHost, setOriginHost] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoadingOlderTurns, setIsLoadingOlderTurns] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const reconnectDelayRef = useRef(1000);
@@ -54,6 +58,54 @@ export function useThreadConnection(threadId: string | undefined) {
       setLoadError("Unable to reach the local API.");
     }
   }, [threadId, originHost]);
+
+  const loadOlderTurns = useCallback(async () => {
+    const cursor = thread?.history_next_cursor;
+    if (!threadId || !cursor || isLoadingOlderTurns) return false;
+
+    setIsLoadingOlderTurns(true);
+    try {
+      const query = new URLSearchParams({
+        scope: "fleet",
+        history_cursor: cursor,
+      });
+      const res = await apiFetch(
+        fleetApiPath(originHost, `/api/threads/${threadId}/?${query}`),
+      );
+      if (!res.ok) {
+        toast.error(
+          await extractErrorMessage(
+            res,
+            `Unable to load older turns (HTTP ${res.status}).`,
+          ),
+        );
+        return false;
+      }
+      const page: ThreadInfo = await res.json();
+      setThread((prev) => {
+        const combinedPage = prev
+          ? {
+              ...page,
+              turn_history: mergeThreadTurnHistory(
+                prev.turn_history,
+                page.turn_history,
+              ),
+            }
+          : page;
+        const reconciled = reconcileThreadSnapshot(prev, combinedPage);
+        return {
+          ...reconciled,
+          history_next_cursor: page.history_next_cursor,
+        };
+      });
+      return true;
+    } catch {
+      toast.error("Unable to reach the local API.");
+      return false;
+    } finally {
+      setIsLoadingOlderTurns(false);
+    }
+  }, [isLoadingOlderTurns, originHost, thread?.history_next_cursor, threadId]);
 
   const connect = useCallback(async () => {
     if (!threadId || !token) return;
@@ -263,6 +315,8 @@ export function useThreadConnection(threadId: string | undefined) {
       steerTurn,
       interruptTurn,
       refreshThread,
+      loadOlderTurns,
+      isLoadingOlderTurns,
     }),
     [
       thread,
@@ -273,6 +327,8 @@ export function useThreadConnection(threadId: string | undefined) {
       steerTurn,
       interruptTurn,
       refreshThread,
+      loadOlderTurns,
+      isLoadingOlderTurns,
     ],
   );
 }

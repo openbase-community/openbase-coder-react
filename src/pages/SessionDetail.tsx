@@ -117,6 +117,8 @@ const SessionDetail = ({
     steerTurn,
     interruptTurn,
     refreshThread,
+    loadOlderTurns,
+    isLoadingOlderTurns,
   } = useThreadWebSocket(threadId);
   const { tagOptions, refreshTagOptions } = useTagOptions();
   const [prompt, setPrompt] = useWorkspaceDraft(`thread-prompt:${threadId}`);
@@ -132,6 +134,7 @@ const SessionDetail = ({
   const connectionLost = hasConnectedRef.current && !isConnected;
   const outputRef = useRef<HTMLDivElement>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
+  const loadingOlderRef = useRef(false);
   const currentTurnOutput = thread?.current_turn?.accumulated_output;
   const currentTurnStderr = thread?.current_turn?.accumulated_stderr;
 
@@ -162,6 +165,7 @@ const SessionDetail = ({
   }, [allowDispatcherThread, navigate, thread]);
 
   useLayoutEffect(() => {
+    if (loadingOlderRef.current) return;
     scrollToBottomInstantly(threadEndRef.current);
   }, [
     thread?.thread_id,
@@ -173,6 +177,22 @@ const SessionDetail = ({
     currentTurnStderr,
     thread?.status,
   ]);
+
+  const handleLoadOlderTurns = async () => {
+    const scrollRoot = findScrollContainer(threadEndRef.current);
+    if (!scrollRoot) return;
+    const previousHeight = scrollRoot.scrollHeight;
+    const previousTop = scrollRoot.scrollTop;
+    loadingOlderRef.current = true;
+    const loaded = await loadOlderTurns();
+    requestAnimationFrame(() => {
+      if (loaded) {
+        scrollRoot.scrollTop =
+          previousTop + (scrollRoot.scrollHeight - previousHeight);
+      }
+      loadingOlderRef.current = false;
+    });
+  };
 
   const handleStartTurn = async () => {
     const trimmed = prompt.trim();
@@ -289,6 +309,20 @@ const SessionDetail = ({
                 {loadError
                   ? loadError
                   : "Live connection lost — reconnecting… Updates may be delayed."}
+              </div>
+            ) : null}
+
+            {thread?.history_next_cursor ? (
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoadingOlderTurns}
+                  onClick={() => void handleLoadOlderTurns()}
+                  className="h-7 px-3 text-[11px]"
+                >
+                  {isLoadingOlderTurns ? "Loading…" : "Load older turns"}
+                </Button>
               </div>
             ) : null}
 
