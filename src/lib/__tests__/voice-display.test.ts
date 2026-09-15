@@ -17,6 +17,18 @@ describe("voicePromptForDisplay", () => {
     ).toBe("  compare <old> & &lt;new&gt;\nnext  ");
   });
 
+  it("unwraps the envelope when harness content trails it (Claude Code turns)", () => {
+    // Claude Code user messages join content blocks with newlines, so the
+    // envelope is often followed by system reminders or hook output.
+    expect(
+      voicePromptForDisplay(
+        "<voice>ship it</voice>\n<system-reminder>context</system-reminder>",
+      ),
+    ).toBe("ship it\n<system-reminder>context</system-reminder>");
+    expect(voicePromptForDisplay("<voice>ship it</voice>\n")).toBe("ship it");
+    expect(voicePromptForDisplay("<voice>ship it</voice>  ")).toBe("ship it");
+  });
+
   it("leaves tag mentions and malformed wrappers unchanged", () => {
     expect(voicePromptForDisplay("Document <voice> tags")).toBe(
       "Document <voice> tags",
