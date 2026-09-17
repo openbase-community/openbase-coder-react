@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
+import { fleetApiPath } from "@/lib/fleet";
 import {
   CalendarClock,
   CheckCircle2,
@@ -30,7 +31,21 @@ import {
   loopBodyText,
   whenLabel,
 } from "./helpers";
-import { defaultForm, type Routine, type RoutinesResponse } from "./types";
+import {
+  defaultForm,
+  routineKey,
+  type Routine,
+  type RoutinesResponse,
+} from "./types";
+
+// Peer loop names are device-local, so detail links carry the origin device.
+function routineDetailPath(routine: Routine): string {
+  const base = `/dashboard/loops/${encodeURIComponent(routine.name)}`;
+  if (!routine.origin_host) return base;
+  const params = new URLSearchParams({ device: routine.origin_host });
+  if (routine.origin_device) params.set("deviceName", routine.origin_device);
+  return `${base}?${params.toString()}`;
+}
 
 const Routines = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,7 +61,7 @@ const Routines = () => {
   const fetchRoutines = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiFetch("/api/routines/");
+      const res = await apiFetch("/api/routines/?scope=fleet");
       if (!res.ok) {
         throw new Error(await extractError(res, "Unable to load loops."));
       }
@@ -132,11 +147,15 @@ const Routines = () => {
   };
 
   const patchRoutine = async (routine: Routine, patch: Partial<Routine>) => {
-    const key = `${routine.name}:patch`;
+    const key = `${routineKey(routine)}:patch`;
     setActionKey(key);
     try {
+      // Mutations go DIRECTLY to the device the loop lives on.
       const res = await apiFetch(
-        `/api/routines/${encodeURIComponent(routine.name)}/`,
+        fleetApiPath(
+          routine.origin_host,
+          `/api/routines/${encodeURIComponent(routine.name)}/`,
+        ),
         {
           method: "PATCH",
           body: JSON.stringify(patch),
@@ -155,14 +174,17 @@ const Routines = () => {
     }
   };
 
-  const runDue = async (name?: string, force = false) => {
-    const key = name ? `${name}:run` : "run-due";
+  const runDue = async (routine: Routine, force = false) => {
+    const key = `${routineKey(routine)}:run`;
     setActionKey(key);
     try {
-      const res = await apiFetch("/api/routines/run-due/", {
-        method: "POST",
-        body: JSON.stringify({ name, force }),
-      });
+      const res = await apiFetch(
+        fleetApiPath(routine.origin_host, "/api/routines/run-due/"),
+        {
+          method: "POST",
+          body: JSON.stringify({ name: routine.name, force }),
+        },
+      );
       if (!res.ok) {
         throw new Error(await extractError(res, "Unable to run loops."));
       }
@@ -179,11 +201,14 @@ const Routines = () => {
   };
 
   const deleteRoutine = async (routine: Routine) => {
-    const key = `${routine.name}:delete`;
+    const key = `${routineKey(routine)}:delete`;
     setActionKey(key);
     try {
       const res = await apiFetch(
-        `/api/routines/${encodeURIComponent(routine.name)}/`,
+        fleetApiPath(
+          routine.origin_host,
+          `/api/routines/${encodeURIComponent(routine.name)}/`,
+        ),
         {
           method: "DELETE",
         },
@@ -191,7 +216,9 @@ const Routines = () => {
       if (!res.ok) {
         throw new Error(await extractError(res, "Unable to delete loop."));
       }
-      setRoutines((prev) => prev.filter((item) => item.name !== routine.name));
+      setRoutines((prev) =>
+        prev.filter((item) => routineKey(item) !== routineKey(routine)),
+      );
       toast.success("Loop deleted");
     } catch (err) {
       toast.error(
@@ -211,7 +238,7 @@ const Routines = () => {
               Loops
             </h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              {routines.length} configured · local Super Agents state
+              {routines.length} configured · all devices
             </p>
           </div>
           {view === "loops" ? (
@@ -307,7 +334,7 @@ const Routines = () => {
               <Panel>
                 {sortedRoutines.map((routine, idx) => (
                   <div
-                    key={routine.name}
+                    key={routineKey(routine)}
                     className={`grid gap-3 px-3 py-3 lg:grid-cols-[minmax(0,1fr)_auto] ${
                       idx > 0 ? "border-t border-border" : ""
                     }`}
@@ -320,11 +347,19 @@ const Routines = () => {
                           <CalendarClock className="h-3.5 w-3.5 shrink-0 text-info" />
                         )}
                         <Link
-                          to={`/dashboard/loops/${encodeURIComponent(routine.name)}`}
+                          to={routineDetailPath(routine)}
                           className="truncate text-[12.5px] font-medium text-foreground hover:text-info hover:underline"
                         >
                           {routine.name}
                         </Link>
+                        {routine.origin_device ? (
+                          <span
+                            className="shrink-0 rounded-sm bg-surface-muted px-1 font-mono text-[10px] text-muted-foreground"
+                            title={`Runs on ${routine.origin_device}`}
+                          >
+                            {routine.origin_device}
+                          </span>
+                        ) : null}
                         {routine.enabled ? (
                           <span className="inline-flex h-5 items-center gap-1 rounded border border-success/30 px-1.5 text-[10.5px] text-success">
                             <CheckCircle2 className="h-3 w-3" />
@@ -381,11 +416,7 @@ const Routines = () => {
                         size="sm"
                         className="h-7 px-2.5 text-[12px]"
                       >
-                        <Link
-                          to={`/dashboard/loops/${encodeURIComponent(routine.name)}`}
-                        >
-                          Details
-                        </Link>
+                        <Link to={routineDetailPath(routine)}>Details</Link>
                       </Button>
                       <Button
                         variant="outline"
@@ -420,7 +451,7 @@ const Routines = () => {
                         size="sm"
                         className="h-7 px-2.5 text-[12px]"
                         disabled={actionKey !== null}
-                        onClick={() => void runDue(routine.name, true)}
+                        onClick={() => void runDue(routine, true)}
                       >
                         <Play className="h-3 w-3" />
                         Run

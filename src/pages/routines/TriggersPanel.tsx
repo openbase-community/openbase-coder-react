@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { fleetApiPath, peerBackendBaseUrl } from "@/lib/fleet";
 import { getBackendUrl } from "@/lib/runtime-config";
 import { Copy, Plus, Trash2, Webhook } from "lucide-react";
 import { useState } from "react";
@@ -18,9 +19,15 @@ const FILTER_OPS: LoopTriggerFilter["op"][] = [
   "regex",
 ];
 
-function triggerIngestUrl(trigger: LoopTrigger): string | null {
+function triggerIngestUrl(
+  trigger: LoopTrigger,
+  originHost?: string | null,
+): string | null {
   if (!trigger.token) return null;
-  return getBackendUrl(`/api/hooks/t/${trigger.token}/`);
+  const path = `/api/hooks/t/${trigger.token}/`;
+  // A peer loop's webhook is served by the device it lives on.
+  if (originHost) return `${peerBackendBaseUrl(originHost)}${path}`;
+  return getBackendUrl(path);
 }
 
 function filterSummary(filter: LoopTriggerFilter): string {
@@ -30,9 +37,11 @@ function filterSummary(filter: LoopTriggerFilter): string {
 
 export function TriggersPanel({
   routine,
+  originHost,
   onChanged,
 }: {
   routine: Routine;
+  originHost?: string | null;
   onChanged: () => void;
 }) {
   const [adding, setAdding] = useState(false);
@@ -57,7 +66,7 @@ export function TriggersPanel({
   };
 
   const copyUrl = async (trigger: LoopTrigger) => {
-    const url = triggerIngestUrl(trigger);
+    const url = triggerIngestUrl(trigger, originHost);
     if (!url) return;
     await navigator.clipboard.writeText(url);
     toast.success("Webhook URL copied");
@@ -85,7 +94,10 @@ export function TriggersPanel({
       }
       if (hmacSecret.trim()) body.hmacSecret = hmacSecret.trim();
       const res = await apiFetch(
-        `/api/routines/${encodeURIComponent(routine.name)}/triggers/`,
+        fleetApiPath(
+          originHost,
+          `/api/routines/${encodeURIComponent(routine.name)}/triggers/`,
+        ),
         { method: "POST", body: JSON.stringify(body) },
       );
       if (!res.ok) {
@@ -106,7 +118,10 @@ export function TriggersPanel({
     setBusy(true);
     try {
       const res = await apiFetch(
-        `/api/routines/${encodeURIComponent(routine.name)}/triggers/${encodeURIComponent(trigger.id)}/`,
+        fleetApiPath(
+          originHost,
+          `/api/routines/${encodeURIComponent(routine.name)}/triggers/${encodeURIComponent(trigger.id)}/`,
+        ),
         { method: "DELETE" },
       );
       if (!res.ok) {

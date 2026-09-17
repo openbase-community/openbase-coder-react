@@ -3,9 +3,15 @@ import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
+import { fleetApiPath } from "@/lib/fleet";
 import { ArrowLeft, Play, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { toast } from "sonner";
 
 import {
@@ -22,6 +28,11 @@ import type { Routine, RoutineResponse } from "./types";
 export const RoutineDetail = () => {
   const { loopName } = useParams();
   const navigate = useNavigate();
+  // Loop names are device-local; a fleet link carries the owning device and
+  // every request here goes DIRECTLY to it.
+  const [searchParams] = useSearchParams();
+  const originHost = searchParams.get("device");
+  const originDevice = searchParams.get("deviceName") ?? originHost;
   const name = loopName ?? "";
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,7 +42,9 @@ export const RoutineDetail = () => {
   const fetchRoutine = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiFetch(`/api/routines/${encodeURIComponent(name)}/`);
+      const res = await apiFetch(
+        fleetApiPath(originHost, `/api/routines/${encodeURIComponent(name)}/`),
+      );
       if (!res.ok) {
         throw new Error(await extractError(res, "Unable to load loop."));
       }
@@ -43,7 +56,7 @@ export const RoutineDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [name]);
+  }, [name, originHost]);
 
   useEffect(() => {
     if (!name) {
@@ -58,10 +71,16 @@ export const RoutineDetail = () => {
     if (!routine) return;
     setActionKey("patch");
     try {
-      const res = await apiFetch(`/api/routines/${encodeURIComponent(routine.name)}/`, {
-        method: "PATCH",
-        body: JSON.stringify(patch),
-      });
+      const res = await apiFetch(
+        fleetApiPath(
+          originHost,
+          `/api/routines/${encodeURIComponent(routine.name)}/`,
+        ),
+        {
+          method: "PATCH",
+          body: JSON.stringify(patch),
+        },
+      );
       if (!res.ok) {
         throw new Error(await extractError(res, "Unable to update loop."));
       }
@@ -78,10 +97,13 @@ export const RoutineDetail = () => {
     if (!routine) return;
     setActionKey("run");
     try {
-      const res = await apiFetch("/api/routines/run-due/", {
-        method: "POST",
-        body: JSON.stringify({ name: routine.name, force: true }),
-      });
+      const res = await apiFetch(
+        fleetApiPath(originHost, "/api/routines/run-due/"),
+        {
+          method: "POST",
+          body: JSON.stringify({ name: routine.name, force: true }),
+        },
+      );
       if (!res.ok) {
         throw new Error(await extractError(res, "Unable to run loop."));
       }
@@ -99,9 +121,15 @@ export const RoutineDetail = () => {
     if (!routine) return;
     setActionKey("delete");
     try {
-      const res = await apiFetch(`/api/routines/${encodeURIComponent(routine.name)}/`, {
-        method: "DELETE",
-      });
+      const res = await apiFetch(
+        fleetApiPath(
+          originHost,
+          `/api/routines/${encodeURIComponent(routine.name)}/`,
+        ),
+        {
+          method: "DELETE",
+        },
+      );
       if (!res.ok) {
         throw new Error(await extractError(res, "Unable to delete loop."));
       }
@@ -130,8 +158,16 @@ export const RoutineDetail = () => {
                 Loops
               </Link>
             </Button>
-            <h1 className="truncate text-base font-semibold tracking-tight text-foreground">
-              {routine?.name ?? name}
+            <h1 className="flex min-w-0 items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+              <span className="truncate">{routine?.name ?? name}</span>
+              {originDevice ? (
+                <span
+                  className="shrink-0 rounded-sm bg-surface-muted px-1 font-mono text-[10px] font-normal text-muted-foreground"
+                  title={`Runs on ${originDevice}`}
+                >
+                  {originDevice}
+                </span>
+              ) : null}
             </h1>
             {routine ? (
               <p className="mt-0.5 font-mono text-[12px] text-muted-foreground">
@@ -219,7 +255,11 @@ export const RoutineDetail = () => {
                 </div>
               ) : null}
 
-              <TriggersPanel routine={routine} onChanged={() => void fetchRoutine()} />
+              <TriggersPanel
+                routine={routine}
+                originHost={originHost}
+                onChanged={() => void fetchRoutine()}
+              />
 
               {routine.lastError ? (
                 <ErrorBanner>

@@ -55,7 +55,16 @@ export type Routine = {
   lastError?: string | null;
   triggers?: LoopTrigger[] | null;
   updatedAt?: string | null;
+  // Present on fleet items only: the peer desktop the loop lives on.
+  // Mutations must go directly to origin_host; names are device-local.
+  origin_device?: string | null;
+  origin_host?: string | null;
 };
+
+/** Stable key for a loop across the fleet (names are device-local). */
+export function routineKey(routine: Routine): string {
+  return `${routine.origin_host ?? "local"}:${routine.name}`;
+}
 
 export type RoutinesResponse = {
   count: number;

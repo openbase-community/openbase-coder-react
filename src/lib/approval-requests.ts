@@ -5,7 +5,16 @@ export type ApprovalRequest = {
   received_at?: string | null;
   thread_id?: string | null;
   turn_id?: string | null;
+  // Present on fleet items only: the peer desktop the approval is pending on.
+  // Answers must go directly to origin_host; ids are device-local.
+  origin_device?: string | null;
+  origin_host?: string | null;
 };
+
+/** Stable key for an approval across the fleet (ids are device-local). */
+export function approvalRequestKey(request: ApprovalRequest): string {
+  return `${request.origin_host ?? "local"}:${String(request.id)}`;
+}
 
 type ApprovalRequestsMessage = {
   type: "approval_requests";
