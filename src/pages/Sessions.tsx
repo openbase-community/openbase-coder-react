@@ -246,6 +246,9 @@ const Sessions = () => {
               onChange={(event) => setThreadSearch(event.target.value)}
               placeholder="Search threads"
               className="h-8 pl-8 text-[12px]"
+              // Cmd/Ctrl+F focuses this all-threads search instead of opening
+              // the in-page find bar (which would only match loaded rows).
+              data-find-focus-target
             />
           </div>
           <div className="flex items-center gap-2">
