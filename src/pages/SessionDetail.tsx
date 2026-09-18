@@ -2,6 +2,7 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { useWorkspaceDraft, useWorkspaceTabTitle } from "@/contexts/workspace-tabs";
 import { RunDetail } from "@/components/RunDetail";
 import { ThreadHeader } from "@/components/ThreadHeader";
+import { ContinuationLinks } from "@/components/thread/ContinuationLinks";
 import { TurnBody, UserBubble } from "@/components/TurnBody";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
@@ -299,11 +300,17 @@ const SessionDetail = ({
             onArchive={archiveThread}
             onOpenProject={openProject}
             onBack={fromProjectPath ? goBackToProject : undefined}
+            onContinued={(next) => {
+              setPrompt(prompt, `thread-prompt:${next.thread_id}`);
+              setPrompt("");
+              navigate(`/dashboard/threads/${next.thread_id}`);
+            }}
           />
         ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
           <div className="mx-auto w-full max-w-[860px] space-y-4">
+            {thread ? <ContinuationLinks key={thread.thread_id} thread={thread} /> : null}
             {thread && (connectionLost || loadError) ? (
               <div className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-[12px] text-warning">
                 {loadError

@@ -39,6 +39,7 @@ import {
 } from "@/lib/thread-display";
 import type { ThreadInfo } from "@/types/session";
 import { ResumeThreadDialog } from "./ResumeThreadDialog";
+import { BackendSwitchMenu, type Continuation } from "./BackendSwitchMenu";
 
 interface ThreadActionsMenuProps {
   thread: ThreadInfo;
@@ -46,6 +47,7 @@ interface ThreadActionsMenuProps {
   onToggleFavorite: () => Promise<void>;
   onArchive: () => Promise<void>;
   onOpenProject: () => void;
+  onContinued?: (thread: Continuation) => void;
 }
 
 export function ThreadActionsMenu({
@@ -54,6 +56,7 @@ export function ThreadActionsMenu({
   onToggleFavorite,
   onArchive,
   onOpenProject,
+  onContinued,
 }: ThreadActionsMenuProps) {
   const trigger = useRef<HTMLButtonElement>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -130,6 +133,7 @@ export function ThreadActionsMenu({
             </p>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {!isDispatcher && onContinued ? <BackendSwitchMenu thread={thread} onContinued={onContinued} /> : null}
           {thread.directory ? (
             <DropdownMenuItem
               onSelect={onOpenProject}

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TagPicker } from "@/components/tags/TagPicker";
 import { ThreadActionsMenu } from "@/components/thread/ThreadActionsMenu";
+import type { Continuation } from "@/components/thread/BackendSwitchMenu";
 import type { TagOption } from "@/lib/item-tags";
 import { threadDisplayName } from "@/lib/thread-display";
 import type { ThreadInfo } from "@/types/session";
@@ -15,6 +16,7 @@ interface ThreadHeaderProps {
   onToggleFavorite: () => Promise<void>;
   onArchive: () => Promise<void>;
   onOpenProject: () => void;
+  onContinued?: (thread: Continuation) => void;
   onBack?: () => void;
 }
 

@@ -55,6 +55,9 @@ export interface ThreadInfo {
   current_turn: TurnInfo | null;
   turn_history: TurnInfo[];
   history_next_cursor?: string | null;
+  continued_from?: { thread_id: string; name: string };
+  continuations?: Array<{ thread_id: string; name: string }>;
+  continuation_context?: { omitted: boolean; message_count: number };
   queued_turns?: QueuedTurn[];
   status: ThreadStatus;
   voice_route?: {
