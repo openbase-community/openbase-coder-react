@@ -11,14 +11,8 @@ import {
   Zap,
 } from "lucide-react";
 
-import { AutoLinkSettings } from "./AutoLinkSettings";
 import { scopeButtonLabel, scopeName, skillDirForComparison } from "./scopes";
-import type {
-  AutoLinkSettings as AutoLinkSettingsData,
-  AutoLinkSyncResult,
-  SkillEntry,
-  SkillSection,
-} from "./types";
+import type { SkillEntry, SkillSection } from "./types";
 
 interface SkillsListProps {
   projectPath: string;
@@ -38,11 +32,6 @@ interface SkillsListProps {
     sourceScope: string,
     targetScope: string,
   ) => void;
-  autoLinkSettings: AutoLinkSettingsData | null;
-  autoLinkSync: AutoLinkSyncResult | null;
-  savingAutoLink: boolean;
-  updateAutoLinkSetting: (enabled: boolean) => void;
-  runAutoLinkSync: () => void;
   collapsedSections: Record<string, boolean>;
   toggleSection: (sectionKey: string) => void;
 }
@@ -61,11 +50,6 @@ export function SkillsList({
   createSkill,
   syncingSkill,
   linkSkill,
-  autoLinkSettings,
-  autoLinkSync,
-  savingAutoLink,
-  updateAutoLinkSetting,
-  runAutoLinkSync,
   collapsedSections,
   toggleSection,
 }: SkillsListProps) {
@@ -129,16 +113,6 @@ export function SkillsList({
         <div className="text-[12px] text-muted-foreground">Loading…</div>
       ) : (
         <div className="space-y-3">
-          {!projectPath && autoLinkSettings ? (
-            <AutoLinkSettings
-              settings={autoLinkSettings}
-              sync={autoLinkSync}
-              saving={savingAutoLink}
-              onToggle={updateAutoLinkSetting}
-              onScan={runAutoLinkSync}
-            />
-          ) : null}
-
           {totalSkills === 0 ? (
             <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
               <Zap className="mx-auto h-4 w-4 text-muted-foreground/40" />

@@ -12,23 +12,3 @@ export interface SkillSection {
   skills_dir: string;
   skills: SkillEntry[];
 }
-
-export interface AutoLinkSyncResult {
-  created: number;
-  already_linked: number;
-  conflicts: number;
-  errors: number;
-  results: Array<{
-    name: string;
-    status: string;
-    error?: string;
-  }>;
-}
-
-export interface AutoLinkSettings {
-  auto_link_personal_skills: boolean;
-  personal_skills_dir: string;
-  codex_skills_dir: string;
-  claude_skills_dir: string;
-  sync: AutoLinkSyncResult | null;
-}

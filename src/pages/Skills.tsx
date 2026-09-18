@@ -1,7 +1,7 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useCallback, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { SkillDetail } from "./skills/SkillDetail";
 import { MarketplaceCatalog } from "./skills/MarketplaceCatalog";
@@ -117,6 +117,11 @@ const Skills = () => {
             </p>
           </div>
           <div className="flex gap-1">
+            <Button asChild variant="outline" size="sm" className="h-7 px-2.5 text-[12px]">
+              <Link to="/dashboard/settings?section=agents&focus=skills">
+                Skill settings
+              </Link>
+            </Button>
             <Button
               variant={projectPath ? "outline" : "default"}
               size="sm"
@@ -173,11 +178,6 @@ const Skills = () => {
             createSkill={skillsData.createSkill}
             syncingSkill={skillsData.syncingSkill}
             linkSkill={skillsData.linkSkill}
-            autoLinkSettings={skillsData.autoLinkSettings}
-            autoLinkSync={skillsData.autoLinkSync}
-            savingAutoLink={skillsData.savingAutoLink}
-            updateAutoLinkSetting={skillsData.updateAutoLinkSetting}
-            runAutoLinkSync={skillsData.runAutoLinkSync}
             collapsedSections={collapsedSections}
             toggleSection={toggleSection}
           />
