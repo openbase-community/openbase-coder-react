@@ -26,7 +26,30 @@ export type BoilerSyncTemplatesResponse = {
     templates?: BoilerSyncTemplate[];
   } | null;
   details: BoilerSyncTemplateDetails | null;
+  featured_source: {
+    org: string;
+    repo: string;
+    repo_url: string;
+    installed: boolean;
+    prompt_dismissed: boolean;
+    prompt_visible: boolean;
+  };
   error: string | null;
+};
+
+const requestBoilerSyncTemplates = async (
+  init: RequestInit,
+): Promise<BoilerSyncTemplatesResponse> => {
+  const res = await apiFetch("/api/boilersync/templates/", init);
+  if (!res.ok) {
+    throw new Error(
+      await extractErrorMessage(
+        res,
+        `Unable to update BoilerSync templates: ${res.status}`,
+      ),
+    );
+  }
+  return (await res.json()) as BoilerSyncTemplatesResponse;
 };
 
 export const fetchBoilerSyncTemplates = async (
@@ -46,3 +69,35 @@ export const fetchBoilerSyncTemplates = async (
   }
   return (await res.json()) as BoilerSyncTemplatesResponse;
 };
+
+export const addBoilerSyncSource = async (
+  repoUrl: string,
+  options: { dismissFeaturedPrompt?: boolean } = {},
+): Promise<BoilerSyncTemplatesResponse> =>
+  requestBoilerSyncTemplates({
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      repo_url: repoUrl,
+      dismiss_featured_prompt: options.dismissFeaturedPrompt ?? false,
+    }),
+  });
+
+export const removeBoilerSyncSource = async (
+  org: string,
+  repo: string,
+): Promise<BoilerSyncTemplatesResponse> =>
+  requestBoilerSyncTemplates({
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ org, repo }),
+  });
+
+export const setBoilerSyncFeaturedPromptDismissed = async (
+  dismissed: boolean,
+): Promise<BoilerSyncTemplatesResponse> =>
+  requestBoilerSyncTemplates({
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dismissed }),
+  });
