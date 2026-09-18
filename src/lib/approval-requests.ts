@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/api";
+
 export type ApprovalRequest = {
   id: string | number;
   method?: string | null;
@@ -5,7 +7,16 @@ export type ApprovalRequest = {
   received_at?: string | null;
   thread_id?: string | null;
   turn_id?: string | null;
+  // Present on fleet items only: the peer desktop the approval is pending on.
+  // The selected backend routes decisions to origin_host; ids are device-local.
+  origin_device?: string | null;
+  origin_host?: string | null;
 };
+
+/** Stable key for an approval across the fleet (ids are device-local). */
+export function approvalRequestKey(request: ApprovalRequest): string {
+  return `${request.origin_host ?? "local"}:${String(request.id)}`;
+}
 
 type ApprovalRequestsMessage = {
   type: "approval_requests";
@@ -46,4 +57,18 @@ export function parseApprovalRequestsMessage(
   }
 
   return value as ApprovalRequestsMessage;
+}
+
+/** Keep the browser's installation capability on its own backend. */
+export function answerApprovalRequest(
+  request: ApprovalRequest,
+  decision: "accept" | "decline" | "cancel",
+): Promise<Response> {
+  return apiFetch(`/api/approval-requests/${encodeURIComponent(String(request.id))}/`, {
+    method: "POST",
+    body: JSON.stringify({
+      decision,
+      ...(request.origin_host ? { origin_host: request.origin_host } : {}),
+    }),
+  });
 }

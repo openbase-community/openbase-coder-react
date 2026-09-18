@@ -1,6 +1,8 @@
+import { RuntimeFreshnessWarning } from "@/components/RuntimeFreshnessWarning";
+import { developerFreshnessEnabled, freshnessRequest, unavailableFreshness, type RuntimeFreshness } from "@/lib/runtime-freshness";
 import { apiFetch } from "@/lib/api";
 import { AlertTriangle } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const POLL_MS = 30_000;
@@ -26,15 +28,35 @@ export interface HealthWarning {
 export function HealthWarningsBanner() {
   const [warnings, setWarnings] = useState<HealthWarning[]>([]);
   const navigate = useNavigate();
+  const inFlight = useRef(false);
+  const [freshness, setFreshness] = useState<RuntimeFreshness | null>(null);
 
   const fetchWarnings = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    const developer = developerFreshnessEnabled();
     try {
-      const res = await apiFetch("/api/health/warnings/");
-      if (!res.ok) return; // Backend down is surfaced elsewhere; stay quiet.
-      const payload = (await res.json()) as { warnings?: HealthWarning[] };
+      const init = developer ? {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(await freshnessRequest()),
+      } : undefined;
+      let res = await apiFetch("/api/health/warnings/", { ...init, signal: AbortSignal.timeout(10_000) });
+      if (developer && (res.status === 404 || res.status === 405)) {
+        setFreshness(unavailableFreshness());
+        res = await apiFetch("/api/health/warnings/", { signal: AbortSignal.timeout(10_000) });
+      }
+      if (!res.ok) {
+        if (developer) setFreshness(unavailableFreshness());
+        return;
+      }
+      const payload = (await res.json()) as { warnings?: HealthWarning[]; freshness?: RuntimeFreshness };
       setWarnings(Array.isArray(payload.warnings) ? payload.warnings : []);
+      setFreshness(developer ? payload.freshness ?? unavailableFreshness() : null);
     } catch {
-      // Unreachable local API: other surfaces handle connectivity errors.
+      if (developer) setFreshness(unavailableFreshness());
+    } finally {
+      inFlight.current = false;
     }
   }, []);
 
@@ -47,16 +69,19 @@ export function HealthWarningsBanner() {
       if (document.visibilityState === "visible") void fetchWarnings();
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
     return () => {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
     };
   }, [fetchWarnings]);
 
-  if (warnings.length === 0) return null;
+  if (warnings.length === 0 && (!freshness?.enabled || freshness.components.every((item) => item.state === "current"))) return null;
 
   return (
     <div className="shrink-0 space-y-1 px-3 py-1.5 md:px-4">
+      <RuntimeFreshnessWarning freshness={freshness} />
       {warnings.map((warning) => {
         const clickable = isSyncWarning(warning);
         const base =

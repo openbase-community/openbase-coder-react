@@ -51,6 +51,9 @@ import { toast } from "sonner";
 
 const Sessions = () => {
   const navigate = useNavigate();
+  const [threadSearch, setThreadSearch] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const filtersActive = Boolean(threadSearch.trim() || selectedTags.length > 0);
   const {
     threads,
     nextThreadsUrl,
@@ -60,12 +63,10 @@ const Sessions = () => {
     fetchData,
     loadMoreThreads,
     updateThread,
-  } = useProjectsAndThreads();
+  } = useProjectsAndThreads({ loadAllThreads: filtersActive });
   const { tagOptions, refreshTagOptions } = useTagOptions();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [syncConflictCount, setSyncConflictCount] = useState<number | null>(null);
-  const [threadSearch, setThreadSearch] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -183,7 +184,7 @@ const Sessions = () => {
     threads.forEach((thread) => (thread.tags ?? []).forEach(remember));
     return Array.from(labels.values()).sort((a, b) => a.localeCompare(b));
   }, [tagOptions, threads]);
-  const filtersActive = Boolean(threadSearch.trim() || selectedTags.length > 0);
+  const searching = filtersActive && Boolean(nextThreadsUrl);
   const toggleSelectedTag = (tag: string) => {
     const key = tag.toLowerCase();
     setSelectedTags((current) =>
@@ -209,6 +210,7 @@ const Sessions = () => {
               {activeCount} active · {filteredThreads.length}
               {filtersActive ? ` of ${threads.length}` : ""}
               {nextThreadsUrl ? "+" : ""} loaded
+              {searching ? " · Searching all threads…" : ""}
             </p>
           </div>
 
@@ -310,7 +312,7 @@ const Sessions = () => {
 
         {loading ? (
           <div className="text-[12px] text-muted-foreground">Loading…</div>
-        ) : threads.length === 0 ? (
+        ) : threads.length === 0 && !searching ? (
           <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
             <Terminal className="mx-auto h-4 w-4 text-muted-foreground/40" />
             <p className="mt-2 text-[12px] text-muted-foreground">
@@ -321,7 +323,9 @@ const Sessions = () => {
           <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
             <Search className="mx-auto h-4 w-4 text-muted-foreground/40" />
             <p className="mt-2 text-[12px] text-muted-foreground">
-              No matching threads.
+              {searching
+                ? "Searching all threads…"
+                : "No matching threads."}
             </p>
           </div>
         ) : (

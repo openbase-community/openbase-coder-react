@@ -13,7 +13,7 @@ import {
 } from "@/lib/project-display";
 import type { Project, ThreadInfo } from "@/types/session";
 
-export const useProjectsAndThreads = () => {
+export const useProjectsAndThreads = ({ loadAllThreads = false } = {}) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [threads, setThreads] = useState<ThreadInfo[]>([]);
   const [totalThreadCount, setTotalThreadCount] = useState(0);
@@ -171,13 +171,37 @@ export const useProjectsAndThreads = () => {
       });
       setTotalThreadCount(page.count);
       setNextThreadsUrl(page.next);
+      setThreadsError(null);
     } catch (err) {
+      setThreadsError(toErrorMessage(err));
       toast.error(toErrorMessage(err));
     } finally {
       pagination.loadingMore = false;
       setLoadingMoreThreads(false);
     }
   }, [nextThreadsUrl]);
+
+  // Client-side filters need every page, even when no loaded thread matches.
+  // Pause on errors so a failed page cannot cause a tight retry loop; polling
+  // clears the error after a successful refresh and resumes the scan.
+  useEffect(() => {
+    if (
+      loadAllThreads &&
+      nextThreadsUrl &&
+      !threadsLoading &&
+      !loadingMoreThreads &&
+      !threadsError
+    ) {
+      void loadMoreThreads();
+    }
+  }, [
+    loadAllThreads,
+    nextThreadsUrl,
+    threadsLoading,
+    loadingMoreThreads,
+    threadsError,
+    loadMoreThreads,
+  ]);
 
   const loadMoreProjects = useCallback(async () => {
     const pagination = projectPagination.current;

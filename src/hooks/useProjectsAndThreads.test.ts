@@ -14,6 +14,7 @@ describe.each(["threads", "projects"] as const)("%s pagination", (kind) => {
   const nextKey = kind === "threads" ? "nextThreadsUrl" : "nextProjectsUrl";
   const moreKey = kind === "threads" ? "loadMoreThreads" : "loadMoreProjects";
   let result: { current: ReturnType<typeof useProjectsAndThreads> };
+  let rerender: (props: { loadAllThreads: boolean }) => void;
   let items: { thread_id: string; path: string; name: string }[];
   let blockedPage: number | null;
   let releasePage: () => void;
@@ -51,7 +52,10 @@ describe.each(["threads", "projects"] as const)("%s pagination", (kind) => {
       return response;
     });
     await act(async () => {
-      ({ result } = renderHook(() => useProjectsAndThreads()));
+      ({ result, rerender } = renderHook(
+        (props) => useProjectsAndThreads(props),
+        { initialProps: { loadAllThreads: false } },
+      ));
     });
   });
 
@@ -70,6 +74,46 @@ describe.each(["threads", "projects"] as const)("%s pagination", (kind) => {
     act(async () => {
       await result.current[moreKey]();
     });
+
+  it.skipIf(kind !== "threads")("loads every page for filters without scrolling, including after polling", async () => {
+    expect(result.current.threads).toHaveLength(25);
+    await act(async () => rerender({ loadAllThreads: true }));
+    expect(result.current.threads).toEqual(items);
+    expect(result.current.nextThreadsUrl).toBeNull();
+
+    items.push({ thread_id: "older", path: "/projects/older", name: "Older match" });
+    await refresh();
+    expect(result.current.threads).toEqual(items);
+    expect(result.current.nextThreadsUrl).toBeNull();
+  });
+
+  it.skipIf(kind !== "threads")("stops scanning when filters are cleared during a request", async () => {
+    blockedPage = 2;
+    await act(async () => rerender({ loadAllThreads: true }));
+    expect(result.current.loadingMoreThreads).toBe(true);
+    await act(async () => {
+      rerender({ loadAllThreads: false });
+    });
+    await act(async () => releasePage());
+    expect(result.current.threads).toHaveLength(50);
+    expect(result.current.nextThreadsUrl).toBe(`${endpoint}?page=3&page_size=25`);
+    expect(result.current.loadingMoreThreads).toBe(false);
+  });
+
+  it.skipIf(kind !== "threads")("pauses a failed scan and resumes after a successful refresh", async () => {
+    failedPage = 2;
+    await act(async () => rerender({ loadAllThreads: true }));
+    expect(result.current.threads).toHaveLength(25);
+    expect(result.current.error).toBe("Page unavailable");
+    expect(result.current.loadingMoreThreads).toBe(false);
+    expect(vi.mocked(apiFetch).mock.calls.filter(([url]) => url.includes("page=2"))).toHaveLength(1);
+
+    failedPage = null;
+    await refresh();
+    expect(result.current.threads).toEqual(items);
+    expect(result.current.nextThreadsUrl).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
 
   it("keeps loaded pages and continues from the next page after polling", async () => {
     await loadMore();

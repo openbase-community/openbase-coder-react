@@ -12,7 +12,11 @@ import { useApprovalRequestsWebSocket } from "@/hooks/use-approval-requests-webs
 import { useMarkKindReadWhileMounted } from "@/contexts/notifications";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
-import type { ApprovalRequest } from "@/lib/approval-requests";
+import {
+  answerApprovalRequest,
+  approvalRequestKey,
+  type ApprovalRequest,
+} from "@/lib/approval-requests";
 import { trackProductAnalytics } from "@/lib/product-analytics";
 import { Check, ExternalLink, ShieldAlert, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -58,7 +62,7 @@ const ApprovalRequests = () => {
 
   const fetchRequests = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/approval-requests/");
+      const res = await apiFetch("/api/approval-requests/?scope=fleet");
       if (!res.ok) {
         throw new Error(
           await extractErrorMessage(res, "Unable to load approval requests."),
@@ -73,8 +77,13 @@ const ApprovalRequests = () => {
     setLoading(false);
   }, []);
 
+  // The socket only carries this backend's approvals; peer items arrive via
+  // the fleet poll, so a live snapshot replaces local rows and keeps peers.
   const applyLiveSnapshot = useCallback((nextRequests: ApprovalRequest[]) => {
-    setRequests(nextRequests);
+    setRequests((prev) => [
+      ...nextRequests,
+      ...prev.filter((item) => item.origin_host),
+    ]);
     setError(null);
     setLoading(false);
   }, []);
@@ -82,26 +91,21 @@ const ApprovalRequests = () => {
 
   useEffect(() => {
     void fetchRequests();
-    if (live) return;
+    // Poll even while the local socket is live: approvals pending on other
+    // devices only surface through the fleet-scoped list.
     const interval = window.setInterval(() => void fetchRequests(), POLL_MS);
     return () => window.clearInterval(interval);
-  }, [fetchRequests, live]);
+  }, [fetchRequests]);
 
   const answerRequest = async (
     request: ApprovalRequest,
     decision: ApprovalDecision,
   ) => {
-    const requestId = String(request.id);
-    const key = `${requestId}:${decision}`;
+    const requestKey = approvalRequestKey(request);
+    const key = `${requestKey}:${decision}`;
     setActingKey(key);
     try {
-      const res = await apiFetch(
-        `/api/approval-requests/${encodeURIComponent(requestId)}/`,
-        {
-          method: "POST",
-          body: JSON.stringify({ decision }),
-        },
-      );
+      const res = await answerApprovalRequest(request, decision);
       if (!res.ok) {
         throw new Error(
           await extractErrorMessage(res, `Unable to ${decision} request.`),
@@ -117,7 +121,9 @@ const ApprovalRequests = () => {
           ? Math.max(0, Date.now() - receivedAt)
           : undefined,
       });
-      setRequests((prev) => prev.filter((item) => String(item.id) !== requestId));
+      setRequests((prev) =>
+        prev.filter((item) => approvalRequestKey(item) !== requestKey),
+      );
       toast.success(decision === "accept" ? "Approved" : "Denied");
       void fetchRequests();
     } catch (err) {
@@ -143,7 +149,7 @@ const ApprovalRequests = () => {
           title="Approval requests"
           loading={loading}
           onRefresh={() => void fetchRequests()}
-          subtitle={`${pendingCount} pending · ${live ? "live updates" : "auto-refresh 5s"}`}
+          subtitle={`${pendingCount} pending · all devices · ${live ? "live updates" : "auto-refresh 5s"}`}
         />
 
         <ResourceError message={error} />
@@ -160,7 +166,7 @@ const ApprovalRequests = () => {
               const requestId = String(request.id);
               return (
                 <div
-                  key={requestId}
+                  key={approvalRequestKey(request)}
                   className={`grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto] ${
                     idx > 0 ? "border-t border-border" : ""
                   }`}
@@ -177,6 +183,14 @@ const ApprovalRequests = () => {
                       <span className="shrink-0 font-mono text-[10.5px] text-muted-foreground">
                         {formatReceivedAt(request.received_at)}
                       </span>
+                      {request.origin_device ? (
+                        <span
+                          className="shrink-0 rounded-sm bg-surface-muted px-1 font-mono text-[10px] text-muted-foreground"
+                          title={`Pending on ${request.origin_device}`}
+                        >
+                          {request.origin_device}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10.5px] text-muted-foreground/70">
                       <span className="truncate">id {requestId}</span>

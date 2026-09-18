@@ -15,6 +15,7 @@ import { useSearchParams } from "react-router-dom";
 import { AuthenticationSettings } from "./settings/AuthenticationSettings";
 import { AppearanceSettings } from "./settings/AppearanceSettings";
 import { TabSettings } from "./settings/TabSettings";
+import { TemplateSettings } from "./settings/TemplateSettings";
 import { BackendModelSettings } from "./settings/BackendModelSettings";
 import { CodingBackendSettings } from "./settings/CodingBackendSettings";
 import { DangerousConfirmationSettings } from "./settings/DangerousConfirmationSettings";
@@ -23,7 +24,9 @@ import { EnvSettings } from "./settings/EnvSettings";
 import { IgnoredLaunchctlSettings } from "./settings/IgnoredLaunchctlSettings";
 import { LiveKitCompanionSettings } from "./settings/LiveKitCompanionSettings";
 import { OpenbaseServicesSettings } from "./settings/OpenbaseServicesSettings";
+import { ProductAnalyticsSettings } from "./settings/ProductAnalyticsSettings";
 import { ReasoningSettings } from "./settings/ReasoningSettings";
+import { SkillSharingSettings } from "./settings/SkillSharingSettings";
 import { ServiceTierSettings } from "./settings/ServiceTierSettings";
 import { SidebarItemsSettings } from "./settings/SidebarItemsSettings";
 import { useOpenbaseServices } from "./settings/useOpenbaseServices";
@@ -117,6 +120,7 @@ const Settings: React.FC = () => {
     setSearchParams(
       (params) => {
         const updated = new URLSearchParams(params);
+        updated.delete("focus");
         if (next === DEFAULT_SECTION) {
           updated.delete("section");
         } else {
@@ -141,6 +145,7 @@ const Settings: React.FC = () => {
           onRestartScheduled={openbaseServices.applyRestartResponse}
         />
         <ReasoningSettings />
+        <SkillSharingSettings />
       </>
     ),
     voice: (
@@ -155,7 +160,9 @@ const Settings: React.FC = () => {
       <>
         <AppearanceSettings />
         <TabSettings />
+        <TemplateSettings />
         <SidebarItemsSettings />
+        <ProductAnalyticsSettings />
       </>
     ),
     safety: <DangerousConfirmationSettings />,

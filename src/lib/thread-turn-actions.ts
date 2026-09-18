@@ -8,12 +8,14 @@ export const threadTurnActionPath = (
   return `/api/threads/${threadId}/turns/${suffix}`;
 };
 
+// Returns null when the outcome is a plain turn start: the thread view already
+// shows the running turn, so a "Turn started" toast is just noise.
 export const threadTurnActionMessage = (
   action: ThreadTurnAction,
   result: Record<string, unknown>,
-) => {
+): string | null => {
   if (action === "queue") {
-    return result.queued ? "Turn queued" : "Turn started";
+    return result.queued ? "Turn queued" : null;
   }
   if (action === "steer") {
     if (result.queued) return "Active turn ended; follow-up queued";
@@ -22,7 +24,7 @@ export const threadTurnActionMessage = (
     }
     return "Steering sent";
   }
-  return "Turn started";
+  return null;
 };
 
 export const promptAfterThreadTurnSubmission = (

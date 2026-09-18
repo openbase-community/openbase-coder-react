@@ -201,15 +201,19 @@ export function useThreadConnection(threadId: string | undefined) {
           setThread((prev) => reconcileThreadSnapshot(prev, msg.data));
           break;
 
-        case "turn_queued":
-          toast.success(threadTurnActionMessage("queue", msg.data ?? {}));
+        case "turn_queued": {
+          const queuedMessage = threadTurnActionMessage("queue", msg.data ?? {});
+          if (queuedMessage) toast.success(queuedMessage);
           void refreshThread();
           break;
+        }
 
-        case "turn_steered":
-          toast.success(threadTurnActionMessage("steer", msg.data ?? {}));
+        case "turn_steered": {
+          const steeredMessage = threadTurnActionMessage("steer", msg.data ?? {});
+          if (steeredMessage) toast.success(steeredMessage);
           void refreshThread();
           break;
+        }
 
         case "error": {
           const message = msg.data?.message ?? "Server error";
@@ -273,7 +277,8 @@ export function useThreadConnection(threadId: string | undefined) {
           return false;
         }
         const result = (await res.json()) as Record<string, unknown>;
-        toast.success(threadTurnActionMessage(action, result));
+        const message = threadTurnActionMessage(action, result);
+        if (message) toast.success(message);
         await refreshThread();
         return true;
       } catch {
