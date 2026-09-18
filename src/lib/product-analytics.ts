@@ -33,12 +33,34 @@ const ALLOWED_PROPERTY_KEYS = new Set([
   "response_duration_ms",
 ]);
 
+/**
+ * Shell-owned control over whether product analytics collection is enabled.
+ * Registered by shells (e.g. the desktop app) that collect opt-out analytics
+ * so the shared Settings page can expose the toggle; when absent, no
+ * analytics preference UI is rendered.
+ */
+export interface ProductAnalyticsPreference {
+  isEnabled(): boolean;
+  setEnabled(enabled: boolean): void;
+}
+
 let sink: ProductAnalyticsSink | null = null;
+let preference: ProductAnalyticsPreference | null = null;
 
 export function configureProductAnalytics(
   nextSink: ProductAnalyticsSink | null,
 ): void {
   sink = nextSink;
+}
+
+export function configureProductAnalyticsPreference(
+  nextPreference: ProductAnalyticsPreference | null,
+): void {
+  preference = nextPreference;
+}
+
+export function getProductAnalyticsPreference(): ProductAnalyticsPreference | null {
+  return preference;
 }
 
 export function trackProductAnalytics(
