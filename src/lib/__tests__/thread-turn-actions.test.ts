@@ -27,6 +27,14 @@ describe("thread turn actions", () => {
     ).toBe("Active turn ended; follow-up started");
   });
 
+  it("suppresses toasts for plain turn starts", () => {
+    expect(threadTurnActionMessage("start", {})).toBeNull();
+    expect(threadTurnActionMessage("queue", { queued: false })).toBeNull();
+    expect(threadTurnActionMessage("queue", { queued: true })).toBe(
+      "Turn queued",
+    );
+  });
+
   it("retains failed and subsequently edited prompts", () => {
     expect(promptAfterThreadTurnSubmission("keep this", "keep this", false)).toBe(
       "keep this",
