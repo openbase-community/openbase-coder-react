@@ -12,8 +12,11 @@ import { useApprovalRequestsWebSocket } from "@/hooks/use-approval-requests-webs
 import { useMarkKindReadWhileMounted } from "@/contexts/notifications";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
-import { approvalRequestKey, type ApprovalRequest } from "@/lib/approval-requests";
-import { fleetApiPath } from "@/lib/fleet";
+import {
+  answerApprovalRequest,
+  approvalRequestKey,
+  type ApprovalRequest,
+} from "@/lib/approval-requests";
 import { trackProductAnalytics } from "@/lib/product-analytics";
 import { Check, ExternalLink, ShieldAlert, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -98,22 +101,11 @@ const ApprovalRequests = () => {
     request: ApprovalRequest,
     decision: ApprovalDecision,
   ) => {
-    const requestId = String(request.id);
     const requestKey = approvalRequestKey(request);
     const key = `${requestKey}:${decision}`;
     setActingKey(key);
     try {
-      // Answers go DIRECTLY to the device the approval is pending on.
-      const res = await apiFetch(
-        fleetApiPath(
-          request.origin_host,
-          `/api/approval-requests/${encodeURIComponent(requestId)}/`,
-        ),
-        {
-          method: "POST",
-          body: JSON.stringify({ decision }),
-        },
-      );
+      const res = await answerApprovalRequest(request, decision);
       if (!res.ok) {
         throw new Error(
           await extractErrorMessage(res, `Unable to ${decision} request.`),
