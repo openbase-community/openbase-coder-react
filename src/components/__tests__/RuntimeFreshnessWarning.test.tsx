@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { RuntimeFreshnessWarning } from "../RuntimeFreshnessWarning";
 import { developerFreshnessEnabled } from "@/lib/runtime-freshness";
@@ -8,11 +8,18 @@ afterEach(() => { cleanup(); delete window.__OPENBASE_RUNTIME_CONFIG__; });
 
 describe("runtime freshness banner", () => {
   const stale = { component: "Voice worker", state: "stale" as const, reason: "cli: old → new", action: "Restart livekit-agent." };
-  it("names stale services and their remedy", () => {
+  it("keeps details outside the row and reveals them on hover or click", () => {
     render(<RuntimeFreshnessWarning freshness={{ enabled: true, components: [stale] }} />);
     expect(screen.getByRole("status").textContent).toContain("1 component needs refreshing");
+    expect(screen.queryByText("Voice worker")).toBeNull();
+    fireEvent.mouseEnter(screen.getByRole("button"));
+    expect(screen.getByRole("dialog", { name: "Runtime freshness details" })).toBeTruthy();
     expect(screen.getByText("Voice worker")).toBeTruthy();
     expect(screen.getByText("Restart livekit-agent.")).toBeTruthy();
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(screen.queryByText("Voice worker")).toBeNull();
+    fireEvent.click(screen.getByRole("button"));
+    expect(screen.getByText("Voice worker")).toBeTruthy();
   });
   it("clears after a verified refresh and suppresses production", () => {
     const view = render(<RuntimeFreshnessWarning freshness={{ enabled: true, components: [stale] }} />);
