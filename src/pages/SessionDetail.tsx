@@ -30,6 +30,7 @@ import {
   MicOff,
   Phone,
   PhoneOff,
+  Smile,
   Square,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -234,6 +235,7 @@ const SessionDetail = ({
     !hasActiveCurrentTurn &&
     prompt.trim().length === 0;
   const fromProjectPath = searchParams.get("fromProject");
+  const fromThreads = searchParams.get("from") === "threads";
   const openProject = () => {
     if (!thread?.directory) return;
     navigate(`/dashboard/project?path=${encodeURIComponent(thread.directory)}`);
@@ -242,7 +244,19 @@ const SessionDetail = ({
     if (!fromProjectPath) return;
     navigate(`/dashboard/project?path=${encodeURIComponent(fromProjectPath)}`);
   };
+  const goBack = fromProjectPath
+    ? goBackToProject
+    : fromThreads
+      ? () => navigate("/dashboard/threads")
+      : undefined;
   const isDispatchThread = Boolean(thread && isDispatcherThread(thread));
+  // A Dispatcher chat with nothing said yet shows a large, faint Dispatcher
+  // glyph in the otherwise empty transcript area.
+  const showDispatchEmptyState =
+    isDispatchThread &&
+    thread?.turn_history.length === 0 &&
+    !thread.current_turn &&
+    !thread.history_next_cursor;
 
   const archiveThread = async () => {
     if (!thread) return;
@@ -299,7 +313,7 @@ const SessionDetail = ({
             onToggleFavorite={toggleFavorite}
             onArchive={archiveThread}
             onOpenProject={openProject}
-            onBack={fromProjectPath ? goBackToProject : undefined}
+            onBack={goBack}
             onContinued={(next) => {
               setPrompt(prompt, `thread-prompt:${next.thread_id}`);
               setPrompt("");
@@ -308,8 +322,19 @@ const SessionDetail = ({
           />
         ) : null}
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-          <div className="mx-auto w-full max-w-[860px] space-y-4">
+        <div className="relative min-h-0 flex-1 overflow-y-auto px-3 py-4">
+          {showDispatchEmptyState ? (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+            >
+              <Smile
+                strokeWidth={1.25}
+                className="h-40 w-40 text-foreground opacity-[0.06] dark:opacity-[0.08]"
+              />
+            </div>
+          ) : null}
+          <div className="mx-auto w-full max-w-[720px] space-y-8">
             {thread ? <ContinuationLinks key={thread.thread_id} thread={thread} /> : null}
             {thread && (connectionLost || loadError) ? (
               <div className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-[12px] text-warning">
@@ -393,7 +418,7 @@ const SessionDetail = ({
 
         {thread ? (
           <div className="shrink-0 border-t border-border bg-background/95 p-2.5 backdrop-blur">
-            <div className="mx-auto w-full max-w-[860px] space-y-1.5">
+            <div className="mx-auto w-full max-w-[720px] space-y-1.5">
               {call && (inCall || callConnecting) ? (
                 <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-1.5 text-[12px]">
                   <span className="truncate text-muted-foreground">

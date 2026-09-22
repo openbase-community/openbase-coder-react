@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Input } from "@/components/ui/input";
-import { Panel } from "@/components/ui/panel";
 import {
   Popover,
   PopoverContent,
@@ -41,8 +40,8 @@ import {
   Archive,
   Plus,
   Search,
+  MessageSquare,
   Tag,
-  Terminal,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -216,14 +215,22 @@ const Sessions = () => {
 
           <div className="flex items-center gap-2">
             <Button
-              variant={syncConflictCount ? "destructive" : "outline"}
+              variant="ghost"
               size="sm"
-              className="h-7 px-2.5 text-[12px]"
+              className={`h-7 px-2 text-[12px] ${
+                syncConflictCount
+                  ? "text-destructive hover:text-destructive"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => navigate("/dashboard/threads/sync-conflicts")}
             >
               <AlertTriangle className="h-3 w-3" />
               Sync conflicts
-              {syncConflictCount ? ` · ${syncConflictCount}` : ""}
+              {syncConflictCount ? (
+                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground">
+                  {syncConflictCount}
+                </span>
+              ) : null}
             </Button>
             <NewThreadDialog
               onOpenChange={setDialogOpen}
@@ -317,7 +324,7 @@ const Sessions = () => {
           <div className="text-[12px] text-muted-foreground">Loading…</div>
         ) : threads.length === 0 && !searching ? (
           <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
-            <Terminal className="mx-auto h-4 w-4 text-muted-foreground/40" />
+            <MessageSquare className="mx-auto h-4 w-4 text-muted-foreground/40" />
             <p className="mt-2 text-[12px] text-muted-foreground">
               No threads yet.
             </p>
@@ -339,8 +346,8 @@ const Sessions = () => {
                   <div className="mb-1.5 px-1 text-[11px] font-semibold uppercase text-muted-foreground">
                     {group.label}
                   </div>
-                  <Panel>
-                    {group.threads.map((thread, idx) => {
+                  <div className="divide-y divide-border">
+                    {group.threads.map((thread) => {
                       const isDispatchThread = thread.voice_route?.role === "dispatcher";
 
                       return (
@@ -348,8 +355,10 @@ const Sessions = () => {
                           key={thread.thread_id}
                           thread={thread}
                           displayName={displayNames.get(thread.thread_id)}
-                          showTopBorder={idx > 0}
-                          onClick={() => navigate(threadRoutePath(thread))}
+                          timestamp="time"
+                          onClick={() =>
+                            navigate(threadRoutePath(thread, { fromThreads: true }))
+                          }
                           onToggleFavorite={(item) =>
                             void toggleThreadFavorite(item, !item.is_favorite)
                           }
@@ -359,16 +368,9 @@ const Sessions = () => {
                           }
                           action={
                             isDispatchThread ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-not-allowed"
-                                disabled
-                                title="Dispatcher threads cannot be archived"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Archive className="h-3 w-3 text-muted-foreground" />
-                              </Button>
+                              // Not archivable: keep the slot so the row's
+                              // trailing controls align with the others.
+                              <span aria-hidden="true" className="h-6 w-6 shrink-0" />
                             ) : (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -412,7 +414,7 @@ const Sessions = () => {
                         />
                       );
                     })}
-                  </Panel>
+                  </div>
                 </section>
               ))}
             </div>

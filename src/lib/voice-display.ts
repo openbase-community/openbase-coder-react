@@ -42,3 +42,21 @@ export function voicePromptForDisplay(text: string): string {
     .replace(/&amp;/g, "&");
   return rest.trim() ? decoded + rest : decoded;
 }
+
+const SYSTEM_NOTE_OPEN = "[Openbase system note:";
+
+/**
+ * Strip a leading runtime-injected system note (e.g. the onboarding
+ * reminder the CLI prepends to Dispatcher messages) so the bubble shows
+ * what the user actually typed. If the stored prompt is only the note (the
+ * backend keeps a truncated preview for Claude threads, which can cut the
+ * user's text off entirely), fall back to a short placeholder.
+ */
+export function userPromptForDisplay(text: string): string {
+  const shown = voicePromptForDisplay(text);
+  if (!shown.startsWith(SYSTEM_NOTE_OPEN)) return shown;
+  const close = shown.indexOf("]");
+  if (close === -1) return "(message not recorded — only a truncated system note was stored)";
+  const rest = shown.slice(close + 1).trim();
+  return rest || "(message not recorded — only a system note was stored)";
+}

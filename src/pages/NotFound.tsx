@@ -33,7 +33,7 @@ const NotFound = () => {
             <code className="font-mono">{location.pathname}</code> does not match
             an Openbase page.
           </p>
-          <Button className="mt-6" onClick={() => navigate("/dashboard")}>
+          <Button className="mt-6" onClick={() => navigate("/dashboard/dispatch")}>
             <ArrowLeft className="h-4 w-4" />
             Back to workspace
           </Button>

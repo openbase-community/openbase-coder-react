@@ -26,6 +26,10 @@ vi.mock("@/lib/boilersync", async (importOriginal) => ({
   setBoilerSyncFeaturedPromptDismissed: apiMocks.dismiss,
 }));
 
+vi.mock("@/components/ConfigureTabs", () => ({
+  ConfigureTabs: () => null,
+}));
+
 vi.mock("@/components/layouts/DashboardLayout", () => ({
   default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));

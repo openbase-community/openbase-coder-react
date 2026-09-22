@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { ThreadHeader } from "../ThreadHeader";
 import { apiFetch } from "@/lib/api";
 import type { ThreadInfo } from "@/types/session";
@@ -14,8 +15,8 @@ const thread: ThreadInfo = {
 afterEach(() => { cleanup(); vi.resetAllMocks(); });
 
 async function openSwitch(onContinued = vi.fn()) {
-  render(<ThreadHeader thread={thread} isConnected tagOptions={[]} onUpdateTags={vi.fn()}
-    onToggleFavorite={vi.fn()} onArchive={vi.fn()} onOpenProject={vi.fn()} onContinued={onContinued} />);
+  render(<MemoryRouter><ThreadHeader thread={thread} isConnected tagOptions={[]} onUpdateTags={vi.fn()}
+    onToggleFavorite={vi.fn()} onArchive={vi.fn()} onOpenProject={vi.fn()} onContinued={onContinued} /></MemoryRouter>);
   const trigger = screen.getByRole("button", { name: "Thread actions" });
   trigger.focus();
   fireEvent.keyDown(trigger, { key: "ArrowDown" });

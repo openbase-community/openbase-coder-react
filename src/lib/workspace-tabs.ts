@@ -1,4 +1,5 @@
 import { navigationTitle } from "./app-navigation";
+import { configureTabForPath } from "./configure-tabs";
 import { projectName } from "./project-display";
 import { BUILT_IN_SIDEBAR_ITEMS } from "./sidebar-preferences";
 
@@ -13,6 +14,8 @@ export function workspaceTabTitle(path: string): string {
   if (pathname === "/dashboard/project") {
     return projectName(params.get("path") || "") || "Project";
   }
+  const configureTab = configureTabForPath(pathname);
+  if (configureTab && configureTab.path === pathname) return configureTab.title;
   const item = BUILT_IN_SIDEBAR_ITEMS.find((item) => item.path === pathname);
   if (item) return navigationTitle(item);
   return pathname.startsWith("/dashboard/threads/") ? "Thread" : "Openbase";

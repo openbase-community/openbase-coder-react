@@ -102,8 +102,8 @@ describe("workspace navigation and layout", () => {
               children: [{
                 type: "tab",
                 component: "route",
-                name: "Overview",
-                config: { path: "/dashboard" },
+                name: "Dispatch",
+                config: { path: "/dashboard/dispatch" },
               }],
             },
             { type: "tabset", children: [] },

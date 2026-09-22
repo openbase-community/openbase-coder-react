@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
+import { ProviderLogo } from "@/components/ProviderLogo";
+import { modelProvider } from "@/lib/model-provider";
 import {
   Select,
   SelectContent,
@@ -165,8 +167,14 @@ export const BackendModelSettings: React.FC = () => {
                 {description}
               </p>
               {settings ? (
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                   Current:{" "}
+                  {modelProvider(currentModel, currentEngine) ? (
+                    <ProviderLogo
+                      provider={modelProvider(currentModel, currentEngine)!}
+                      className="h-3 w-3"
+                    />
+                  ) : null}
                   {currentOption?.label ?? currentModel ?? "backend default"}
                   {currentOption?.is_default ? " (default)" : ""}
                   {currentEngine
@@ -201,7 +209,13 @@ export const BackendModelSettings: React.FC = () => {
                 <SelectContent>
                   {engines.map((engine) => (
                     <SelectGroup key={engine}>
-                      <SelectLabel>
+                      <SelectLabel className="flex items-center gap-1.5">
+                        {modelProvider(null, engine) ? (
+                          <ProviderLogo
+                            provider={modelProvider(null, engine)!}
+                            className="h-3.5 w-3.5"
+                          />
+                        ) : null}
                         {ENGINE_LABELS[engine] ?? engine}
                       </SelectLabel>
                       {options
@@ -211,10 +225,21 @@ export const BackendModelSettings: React.FC = () => {
                             key={option.id}
                             value={option.id}
                             disabled={!option.available}
+                            title={option.unavailable_reason ?? undefined}
                           >
-                            {option.label}
-                            {option.is_default ? " (default)" : ""}
-                            {option.available ? "" : " (unavailable on Cloud)"}
+                            <span className="inline-flex items-center gap-1.5">
+                              {modelProvider(option.id, option.engine) ? (
+                                <ProviderLogo
+                                  provider={modelProvider(option.id, option.engine)!}
+                                  className="h-3.5 w-3.5"
+                                />
+                              ) : null}
+                              {option.label}
+                              {option.is_default ? " (default)" : ""}
+                              {option.available
+                                ? ""
+                                : ` (${option.unavailable_reason ?? "unavailable"})`}
+                            </span>
                           </SelectItem>
                         ))}
                     </SelectGroup>

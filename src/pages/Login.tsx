@@ -17,7 +17,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await refreshAuth();
-      navigate("/dashboard", { replace: true });
+      navigate("/dashboard/dispatch", { replace: true });
     } catch (error) {
       const description =
         error instanceof Error ? error.message : "Unable to verify local login.";
