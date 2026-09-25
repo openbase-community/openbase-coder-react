@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api";
 import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const POLL_MS = 30_000;
 
@@ -11,6 +12,17 @@ const SYNC_SETTINGS_PATH = "/dashboard/sync";
 
 /** Sync-related warnings can be resolved from the sync settings page. */
 const isSyncWarning = (warning: HealthWarning) => warning.id.startsWith("sync");
+
+/**
+ * A service that predates the binary now installed (e.g. codex-app-server
+ * after a Codex upgrade). The id suffix is the service name; restarting it
+ * through the settings restart endpoint resolves the warning.
+ */
+const RESTART_NEEDED_PREFIX = "service-restart-needed:";
+const restartTargetOf = (warning: HealthWarning) =>
+  warning.id.startsWith(RESTART_NEEDED_PREFIX) ? warning.id.slice(RESTART_NEEDED_PREFIX.length) : null;
+/** The restart takes the local API down briefly; poll again once it is back. */
+const RESTART_REFETCH_MS = 6_000;
 
 export interface HealthWarning {
   id: string;
@@ -30,6 +42,7 @@ export function HealthWarningsBanner() {
   const navigate = useNavigate();
   const inFlight = useRef(false);
   const [freshness, setFreshness] = useState<RuntimeFreshness | null>(null);
+  const [restarting, setRestarting] = useState<string | null>(null);
 
   const fetchWarnings = useCallback(async () => {
     if (inFlight.current) return;
@@ -60,6 +73,34 @@ export function HealthWarningsBanner() {
     }
   }, []);
 
+  const restartService = useCallback(
+    async (service: string) => {
+      setRestarting(service);
+      try {
+        const res = await apiFetch("/api/settings/restart/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ service }),
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!res.ok) {
+          toast.error(`Unable to restart ${service} (${res.status}).`);
+          return;
+        }
+        toast.success(`Restarting ${service}…`);
+        window.setTimeout(() => {
+          setRestarting(null);
+          void fetchWarnings();
+        }, RESTART_REFETCH_MS);
+        return;
+      } catch {
+        toast.error(`Unable to reach the local API to restart ${service}.`);
+      }
+      setRestarting(null);
+    },
+    [fetchWarnings],
+  );
+
   useEffect(() => {
     void fetchWarnings();
     const interval = window.setInterval(() => {
@@ -84,6 +125,7 @@ export function HealthWarningsBanner() {
       <RuntimeFreshnessWarning freshness={freshness} />
       {warnings.map((warning) => {
         const clickable = isSyncWarning(warning);
+        const restartTarget = restartTargetOf(warning);
         const base =
           warning.severity === "critical"
             ? "flex w-full items-start gap-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-left text-[12px] text-destructive"
@@ -104,6 +146,24 @@ export function HealthWarningsBanner() {
             </span>
           </>
         );
+
+        if (restartTarget) {
+          const busy = restarting === restartTarget;
+          return (
+            <div key={warning.id} className={`${base} items-center`}>
+              {content}
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void restartService(restartTarget)}
+                title={`Restart ${restartTarget} now`}
+                className="ml-auto shrink-0 rounded border border-current/40 px-2 py-0.5 font-medium transition-colors hover:bg-warning/20 disabled:cursor-wait disabled:opacity-60"
+              >
+                {busy ? "Restarting…" : "Restart"}
+              </button>
+            </div>
+          );
+        }
 
         if (clickable) {
           return (
