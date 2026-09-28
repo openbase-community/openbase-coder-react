@@ -1,5 +1,8 @@
 import FindInPageBar from "@/components/FindInPageBar";
 import HealthWarningsBanner from "@/components/HealthWarningsBanner";
+import { RuntimeFreshnessWarning } from "@/components/RuntimeFreshnessWarning";
+import { useHealthWarnings } from "@/hooks/useHealthWarnings";
+import { useServiceHealth } from "@/hooks/useServiceHealth";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import UserProfile from "@/components/UserProfile";
 import { WorkspaceToolbar } from "@/components/workspace/WorkspaceToolbar";
@@ -32,6 +35,7 @@ import {
   orderNavigationItems,
 } from "@/lib/app-navigation";
 import { openExternalUrl } from "@/lib/external-links";
+import { hasInsetWindowControls } from "@/lib/runtime-config";
 import {
   BUILT_IN_SIDEBAR_ITEMS,
   readHiddenSidebarItems,
@@ -40,7 +44,7 @@ import {
   type SidebarItem,
 } from "@/lib/sidebar-preferences";
 import { usePluginRegistry } from "@/plugin-registry";
-import { ArrowUpRight, ChevronDown, Zap } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, ChevronDown, Zap } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -63,6 +67,17 @@ const DashboardChrome: React.FC<DashboardLayoutProps> = ({
     readHiddenSidebarItems(),
   );
   const cliVersions = useCliVersions();
+  const health = useHealthWarnings();
+  const serviceHealth = useServiceHealth();
+  const servicesDegraded =
+    serviceHealth.required !== null &&
+    serviceHealth.healthy < serviceHealth.required;
+  const serviceSummary =
+    serviceHealth.required === null
+      ? null
+      : servicesDegraded
+        ? `${serviceHealth.healthy} of ${serviceHealth.required} required checks healthy`
+        : "All required checks healthy";
 
   useEffect(() => {
     const refresh = () => setHiddenSidebarItems(readHiddenSidebarItems());
@@ -111,9 +126,12 @@ const DashboardChrome: React.FC<DashboardLayoutProps> = ({
 
   const isActive = (path: string, exact?: boolean) =>
     exact ? location.pathname === path : location.pathname.startsWith(path);
+  const isItemActive = (item: SidebarItem) =>
+    isActive(item.path, item.exact ?? false) ||
+    (item.activePaths ?? []).some((path) => isActive(path));
 
   const [systemOpen, setSystemOpen] = useState(() =>
-    systemNav.some((item) => isActive(item.path, item.exact ?? false)),
+    systemNav.some((item) => isItemActive(item)),
   );
 
   const navigateToItem = (item: SidebarItem) => {
@@ -130,24 +148,29 @@ const DashboardChrome: React.FC<DashboardLayoutProps> = ({
       return (
         <SidebarMenuItem key={item.path}>
           <SidebarMenuButton
-            isActive={
-              item.externalUrl
-                ? false
-                : isActive(item.path, item.exact ?? false)
-            }
+            isActive={item.externalUrl ? false : isItemActive(item)}
             onClick={() => navigateToItem(item)}
             tooltip={title}
-            className="h-8 gap-2.5 rounded-md px-2 text-[12.5px] font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary data-[active=true]:shadow-[0_1px_2px_hsl(var(--sidebar-primary)/0.12),inset_0_0_0_1px_hsl(0_0%_100%/0.9)]"
+            className="h-8 gap-2.5 rounded-md px-2 text-[12.5px] font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-primary"
           >
             <item.icon className="h-4 w-4" strokeWidth={1.9} />
             <span>{title}</span>
             {item.externalUrl ? (
               <ArrowUpRight className="ml-auto h-3 w-3 opacity-45" />
+            ) : item.key === "status" && servicesDegraded ? (
+              <AlertTriangle
+                aria-label="Some required services are not running"
+                className="ml-auto h-3.5 w-3.5 text-warning"
+              />
             ) : null}
           </SidebarMenuButton>
         </SidebarMenuItem>
       );
     });
+
+  // Electron on macOS hides the native title bar, so the top bar doubles as
+  // the window's drag handle and must clear the inset traffic lights.
+  const insetWindowControls = hasInsetWindowControls();
 
   return (
     <SidebarProvider
@@ -159,11 +182,13 @@ const DashboardChrome: React.FC<DashboardLayoutProps> = ({
         <a className="ob-skip-link" href="#openbase-main">
           Skip to content
         </a>
-        <Sidebar className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-          <SidebarHeader className="flex h-11 justify-center border-b border-sidebar-border px-3 py-0">
+        <Sidebar className="border-r-0 bg-sidebar text-sidebar-foreground group-data-[side=left]:border-r-0">
+          <SidebarHeader
+            className={`ob-titlebar flex h-11 justify-center border-b border-sidebar-border py-0 ${insetWindowControls ? "pl-[78px] pr-3" : "px-3"}`}
+          >
             <button
               type="button"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/dashboard/dispatch")}
               aria-label="Openbase Coder home"
               className="flex h-6 items-center rounded px-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
             >
@@ -176,11 +201,8 @@ const DashboardChrome: React.FC<DashboardLayoutProps> = ({
             </button>
           </SidebarHeader>
 
-          <SidebarContent className="px-2 py-2">
+          <SidebarContent className="border-r border-sidebar-border px-2 py-2">
             <SidebarGroup className="px-0">
-              <SidebarGroupLabel className={groupLabelClass}>
-                Workspace
-              </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu className="gap-0.5">
                   {renderNavItems(primaryNav)}
@@ -224,6 +246,22 @@ const DashboardChrome: React.FC<DashboardLayoutProps> = ({
                       />
                     </button>
                   </CollapsibleTrigger>
+                  {serviceSummary ? (
+                    <button
+                      type="button"
+                      onClick={() => navigate("/dashboard/status")}
+                      title={
+                        serviceHealth.unhealthy.length
+                          ? `Not running: ${serviceHealth.unhealthy.join(", ")}`
+                          : "Open Status"
+                      }
+                      className={`flex h-6 w-full items-center rounded px-2 text-left text-[11px] transition-colors hover:bg-sidebar-accent ${
+                        servicesDegraded ? "text-destructive" : "text-success"
+                      }`}
+                    >
+                      <span className="truncate">{serviceSummary}</span>
+                    </button>
+                  ) : null}
                   <CollapsibleContent>
                     <SidebarGroupContent className="pt-1">
                       <SidebarMenu className="gap-0.5">
@@ -236,7 +274,7 @@ const DashboardChrome: React.FC<DashboardLayoutProps> = ({
             ) : null}
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
+          <SidebarFooter className="border-r border-t border-sidebar-border px-2 py-2">
             <SidebarMenu className="gap-0.5">
               {renderNavItems(footerNav)}
             </SidebarMenu>
@@ -270,17 +308,18 @@ const DashboardChrome: React.FC<DashboardLayoutProps> = ({
         <div
           className={`flex min-h-0 min-w-0 flex-1 flex-col ${noPadding ? "overflow-hidden" : "overflow-auto"}`}
         >
-          <header className="sticky top-0 z-10 flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/85 px-3 backdrop-blur md:px-4">
+          <header className="ob-titlebar sticky top-0 z-10 flex h-11 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border bg-background/85 px-3 backdrop-blur md:px-4">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <SidebarTrigger className="md:hidden" />
             </div>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex min-w-0 shrink items-center gap-1">
+              <RuntimeFreshnessWarning freshness={health.freshness} />
               <WorkspaceToolbar />
               <NotificationsDropdown />
               <UserProfile />
             </div>
           </header>
-          <HealthWarningsBanner />
+          <HealthWarningsBanner warnings={health.warnings} onRefresh={health.refresh} />
           <FindInPageBar />
           <main
             id="openbase-main"

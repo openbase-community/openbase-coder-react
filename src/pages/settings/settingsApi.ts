@@ -113,6 +113,7 @@ export type BackendModelOption = {
   description: string;
   engine: string;
   available: boolean;
+  unavailable_reason?: string | null;
   is_default?: boolean;
 };
 

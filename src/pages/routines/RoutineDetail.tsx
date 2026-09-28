@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { ModelBadge } from "@/components/ModelBadge";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Panel } from "@/components/ui/panel";
@@ -321,7 +322,16 @@ export const RoutineDetail = () => {
                 </DetailField>
                 <DetailField label="Cwd">{routine.cwd ?? ""}</DetailField>
                 <DetailField label="Mode">{routine.mode ?? ""}</DetailField>
-                <DetailField label="Model">{routine.model ?? ""}</DetailField>
+                <DetailField label="Model">
+                  {routine.model ? (
+                    <ModelBadge
+                      model={routine.model}
+                      className="text-[length:inherit] text-inherit"
+                    />
+                  ) : (
+                    ""
+                  )}
+                </DetailField>
                 <DetailField label="Reasoning effort">
                   {routine.reasoningEffort ?? ""}
                 </DetailField>

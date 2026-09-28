@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { ThreadGlyph } from "@/components/ThreadGlyph";
 import { OpenInNewTabMenu } from "@/components/workspace/OpenInNewTabMenu";
 import { threadDisplayName } from "@/lib/thread-display";
 import {
@@ -50,7 +51,6 @@ import {
   GitBranch,
   Plus,
   Star,
-  Terminal,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -713,8 +713,8 @@ const ProjectDetail = () => {
           />
         ) : null}
 
-        <Panel ref={threadsRef}>
-          <div className="border-b border-border px-3 py-2 text-[13px] font-medium text-foreground">
+        <div ref={threadsRef} className="divide-y divide-border">
+          <div className="py-2 text-[13px] font-medium text-foreground">
             Threads
           </div>
           {loading ? (
@@ -743,7 +743,7 @@ const ProjectDetail = () => {
                   key={group.key}
                   className={groupIndex > 0 ? "border-t border-border" : ""}
                 >
-                  <div className="bg-surface-muted/50 px-3 py-1.5 text-[11px] font-semibold uppercase text-muted-foreground">
+                  <div className="py-1.5 text-[11px] font-semibold uppercase text-muted-foreground">
                     {group.label}
                   </div>
                   {group.threads.map((thread, idx) => {
@@ -783,13 +783,13 @@ const ProjectDetail = () => {
                             );
                           }}
                           className={cn(
-                            "group flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-muted",
+                            "group flex w-full items-center gap-2 py-2 text-left transition-colors",
                             isDeemphasized &&
                               "opacity-60 saturate-0 hover:opacity-80",
                             idx > 0 && "border-t border-border",
                           )}
                         >
-                          <Terminal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <ThreadGlyph thread={thread} className="h-3.5 w-3.5" />
                           {!isDispatcherThread(thread) ? (
                             <button
                               type="button"
@@ -839,7 +839,7 @@ const ProjectDetail = () => {
                               ) : null}
                             </div>
                             <div className="mt-1 truncate font-mono text-[10.5px] text-muted-foreground">
-                              {new Date(thread.updated_at).toLocaleString()}
+                              {new Date(thread.updated_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                             </div>
                           </div>
                           <TagPicker
@@ -869,7 +869,7 @@ const ProjectDetail = () => {
               ) : null}
             </div>
           )}
-        </Panel>
+        </div>
       </div>
     </DashboardLayout>
   );

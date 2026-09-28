@@ -35,7 +35,9 @@ function FreshnessPopover({ freshness }: { freshness: RuntimeFreshness }) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex h-7 w-full min-w-0 items-center gap-2 overflow-hidden rounded border border-warning/40 bg-warning/10 px-3 text-left text-[12px] text-warning"
+          // Compact header note: plain warning-coloured text, no box, so it
+          // reads as a status glyph beside the toolbar rather than a banner.
+          className="flex h-7 min-w-0 max-w-[26rem] items-center gap-1.5 rounded px-1.5 text-left text-[12px] text-warning transition-colors hover:bg-warning/10"
           onMouseEnter={() => { keepOpen(); setOpen(true); }}
           onMouseLeave={closeAfterHover}
           onClick={(event) => {
@@ -48,11 +50,10 @@ function FreshnessPopover({ freshness }: { freshness: RuntimeFreshness }) {
         >
           <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
           <span role="status" className="min-w-0 flex-1 truncate">{summary}{stale > 0 && unknown > 0 ? ` ${unknown} also unverified.` : ""}</span>
-          <span className="shrink-0 whitespace-nowrap underline underline-offset-2">Details</span>
         </button>
       </PopoverTrigger>
       <PopoverContent
-        align="start"
+        align="end"
         className="max-h-[min(60vh,420px)] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto text-xs"
         aria-label="Runtime freshness details"
         onOpenAutoFocus={(event) => event.preventDefault()}

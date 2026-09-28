@@ -60,7 +60,7 @@
     --sidebar-ring: 214 72% 42%;
 
     /* Deep agents UI tokens */
-    --color-user-message-bg: 214 44% 96%;
+    --color-user-message-bg: 214 40% 91%;
     --color-surface: 0 0% 100%;
     --color-file-button: 0 0% 100%;
     --color-file-button-hover: 214 52% 94%;
@@ -171,6 +171,24 @@
     color: hsl(222 84% 5%);
   }
 
+  /* Project-wide corner standard: every rounded corner is a macOS-style
+     squircle (continuous curvature) rather than a plain circular arc.
+     Chromium 139+ / Electron 39+ honour this; older browsers fall back to
+     round corners. Fully-round shapes (avatars, dots, pills) stay circular. */
+  @supports (corner-shape: squircle) {
+    body,
+    body *,
+    body *::before,
+    body *::after {
+      corner-shape: squircle;
+    }
+    .rounded-full,
+    .rounded-full::before,
+    .rounded-full::after {
+      corner-shape: round;
+    }
+  }
+
   /* Subtle blue-white wash behind the shared app shell. Restrained: a soft
      gradient only, no heavy glass or noise, so page content stays crisp. */
   .ob-app-shell {
@@ -185,6 +203,20 @@
 
   .dark .ob-app-shell {
     background: hsl(var(--background));
+  }
+
+  /* The 44px top bar is the window drag handle when Electron hides the
+     native title bar (no-op in a normal browser). Interactive children opt
+     back out so clicks still land. */
+  .ob-titlebar {
+    -webkit-app-region: drag;
+  }
+  .ob-titlebar a,
+  .ob-titlebar button,
+  .ob-titlebar input,
+  .ob-titlebar [role="button"],
+  .ob-titlebar [role="menuitem"] {
+    -webkit-app-region: no-drag;
   }
 
   /* Keyboard-only skip target for the shared shell. */

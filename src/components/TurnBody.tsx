@@ -1,8 +1,9 @@
 import { StatusBadge } from "@/components/StatusBadge";
 import { TurnFileEdits } from "@/components/TurnFileEdits";
 import { relativeTimeShort } from "@/lib/relative-time";
-import { shortModelLabel } from "@/lib/thread-display";
-import { voicePromptForDisplay } from "@/lib/voice-display";
+import { ProviderLogo } from "@/components/ProviderLogo";
+import { modelProvider, prettyModelLabel } from "@/lib/model-provider";
+import { userPromptForDisplay } from "@/lib/voice-display";
 import type { TurnInfo } from "@/types/session";
 import { ChevronDown, CornerUpLeft } from "lucide-react";
 import type { ReactNode, Ref } from "react";
@@ -26,8 +27,10 @@ export function UserBubble({
   hint?: string;
 }) {
   return (
-    <div className="flex justify-end">
-      <div className="max-w-[82%] rounded-2xl bg-user-message px-3.5 py-1.5 text-[13px] leading-snug text-foreground">
+    // w-full so the percentage cap is relative to the transcript column, not
+    // to a shrink-wrapped flex item (which squeezed bubbles to a few words).
+    <div className="flex w-full min-w-0 justify-end">
+      <div className="max-w-[80%] rounded-2xl bg-user-message px-4 py-2.5 text-sm leading-relaxed text-foreground">
         {hint ? (
           <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             {hint}
@@ -41,7 +44,7 @@ export function UserBubble({
             />
           ) : null}
           <span className="whitespace-pre-wrap break-words">
-            {voicePromptForDisplay(text)}
+            {userPromptForDisplay(text)}
           </span>
         </div>
       </div>
@@ -82,9 +85,15 @@ function TurnMeta({ turn }: { turn: TurnInfo }) {
     );
   }
   if (turn.model) {
+    const provider = modelProvider(turn.model);
     bits.push(
-      <span key="model" className="font-mono" title={turn.model}>
-        {shortModelLabel(turn.model)}
+      <span
+        key="model"
+        className="inline-flex items-center gap-1"
+        title={turn.model}
+      >
+        {provider ? <ProviderLogo provider={provider} className="h-3 w-3" /> : null}
+        {prettyModelLabel(turn.model)}
       </span>,
     );
   }
@@ -154,7 +163,7 @@ function TurnBodyImpl({
   );
 
   return (
-    <div className="group/turn space-y-2">
+    <div className="group/turn space-y-4">
       <div className="flex items-start justify-end gap-1">
         {hasResponse ? (
           <button

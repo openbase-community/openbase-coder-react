@@ -5,7 +5,7 @@ import { useVoiceCall } from "@/hooks/use-voice-call";
 import { apiFetch } from "@/lib/api";
 import { fetchThreadPage, LARGE_THREAD_PAGE_SIZE } from "@/lib/project-display";
 import type { ThreadInfo } from "@/types/session";
-import { MessageSquare, RefreshCw } from "lucide-react";
+import { RefreshCw, Smile } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import SessionDetail from "./SessionDetail";
 
@@ -69,7 +69,7 @@ const DispatchChat = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-4">
+      <div className="flex min-h-[calc(100vh-6rem)] flex-col gap-4">
         <div>
           <h1 className="text-base font-semibold tracking-tight text-foreground">
             Dispatcher
@@ -85,9 +85,15 @@ const DispatchChat = () => {
           </ErrorBanner>
         ) : null}
 
-        <div className="rounded border border-dashed border-border bg-surface px-4 py-8 text-center">
-          <MessageSquare className="mx-auto h-5 w-5 text-muted-foreground/40" />
-          <p className="mt-2 text-[12px] text-muted-foreground">
+        {/* Empty state: a large, very faint Dispatcher glyph centered in the
+            remaining space, with the status and refresh action beneath it. */}
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <Smile
+            aria-hidden="true"
+            strokeWidth={1.25}
+            className="h-40 w-40 text-foreground opacity-[0.06] dark:opacity-[0.08]"
+          />
+          <p className="mt-4 text-[12px] text-muted-foreground">
             {loading ? "Looking for Dispatcher chat…" : "No Dispatcher chat found."}
           </p>
           <Button

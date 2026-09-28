@@ -81,7 +81,7 @@ const SETTINGS_SECTIONS: Array<{
   },
   {
     id: "safety",
-    label: "Safety",
+    label: "Guardrails",
     description: "Approval requirements",
     icon: ShieldCheck,
   },
@@ -189,35 +189,30 @@ const Settings: React.FC = () => {
           </p>
         </div>
 
-        <div className="workspace-settings-grid grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="workspace-settings-grid grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)]">
           <aside className="workspace-settings-navigation min-w-0 lg:sticky lg:top-16 lg:self-start">
             <nav
               aria-label="Settings categories"
-              className="workspace-settings-categories flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
+              className="workspace-settings-categories flex gap-0.5 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
             >
               {SETTINGS_SECTIONS.map((item) => {
                 const isCurrent = section === item.id;
                 return (
+                  // Mirrors the app sidebar's nav items: icon + title only,
+                  // flat tint when current, no ring or shadow.
                   <button
                     aria-current={isCurrent ? "page" : undefined}
-                    className={`workspace-settings-category group flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-left transition-colors lg:w-full ${
+                    className={`workspace-settings-category flex h-8 shrink-0 items-center gap-2.5 rounded-md px-2 text-left text-[12.5px] font-medium transition-colors lg:w-full ${
                       isCurrent
-                        ? "bg-surface text-primary shadow-sm ring-1 ring-border"
-                        : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+                        ? "bg-sidebar-accent text-sidebar-primary"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
                     key={item.id}
                     onClick={() => setSection(item.id)}
                     type="button"
                   >
                     <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.9} />
-                    <span className="min-w-0">
-                      <span className="block text-[13px] font-medium">
-                        {item.label}
-                      </span>
-                      <span className="workspace-settings-description hidden truncate text-[11px] font-normal opacity-70 lg:block">
-                        {item.description}
-                      </span>
-                    </span>
+                    <span className="truncate">{item.label}</span>
                   </button>
                 );
               })}

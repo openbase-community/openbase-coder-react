@@ -55,8 +55,8 @@ export function freshWorkspace(): Model {
               type: "tab",
               id: "initial",
               component: "route",
-              name: "Overview",
-              config: { path: "/dashboard" },
+              name: "Dispatch",
+              config: { path: "/dashboard/dispatch" },
             },
           ],
         },
@@ -108,7 +108,7 @@ export class WorkspaceController {
     return node instanceof TabNode ? node : this.tabs[0];
   }
   get path(): string {
-    return this.focused?.getConfig()?.path ?? "/dashboard";
+    return this.focused?.getConfig()?.path ?? "/dashboard/dispatch";
   }
   get canUndo() {
     return this.undoStack.length > 0;

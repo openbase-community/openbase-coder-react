@@ -3,7 +3,20 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { HealthWarningsBanner } from "../HealthWarningsBanner";
+import { RuntimeFreshnessWarning } from "../RuntimeFreshnessWarning";
+import { useHealthWarnings } from "@/hooks/useHealthWarnings";
 import { apiFetch } from "@/lib/api";
+
+/** Same wiring as DashboardLayout: one poll feeding both render points. */
+function HealthWarnings() {
+  const health = useHealthWarnings();
+  return (
+    <>
+      <RuntimeFreshnessWarning freshness={health.freshness} />
+      <HealthWarningsBanner warnings={health.warnings} />
+    </>
+  );
+}
 
 vi.mock("@/lib/api", () => ({ apiFetch: vi.fn() }));
 const fetchMock = vi.mocked(apiFetch);
@@ -18,7 +31,7 @@ afterEach(() => { cleanup(); delete window.__OPENBASE_RUNTIME_CONFIG__; });
 it("refreshes on focus, clears verified components, and marks failed checks unknown", async () => {
   const stale = { enabled: true, components: [{ component: "API", state: "stale", reason: "old commit", action: "Restart API." }] };
   fetchMock.mockResolvedValueOnce(response(stale));
-  render(<MemoryRouter><HealthWarningsBanner /></MemoryRouter>);
+  render(<MemoryRouter><HealthWarnings /></MemoryRouter>);
   await screen.findByText(/1 component needs refreshing/);
   expect(fetchMock.mock.calls[0][1]?.method).toBe("POST");
   fetchMock.mockResolvedValueOnce(response({ enabled: true, components: [] }));
@@ -32,7 +45,7 @@ it("refreshes on focus, clears verified components, and marks failed checks unkn
 it("falls back for a backend older than the capability", async () => {
   fetchMock.mockResolvedValueOnce(new Response("", { status: 405 }));
   fetchMock.mockResolvedValueOnce(response(undefined));
-  render(<MemoryRouter><HealthWarningsBanner /></MemoryRouter>);
+  render(<MemoryRouter><HealthWarnings /></MemoryRouter>);
   await screen.findByText("Cannot verify 1 running component.");
   expect(fetchMock).toHaveBeenCalledTimes(2);
   expect(fetchMock.mock.calls[1][1]?.method).toBeUndefined();
@@ -41,7 +54,7 @@ it("falls back for a backend older than the capability", async () => {
 it("production desktop requests only existing health checks", async () => {
   window.__OPENBASE_RUNTIME_CONFIG__.nonDeveloperInstall = true;
   fetchMock.mockResolvedValueOnce(response(undefined));
-  render(<MemoryRouter><HealthWarningsBanner /></MemoryRouter>);
+  render(<MemoryRouter><HealthWarnings /></MemoryRouter>);
   await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
   expect(fetchMock.mock.calls[0][1]?.method).toBeUndefined();
   expect(screen.queryByRole("status")).toBeNull();

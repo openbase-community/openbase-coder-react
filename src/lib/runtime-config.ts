@@ -9,6 +9,8 @@ declare global {
        */
       routerBasename?: string;
       shell?: "web" | "electron";
+      /** Electron only: Node's `process.platform` ("darwin", "win32", ...). */
+      platform?: string;
       /**
        * Desktop-only onboarding flags. Unused by the shared console but kept in
        * this shared `Window` augmentation so it stays structurally identical to
@@ -74,4 +76,20 @@ export function getBackendWebSocketUrl(path: string) {
   // Preserve any base path prefix (subpath reverse-proxy) ahead of the ws path.
   const basePath = base.pathname.replace(/\/$/, "");
   return `${protocol}//${base.host}${basePath}${path}`;
+}
+
+/**
+ * True when the console is hosted by the Electron shell on macOS with a
+ * hidden native title bar, so the top bar must reserve room for the
+ * traffic-light window controls.
+ */
+export function hasInsetWindowControls() {
+  return getRuntimeShell() === "electron" && getRuntimePlatform() === "darwin";
+}
+
+export function getRuntimePlatform() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+  return window.__OPENBASE_RUNTIME_CONFIG__?.platform;
 }

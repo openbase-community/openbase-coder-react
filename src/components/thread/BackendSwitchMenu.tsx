@@ -5,7 +5,9 @@ import {
   DropdownMenuItem, DropdownMenuLabel, DropdownMenuPortal,
   DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ProviderLogo } from "@/components/ProviderLogo";
 import { apiFetch } from "@/lib/api";
+import { backendProvider } from "@/lib/model-provider";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { fleetApiPath } from "@/lib/fleet";
 import { continuationRequestId } from "@/lib/continuation-request";
@@ -87,6 +89,9 @@ export function BackendSwitchMenu({ thread, onContinued }: {
               onSelect={(event) => { event.preventDefault(); void switchBackend(option.backend); }}
               className="flex items-start gap-2">
               <Check className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${option.current ? "" : "invisible"}`} />
+              {backendProvider(option.backend) ? (
+                <ProviderLogo provider={backendProvider(option.backend)!} className="mt-0.5 h-3.5 w-3.5" />
+              ) : null}
               <span>{option.label}{option.reason && !option.current ? (
                 <span className="block text-xs text-muted-foreground">{option.reason}</span>
               ) : null}</span>

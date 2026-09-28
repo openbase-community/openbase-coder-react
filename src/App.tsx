@@ -27,7 +27,6 @@ import {
 import AgentsMd from "./pages/AgentsMd";
 import ApprovalRequests from "./pages/ApprovalRequests";
 import BoilerSync from "./pages/BoilerSync";
-import Dashboard from "./pages/Dashboard";
 import DispatchChat from "./pages/DispatchChat";
 import Reports from "./pages/Reports";
 import Diff from "./pages/Diff";
@@ -68,7 +67,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AnonymousRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <AuthLoadingScreen />;
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) return <Navigate to="/dashboard/dispatch" replace />;
   return <>{children}</>;
 }
 
@@ -108,7 +107,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/dashboard/dispatch" replace />} />
       <Route
         path="/login"
         element={
@@ -119,11 +118,7 @@ function AppRoutes() {
       />
       <Route
         path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
+        element={<Navigate to="/dashboard/dispatch" replace />}
       />
       <Route
         path="/dashboard/projects"
@@ -194,6 +189,10 @@ function AppRoutes() {
             <ApprovalRequests />
           </ProtectedRoute>
         }
+      />
+      <Route
+        path="/dashboard/configure"
+        element={<Navigate to="/dashboard/loops" replace />}
       />
       <Route
         path="/dashboard/routines"

@@ -7,16 +7,12 @@ import type { SidebarItem } from "@/lib/sidebar-preferences";
  * ones. Keep these keys in sync with BUILT_IN_SIDEBAR_ITEMS.
  */
 export const WORKSPACE_ORDER = [
-  "overview",
   "dispatch",
   "threads",
   "projects",
   "reports",
   "approvals",
-  "routines",
-  "skills",
-  "memories",
-  "templates",
+  "configure",
 ] as const;
 
 /**
