@@ -4,6 +4,7 @@ import { ModelBadge } from "@/components/ModelBadge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TagPicker } from "@/components/tags/TagPicker";
+import { DispatcherHelp } from "@/components/thread/DispatcherHelp";
 import { DispatcherModelMenu } from "@/components/thread/DispatcherModelMenu";
 import { ThreadActionsMenu } from "@/components/thread/ThreadActionsMenu";
 import type { Continuation } from "@/components/thread/BackendSwitchMenu";
@@ -48,12 +49,15 @@ export function ThreadHeader({
           <ArrowLeft className="h-3.5 w-3.5" />
         </Button>
       ) : null}
-      <h1
-        className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground"
-        title={title}
-      >
-        {title}
-      </h1>
+      <div className="flex min-w-0 flex-1 items-center gap-1">
+        <h1
+          className="min-w-0 truncate text-sm font-semibold text-foreground"
+          title={title}
+        >
+          {title}
+        </h1>
+        {isDispatcherThread(thread) ? <DispatcherHelp /> : null}
+      </div>
       {thread.is_favorite ? (
         <Star
           className="h-3 w-3 shrink-0 fill-current text-warning"

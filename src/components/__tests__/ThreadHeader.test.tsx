@@ -144,3 +144,15 @@ it("keeps disconnection visible and hides unsupported dispatcher actions", async
     screen.queryByRole("menuitem", { name: "Favorite thread" }),
   ).toBeNull();
 });
+
+it("explains the Dispatcher with a help icon only on the Dispatcher thread", () => {
+  header({ voice_route: { role: "dispatcher", active: true } });
+  expect(
+    screen.getByRole("button", { name: "What is the Dispatcher?" }),
+  ).toBeTruthy();
+  cleanup();
+  header();
+  expect(
+    screen.queryByRole("button", { name: "What is the Dispatcher?" }),
+  ).toBeNull();
+});

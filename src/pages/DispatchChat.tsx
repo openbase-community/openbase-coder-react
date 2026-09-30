@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { DispatcherHelp } from "@/components/thread/DispatcherHelp";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { useVoiceCall } from "@/hooks/use-voice-call";
@@ -71,9 +72,12 @@ const DispatchChat = () => {
     <DashboardLayout>
       <div className="flex min-h-[calc(100vh-6rem)] flex-col gap-4">
         <div>
-          <h1 className="text-base font-semibold tracking-tight text-foreground">
-            Dispatcher
-          </h1>
+          <div className="flex items-center gap-1">
+            <h1 className="text-base font-semibold tracking-tight text-foreground">
+              Dispatcher
+            </h1>
+            <DispatcherHelp />
+          </div>
           <p className="mt-0.5 text-[12px] text-muted-foreground">
             Shared voice Dispatcher chat
           </p>
