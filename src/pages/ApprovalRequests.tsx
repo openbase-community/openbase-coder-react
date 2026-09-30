@@ -1,4 +1,5 @@
-import { ApprovalRequestParameters } from "@/components/approvals/ApprovalRequestParameters";
+import { ApprovalCardStack } from "@/components/approvals/ApprovalCardStack";
+import { ApprovalRequestSummary } from "@/components/approvals/ApprovalRequestSummary";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
   ResourceEmptyState,
@@ -17,39 +18,18 @@ import {
   approvalRequestKey,
   type ApprovalRequest,
 } from "@/lib/approval-requests";
+import {
+  APPROVAL_REVIEW_PREFERENCES_EVENT,
+  readApprovalReviewMode,
+} from "@/lib/approval-review-preferences";
 import { trackProductAnalytics } from "@/lib/product-analytics";
-import { Check, ExternalLink, ShieldAlert, X } from "lucide-react";
+import { Check, ShieldAlert, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 type ApprovalDecision = "accept" | "decline";
 
 const POLL_MS = 5000;
-
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function requestLabel(request: ApprovalRequest): string {
-  const params = request.params ?? {};
-  return (
-    stringValue(params.description) ??
-    stringValue(params.command) ??
-    stringValue(params.toolName) ??
-    stringValue(params.tool_name) ??
-    stringValue(params.name) ??
-    request.method ??
-    "Approval request"
-  );
-}
-
-function formatReceivedAt(value?: string | null): string {
-  if (!value) return "pending";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
 
 const ApprovalRequests = () => {
   // Viewing the queue counts as reading approval notifications, including
@@ -59,6 +39,20 @@ const ApprovalRequests = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actingKey, setActingKey] = useState<string | null>(null);
+  const [reviewMode, setReviewMode] = useState(() => readApprovalReviewMode());
+
+  useEffect(() => {
+    const refreshReviewMode = () => setReviewMode(readApprovalReviewMode());
+    window.addEventListener(APPROVAL_REVIEW_PREFERENCES_EVENT, refreshReviewMode);
+    window.addEventListener("storage", refreshReviewMode);
+    return () => {
+      window.removeEventListener(
+        APPROVAL_REVIEW_PREFERENCES_EVENT,
+        refreshReviewMode,
+      );
+      window.removeEventListener("storage", refreshReviewMode);
+    };
+  }, []);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -100,7 +94,7 @@ const ApprovalRequests = () => {
   const answerRequest = async (
     request: ApprovalRequest,
     decision: ApprovalDecision,
-  ) => {
+  ): Promise<boolean> => {
     const requestKey = approvalRequestKey(request);
     const key = `${requestKey}:${decision}`;
     setActingKey(key);
@@ -126,8 +120,10 @@ const ApprovalRequests = () => {
       );
       toast.success(decision === "accept" ? "Approved" : "Denied");
       void fetchRequests();
+      return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unable to answer request.");
+      return false;
     } finally {
       setActingKey(null);
     }
@@ -160,85 +156,46 @@ const ApprovalRequests = () => {
           <ResourceEmptyState icon={ShieldAlert} className="py-8">
             No pending approvals.
           </ResourceEmptyState>
+        ) : reviewMode === "cards" ? (
+          <ApprovalCardStack
+            requests={sortedRequests}
+            acting={actingKey !== null}
+            onAnswer={answerRequest}
+          />
         ) : (
           <Panel>
-            {sortedRequests.map((request, idx) => {
-              const requestId = String(request.id);
-              return (
-                <div
-                  key={approvalRequestKey(request)}
-                  className={`grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto] ${
-                    idx > 0 ? "border-t border-border" : ""
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-warning" />
-                      <span
-                        className="min-w-0 truncate text-[12.5px] font-medium text-foreground"
-                        title={requestLabel(request)}
-                      >
-                        {requestLabel(request)}
-                      </span>
-                      <span className="shrink-0 font-mono text-[10.5px] text-muted-foreground">
-                        {formatReceivedAt(request.received_at)}
-                      </span>
-                      {request.origin_device ? (
-                        <span
-                          className="shrink-0 rounded-sm bg-surface-muted px-1 font-mono text-[10px] text-muted-foreground"
-                          title={`Pending on ${request.origin_device}`}
-                        >
-                          {request.origin_device}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10.5px] text-muted-foreground/70">
-                      <span className="truncate">id {requestId}</span>
-                      {request.thread_id ? (
-                        <Link
-                          to={`/dashboard/threads/${encodeURIComponent(request.thread_id)}`}
-                          className="inline-flex max-w-[18rem] items-center gap-1 truncate text-info hover:underline"
-                        >
-                          <span className="truncate">{request.thread_id}</span>
-                          <ExternalLink className="h-3 w-3 shrink-0" />
-                        </Link>
-                      ) : null}
-                      {request.turn_id ? (
-                        <span className="truncate">turn {request.turn_id}</span>
-                      ) : null}
-                      {request.method ? (
-                        <span className="truncate">{request.method}</span>
-                      ) : null}
-                    </div>
-                    {request.params ? (
-                      <ApprovalRequestParameters params={request.params} />
-                    ) : null}
-                  </div>
+            {sortedRequests.map((request, idx) => (
+              <div
+                key={approvalRequestKey(request)}
+                className={`grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto] ${
+                  idx > 0 ? "border-t border-border" : ""
+                }`}
+              >
+                <ApprovalRequestSummary request={request} />
 
-                  <div className="flex items-start gap-2 md:justify-end">
-                    <Button
-                      size="sm"
-                      className="h-7 px-2.5 text-[12px]"
-                      onClick={() => void answerRequest(request, "accept")}
-                      disabled={actingKey !== null}
-                    >
-                      <Check className="h-3 w-3" />
-                      Approve
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2.5 text-[12px]"
-                      onClick={() => void answerRequest(request, "decline")}
-                      disabled={actingKey !== null}
-                    >
-                      <X className="h-3 w-3" />
-                      Deny
-                    </Button>
-                  </div>
+                <div className="flex items-start gap-2 md:justify-end">
+                  <Button
+                    size="sm"
+                    className="h-7 px-2.5 text-[12px]"
+                    onClick={() => void answerRequest(request, "accept")}
+                    disabled={actingKey !== null}
+                  >
+                    <Check className="h-3 w-3" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2.5 text-[12px]"
+                    onClick={() => void answerRequest(request, "decline")}
+                    disabled={actingKey !== null}
+                  >
+                    <X className="h-3 w-3" />
+                    Deny
+                  </Button>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </Panel>
         )}
       </div>

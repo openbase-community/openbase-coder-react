@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import React, { type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
+import { ApprovalReviewSettings } from "./settings/ApprovalReviewSettings";
 import { AuthenticationSettings } from "./settings/AuthenticationSettings";
 import { AppearanceSettings } from "./settings/AppearanceSettings";
 import { TabSettings } from "./settings/TabSettings";
@@ -165,7 +166,12 @@ const Settings: React.FC = () => {
         <ProductAnalyticsSettings />
       </>
     ),
-    safety: <DangerousConfirmationSettings />,
+    safety: (
+      <>
+        <ApprovalReviewSettings />
+        <DangerousConfirmationSettings />
+      </>
+    ),
     advanced: (
       <>
         <EnvSettings />
