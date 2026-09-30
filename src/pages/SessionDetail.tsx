@@ -3,6 +3,7 @@ import { useWorkspaceDraft, useWorkspaceTabTitle } from "@/contexts/workspace-ta
 import { RunDetail } from "@/components/RunDetail";
 import { ThreadHeader } from "@/components/ThreadHeader";
 import { ContinuationLinks } from "@/components/thread/ContinuationLinks";
+import { ThreadTerminal } from "@/components/thread/ThreadTerminal";
 import { TurnBody, UserBubble } from "@/components/TurnBody";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
@@ -12,6 +13,7 @@ import type {
 } from "@/hooks/use-voice-call";
 import { useMarkEntityRead } from "@/contexts/notifications";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
+import { useThreadTerminalTab } from "@/hooks/useThreadTerminalTab";
 import { useTagOptions } from "@/hooks/useTagOptions";
 import { apiFetch } from "@/lib/api";
 import { fleetApiPath } from "@/lib/fleet";
@@ -23,15 +25,18 @@ import {
   threadRoutePath,
 } from "@/lib/thread-display";
 import { setThreadFavorite } from "@/lib/thread-favorites";
+import { threadSupportsTerminal } from "@/lib/thread-terminal";
 import { promptAfterThreadTurnSubmission } from "@/lib/thread-turn-actions";
 import {
   ArrowUp,
+  MessageSquare,
   Mic,
   MicOff,
   Phone,
   PhoneOff,
   Radio,
   Square,
+  SquareTerminal,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -109,7 +114,7 @@ const SessionDetail = ({
   const threadId = threadIdOverride ?? routeThreadId;
   useMarkEntityRead("thread", threadId);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     thread,
     isConnected,
@@ -139,6 +144,35 @@ const SessionDetail = ({
   const loadingOlderRef = useRef(false);
   const currentTurnOutput = thread?.current_turn?.accumulated_output;
   const currentTurnStderr = thread?.current_turn?.accumulated_stderr;
+  const [terminalTabEnabled] = useThreadTerminalTab();
+  const showTerminalTab = Boolean(
+    terminalTabEnabled && thread && threadSupportsTerminal(thread),
+  );
+  const terminalActive =
+    showTerminalTab && searchParams.get("view") === "terminal";
+  // Mounted on first open, then kept (hidden) so flipping back to Chat and
+  // returning does not reattach the TUI.
+  const [terminalMounted, setTerminalMounted] = useState(false);
+  useEffect(() => {
+    if (terminalActive) setTerminalMounted(true);
+  }, [terminalActive]);
+  useEffect(() => {
+    setTerminalMounted(false);
+  }, [threadId]);
+  const setThreadView = (view: "chat" | "terminal") => {
+    setSearchParams(
+      (params) => {
+        const updated = new URLSearchParams(params);
+        if (view === "terminal") {
+          updated.set("view", "terminal");
+        } else {
+          updated.delete("view");
+        }
+        return updated;
+      },
+      { replace: true },
+    );
+  };
 
   useLayoutEffect(() => {
     const scrollRoot = findScrollContainer(threadEndRef.current);
@@ -322,7 +356,55 @@ const SessionDetail = ({
           />
         ) : null}
 
-        <div className="relative min-h-0 flex-1 overflow-y-auto px-3 py-4">
+        {showTerminalTab ? (
+          <div
+            role="tablist"
+            aria-label="Thread view"
+            className="flex shrink-0 items-center gap-1 border-b border-border px-3 py-1 text-[11.5px]"
+          >
+            {(
+              [
+                { view: "chat", label: "Chat", Icon: MessageSquare },
+                { view: "terminal", label: "Terminal", Icon: SquareTerminal },
+              ] as const
+            ).map(({ view, label, Icon }) => {
+              const selected = (view === "terminal") === terminalActive;
+              return (
+                <button
+                  key={view}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => setThreadView(view)}
+                  className={`flex h-6 items-center gap-1.5 rounded-md px-2 transition-colors ${
+                    selected
+                      ? "bg-surface-muted font-medium text-foreground"
+                      : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {thread && terminalMounted && showTerminalTab ? (
+          <div className={terminalActive ? "min-h-0 flex-1" : "hidden"}>
+            <ThreadTerminal
+              threadId={thread.thread_id}
+              originHost={thread.origin_host}
+              active={terminalActive}
+            />
+          </div>
+        ) : null}
+
+        <div
+          className={`relative min-h-0 flex-1 overflow-y-auto px-3 py-4 ${
+            terminalActive ? "hidden" : ""
+          }`}
+        >
           {showDispatchEmptyState ? (
             <div
               aria-hidden="true"
@@ -416,7 +498,7 @@ const SessionDetail = ({
           </div>
         </div>
 
-        {thread ? (
+        {thread && !terminalActive ? (
           <div className="shrink-0 border-t border-border bg-background/95 p-2.5 backdrop-blur">
             <div className="mx-auto w-full max-w-[720px] space-y-1.5">
               {call && (inCall || callConnecting) ? (

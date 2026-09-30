@@ -17,6 +17,7 @@ import { AuthenticationSettings } from "./settings/AuthenticationSettings";
 import { AppearanceSettings } from "./settings/AppearanceSettings";
 import { TabSettings } from "./settings/TabSettings";
 import { TemplateSettings } from "./settings/TemplateSettings";
+import { ThreadTerminalSettings } from "./settings/ThreadTerminalSettings";
 import { BackendModelSettings } from "./settings/BackendModelSettings";
 import { CodingBackendSettings } from "./settings/CodingBackendSettings";
 import { DangerousConfirmationSettings } from "./settings/DangerousConfirmationSettings";
@@ -161,6 +162,7 @@ const Settings: React.FC = () => {
       <>
         <AppearanceSettings />
         <TabSettings />
+        <ThreadTerminalSettings />
         <TemplateSettings />
         <SidebarItemsSettings />
         <ProductAnalyticsSettings />
