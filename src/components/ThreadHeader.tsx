@@ -1,4 +1,5 @@
 import { ArrowLeft, Star, WifiOff } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModelBadge } from "@/components/ModelBadge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ interface ThreadHeaderProps {
   onArchive: () => Promise<void>;
   onOpenProject: () => void;
   onContinued?: (thread: Continuation) => void;
+  onRename?: (name: string) => Promise<void>;
   onBack?: () => void;
 }
 
@@ -35,6 +37,8 @@ export function ThreadHeader({
   const navigate = useNavigate();
   const title = threadDisplayName(thread);
   const model = thread.model ?? thread.current_turn?.model ?? null;
+  const canRename = Boolean(actions.onRename) && !isDispatcherThread(thread);
+  const [renameOpen, setRenameOpen] = useState(false);
   return (
     <header className="flex shrink-0 items-center gap-2 border-b border-border bg-background/95 px-3 py-2">
       {onBack ? (
@@ -51,8 +55,11 @@ export function ThreadHeader({
       ) : null}
       <div className="flex min-w-0 flex-1 items-center gap-1">
         <h1
-          className="min-w-0 truncate text-sm font-semibold text-foreground"
-          title={title}
+          className={`min-w-0 truncate text-sm font-semibold text-foreground ${
+            canRename ? "cursor-text" : ""
+          }`}
+          title={canRename ? `${title} — double-click to rename` : title}
+          onDoubleClick={canRename ? () => setRenameOpen(true) : undefined}
         >
           {title}
         </h1>
@@ -101,6 +108,8 @@ export function ThreadHeader({
       <ThreadActionsMenu
         thread={thread}
         isConnected={isConnected}
+        renameOpen={renameOpen}
+        onRenameOpenChange={setRenameOpen}
         {...actions}
       />
     </header>

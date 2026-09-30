@@ -322,7 +322,10 @@ export function ThreadTerminal({
         </div>
       ) : null}
       <div className="relative min-h-0 flex-1 bg-background px-2 pt-1.5 text-foreground">
-        <div ref={hostRef} className="h-full w-full bg-background text-foreground" />
+        <div
+          ref={hostRef}
+          className="h-full w-full bg-background text-foreground"
+        />
       </div>
     </div>
   );
