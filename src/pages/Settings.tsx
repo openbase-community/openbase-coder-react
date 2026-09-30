@@ -28,6 +28,7 @@ import { ProductAnalyticsSettings } from "./settings/ProductAnalyticsSettings";
 import { ReasoningSettings } from "./settings/ReasoningSettings";
 import { SkillSharingSettings } from "./settings/SkillSharingSettings";
 import { ServiceTierSettings } from "./settings/ServiceTierSettings";
+import { VoiceModeSettings } from "./settings/VoiceModeSettings";
 import { SidebarItemsSettings } from "./settings/SidebarItemsSettings";
 import { useOpenbaseServices } from "./settings/useOpenbaseServices";
 
@@ -151,6 +152,7 @@ const Settings: React.FC = () => {
     voice: (
       <>
         {isNativeShell ? <LiveKitCompanionSettings /> : null}
+        <VoiceModeSettings />
         <DispatcherVoiceSettings
           onRestartScheduled={openbaseServices.applyRestartResponse}
         />

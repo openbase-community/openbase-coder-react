@@ -193,6 +193,25 @@ export type ServiceTierSettingsResponse = {
   restart_hint: string;
 };
 
+export type VoiceMode = "dispatcher" | "direct";
+
+export type VoiceModeOption = {
+  id: VoiceMode;
+  label: string;
+  summary: string;
+};
+
+export type VoiceModeSettingsResponse = {
+  voice_mode: VoiceMode;
+  default: VoiceMode;
+  options: VoiceModeOption[];
+  config_path: string;
+  config_exists: boolean;
+  changed: boolean;
+  restart_required: boolean;
+  applies_hint: string;
+};
+
 export type TTSProvider = {
   id: string;
   name: string;
