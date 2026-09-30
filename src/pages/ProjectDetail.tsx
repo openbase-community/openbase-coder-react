@@ -44,6 +44,7 @@ import { cn } from "@/lib/utils";
 import type { ReportsFile, ThreadInfo } from "@/types/session";
 import {
   ArrowLeft,
+  CalendarClock,
   ChevronDown,
   ChevronRight,
   ExternalLink,
@@ -355,6 +356,8 @@ const ProjectDetail = () => {
     navigate(`/dashboard/diff?path=${encodeURIComponent(projectPath)}`);
   const goToSkills = () =>
     navigate(`/dashboard/skills?path=${encodeURIComponent(projectPath)}`);
+  const goToLoops = () =>
+    navigate(`/dashboard/loops?project=${encodeURIComponent(projectPath)}`);
   const scrollToThreads = () =>
     threadsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -432,6 +435,15 @@ const ProjectDetail = () => {
           >
             <Zap className="h-3 w-3" />
             Skills
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2.5 text-[12px]"
+            onClick={goToLoops}
+          >
+            <CalendarClock className="h-3 w-3" />
+            Loops
           </Button>
           <Button
             size="sm"

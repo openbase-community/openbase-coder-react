@@ -10,6 +10,9 @@ import {
 import { Plus } from "lucide-react";
 import { type Dispatch, type FormEvent, type SetStateAction } from "react";
 
+import { projectName } from "@/lib/project-display";
+import type { Project } from "@/types/session";
+
 import { fieldInputClass, fieldLabelClass, monoFieldInputClass } from "./helpers";
 import type { RoutineForm } from "./types";
 
@@ -18,6 +21,8 @@ type CreateRoutineDialogProps = {
   onOpenChange: (open: boolean) => void;
   form: RoutineForm;
   setForm: Dispatch<SetStateAction<RoutineForm>>;
+  // Tracked projects on this device; picking one sets cwd to its root.
+  projects: Project[];
   submitting: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
@@ -27,6 +32,7 @@ export const CreateRoutineDialog = ({
   onOpenChange,
   form,
   setForm,
+  projects,
   submitting,
   onSubmit,
 }: CreateRoutineDialogProps) => (
@@ -205,14 +211,31 @@ export const CreateRoutineDialog = ({
 
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
                 <label className="min-w-0">
-                  <span className={fieldLabelClass}>Cwd</span>
-                  <input
-                    className={monoFieldInputClass}
-                    value={form.cwd}
+                  <span className={fieldLabelClass}>Project</span>
+                  <select
+                    className={fieldInputClass}
+                    value={
+                      projects.some((project) => project.path === form.cwd)
+                        ? form.cwd
+                        : ""
+                    }
                     onChange={(event) =>
                       setForm({ ...form, cwd: event.target.value })
                     }
-                  />
+                  >
+                    <option value="">
+                      {form.cwd ? "custom cwd" : "none"}
+                    </option>
+                    {projects.map((project) => (
+                      <option
+                        key={project.path}
+                        value={project.path}
+                        title={project.path}
+                      >
+                        {projectName(project.path)}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label className="min-w-0">
                   <span className={fieldLabelClass}>Mode</span>
@@ -228,6 +251,18 @@ export const CreateRoutineDialog = ({
                   </select>
                 </label>
               </div>
+
+              <label className="block min-w-0">
+                <span className={fieldLabelClass}>Cwd</span>
+                <input
+                  className={monoFieldInputClass}
+                  value={form.cwd}
+                  onChange={(event) =>
+                    setForm({ ...form, cwd: event.target.value })
+                  }
+                  placeholder="Project root, or any folder inside a tracked project"
+                />
+              </label>
 
               <label className="flex min-w-0 items-center gap-2">
                 <input

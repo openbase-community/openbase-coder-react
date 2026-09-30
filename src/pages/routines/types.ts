@@ -42,6 +42,9 @@ export type Routine = {
   threadId?: string | null;
   freshThreadPerRun?: boolean | null;
   cwd?: string | null;
+  // Tracked project containing cwd (longest-prefix match on the owning
+  // device); null when the cwd is untracked. Read-only, derived server-side.
+  projectPath?: string | null;
   mode?: string | null;
   model?: string | null;
   reasoningEffort?: string | null;
