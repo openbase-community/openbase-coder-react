@@ -1,5 +1,4 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import { OpenbaseMark } from "@/components/OpenbaseMark";
 import { useWorkspaceDraft, useWorkspaceTabTitle } from "@/contexts/workspace-tabs";
 import { RunDetail } from "@/components/RunDetail";
 import { ThreadHeader } from "@/components/ThreadHeader";
@@ -27,6 +26,7 @@ import { setThreadFavorite } from "@/lib/thread-favorites";
 import { promptAfterThreadTurnSubmission } from "@/lib/thread-turn-actions";
 import {
   ArrowUp,
+  Megaphone,
   Mic,
   MicOff,
   Phone,
@@ -328,7 +328,8 @@ const SessionDetail = ({
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 flex items-center justify-center"
             >
-              <OpenbaseMark
+              <Megaphone
+                strokeWidth={1.25}
                 className="h-40 w-40 text-foreground opacity-[0.06] dark:opacity-[0.08]"
               />
             </div>

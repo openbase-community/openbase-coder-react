@@ -6,6 +6,7 @@ import {
   FolderOpen,
   FolderSync,
   LucideIcon,
+  Megaphone,
   MessageSquare,
   Monitor,
   Server,
@@ -14,7 +15,6 @@ import {
   SlidersHorizontal,
   Wrench,
 } from "lucide-react";
-import { OpenbaseMark } from "@/components/OpenbaseMark";
 import { CONFIGURE_DEFAULT_PATH, CONFIGURE_TABS } from "./configure-tabs";
 
 export type SidebarSection = "workspace" | "system" | "plugins";
@@ -22,7 +22,7 @@ export type SidebarSection = "workspace" | "system" | "plugins";
 export type SidebarItem = {
   key: string;
   path: string;
-  icon: LucideIcon | typeof OpenbaseMark;
+  icon: LucideIcon;
   title: string;
   section: SidebarSection;
   externalUrl?: string;
@@ -54,7 +54,7 @@ export const BUILT_IN_SIDEBAR_ITEMS: SidebarItem[] = [
   {
     key: "dispatch",
     path: "/dashboard/dispatch",
-    icon: OpenbaseMark,
+    icon: Megaphone,
     title: "Dispatch",
     section: "workspace",
   },

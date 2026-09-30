@@ -1,4 +1,3 @@
-import { OpenbaseMark } from "@/components/OpenbaseMark";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
@@ -6,7 +5,7 @@ import { useVoiceCall } from "@/hooks/use-voice-call";
 import { apiFetch } from "@/lib/api";
 import { fetchThreadPage, LARGE_THREAD_PAGE_SIZE } from "@/lib/project-display";
 import type { ThreadInfo } from "@/types/session";
-import { RefreshCw } from "lucide-react";
+import { Megaphone, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import SessionDetail from "./SessionDetail";
 
@@ -89,8 +88,9 @@ const DispatchChat = () => {
         {/* Empty state: a large, very faint Dispatcher glyph centered in the
             remaining space, with the status and refresh action beneath it. */}
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <OpenbaseMark
+          <Megaphone
             aria-hidden="true"
+            strokeWidth={1.25}
             className="h-40 w-40 text-foreground opacity-[0.06] dark:opacity-[0.08]"
           />
           <p className="mt-4 text-[12px] text-muted-foreground">
