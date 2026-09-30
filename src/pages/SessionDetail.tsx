@@ -1,5 +1,8 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import { useWorkspaceDraft, useWorkspaceTabTitle } from "@/contexts/workspace-tabs";
+import {
+  useWorkspaceDraft,
+  useWorkspaceTabTitle,
+} from "@/contexts/workspace-tabs";
 import { RunDetail } from "@/components/RunDetail";
 import { ThreadHeader } from "@/components/ThreadHeader";
 import { ContinuationLinks } from "@/components/thread/ContinuationLinks";
@@ -7,10 +10,7 @@ import { ThreadTerminal } from "@/components/thread/ThreadTerminal";
 import { TurnBody, UserBubble } from "@/components/TurnBody";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
-import type {
-  VoiceAgentState,
-  VoiceCallStatus,
-} from "@/hooks/use-voice-call";
+import type { VoiceAgentState, VoiceCallStatus } from "@/hooks/use-voice-call";
 import { useMarkEntityRead } from "@/contexts/notifications";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
 import { useThreadTerminalTab } from "@/hooks/useThreadTerminalTab";
@@ -25,6 +25,7 @@ import {
   threadRoutePath,
 } from "@/lib/thread-display";
 import { setThreadFavorite } from "@/lib/thread-favorites";
+import { renameThread } from "@/lib/thread-name";
 import { threadSupportsTerminal } from "@/lib/thread-terminal";
 import { promptAfterThreadTurnSubmission } from "@/lib/thread-turn-actions";
 import {
@@ -323,6 +324,20 @@ const SessionDetail = ({
     }
   };
 
+  const rename = async (name: string) => {
+    if (!thread) return;
+    try {
+      await renameThread(thread.thread_id, name, thread.origin_host);
+      await refreshThread();
+      toast.success("Thread renamed");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to rename thread",
+      );
+      throw err;
+    }
+  };
+
   const updateTags = async (tags: string[]) => {
     if (!thread) return;
     try {
@@ -347,6 +362,7 @@ const SessionDetail = ({
             onToggleFavorite={toggleFavorite}
             onArchive={archiveThread}
             onOpenProject={openProject}
+            onRename={rename}
             onBack={goBack}
             onContinued={(next) => {
               setPrompt(prompt, `thread-prompt:${next.thread_id}`);
@@ -417,7 +433,9 @@ const SessionDetail = ({
             </div>
           ) : null}
           <div className="mx-auto w-full max-w-[720px] space-y-8">
-            {thread ? <ContinuationLinks key={thread.thread_id} thread={thread} /> : null}
+            {thread ? (
+              <ContinuationLinks key={thread.thread_id} thread={thread} />
+            ) : null}
             {thread && (connectionLost || loadError) ? (
               <div className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-[12px] text-warning">
                 {loadError

@@ -4,6 +4,7 @@ import {
   Copy,
   FolderOpen,
   MoreHorizontal,
+  Pencil,
   Star,
   Terminal,
   Wifi,
@@ -38,7 +39,9 @@ import {
   threadProjectLabel,
 } from "@/lib/thread-display";
 import type { ThreadInfo } from "@/types/session";
+import { RenameThreadDialog } from "./RenameThreadDialog";
 import { ResumeThreadDialog } from "./ResumeThreadDialog";
+import { threadDisplayName } from "@/lib/thread-display";
 import { BackendSwitchMenu, type Continuation } from "./BackendSwitchMenu";
 
 interface ThreadActionsMenuProps {
@@ -48,6 +51,10 @@ interface ThreadActionsMenuProps {
   onArchive: () => Promise<void>;
   onOpenProject: () => void;
   onContinued?: (thread: Continuation) => void;
+  onRename?: (name: string) => Promise<void>;
+  /** Opens the rename dialog from outside the menu (e.g. the title). */
+  renameOpen?: boolean;
+  onRenameOpenChange?: (open: boolean) => void;
 }
 
 export function ThreadActionsMenu({
@@ -57,9 +64,18 @@ export function ThreadActionsMenu({
   onArchive,
   onOpenProject,
   onContinued,
+  onRename,
+  renameOpen: renameOpenProp,
+  onRenameOpenChange,
 }: ThreadActionsMenuProps) {
   const trigger = useRef<HTMLButtonElement>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [renameOpenState, setRenameOpenState] = useState(false);
+  const renameOpen = renameOpenProp ?? renameOpenState;
+  const setRenameOpen = (open: boolean) => {
+    setRenameOpenState(open);
+    onRenameOpenChange?.(open);
+  };
   const [resumeCommand, setResumeCommand] = useState<CliResumeCommand | null>(
     null,
   );
@@ -111,7 +127,8 @@ export function ThreadActionsMenu({
           align="end"
           className="w-72 max-w-[calc(100vw-2rem)]"
           onCloseAutoFocus={(event) => {
-            if (archiveOpen || resumeCommand) event.preventDefault();
+            if (archiveOpen || renameOpen || resumeCommand)
+              event.preventDefault();
           }}
         >
           <DropdownMenuLabel className="space-y-1.5 font-normal">
@@ -133,7 +150,9 @@ export function ThreadActionsMenu({
             </p>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {!isDispatcher && onContinued ? <BackendSwitchMenu thread={thread} onContinued={onContinued} /> : null}
+          {!isDispatcher && onContinued ? (
+            <BackendSwitchMenu thread={thread} onContinued={onContinued} />
+          ) : null}
           {thread.directory ? (
             <DropdownMenuItem
               onSelect={onOpenProject}
@@ -147,6 +166,15 @@ export function ThreadActionsMenu({
                   {threadProjectLabel(thread)}
                 </span>
               </span>
+            </DropdownMenuItem>
+          ) : null}
+          {!isDispatcher && onRename ? (
+            <DropdownMenuItem
+              onSelect={() => setRenameOpen(true)}
+              className="gap-2"
+            >
+              <Pencil className="h-4 w-4" />
+              Rename thread
             </DropdownMenuItem>
           ) : null}
           {!isDispatcher ? (
@@ -188,6 +216,15 @@ export function ThreadActionsMenu({
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
+      {onRename ? (
+        <RenameThreadDialog
+          open={renameOpen}
+          currentName={threadDisplayName(thread)}
+          onOpenChange={setRenameOpen}
+          onRename={onRename}
+          onCloseAutoFocus={restoreFocus}
+        />
+      ) : null}
       <AlertDialog open={archiveOpen} onOpenChange={setArchiveOpen}>
         <AlertDialogContent onCloseAutoFocus={restoreFocus}>
           <AlertDialogHeader>

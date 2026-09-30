@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { NewThreadDialog } from "@/components/NewThreadDialog";
 import { ThreadListItem } from "@/components/ThreadListItem";
+import { RenameThreadDialog } from "@/components/thread/RenameThreadDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,8 +30,10 @@ import { filterThreads } from "@/lib/thread-filters";
 import { fleetApiPath } from "@/lib/fleet";
 import type { ThreadInfo } from "@/types/session";
 import { setThreadFavorite } from "@/lib/thread-favorites";
+import { renameThread } from "@/lib/thread-name";
 import {
   groupThreadsByDay,
+  threadDisplayName,
   threadListDisplayNames,
   threadRoutePath,
 } from "@/lib/thread-display";
@@ -38,6 +41,7 @@ import { useProjectsAndThreads } from "@/hooks/useProjectsAndThreads";
 import {
   AlertTriangle,
   Archive,
+  Pencil,
   Plus,
   Search,
   MessageSquare,
@@ -65,7 +69,9 @@ const Sessions = () => {
   } = useProjectsAndThreads({ loadAllThreads: filtersActive });
   const { tagOptions, refreshTagOptions } = useTagOptions();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [syncConflictCount, setSyncConflictCount] = useState<number | null>(null);
+  const [syncConflictCount, setSyncConflictCount] = useState<number | null>(
+    null,
+  );
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -123,11 +129,35 @@ const Sessions = () => {
       void fetchData();
       toast.success("Thread archived");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to archive thread");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to archive thread",
+      );
     }
   };
 
-  const toggleThreadFavorite = async (item: ThreadInfo, isFavorite: boolean) => {
+  const [renameTarget, setRenameTarget] = useState<ThreadInfo | null>(null);
+  const renameTargetThread = async (name: string) => {
+    if (!renameTarget) return;
+    try {
+      await renameThread(
+        renameTarget.thread_id,
+        name,
+        renameTarget.origin_host,
+      );
+      void fetchData();
+      toast.success("Thread renamed");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to rename thread",
+      );
+      throw err;
+    }
+  };
+
+  const toggleThreadFavorite = async (
+    item: ThreadInfo,
+    isFavorite: boolean,
+  ) => {
     try {
       await setThreadFavorite(item.thread_id, isFavorite, item.origin_host);
       void fetchData();
@@ -315,9 +345,7 @@ const Sessions = () => {
         </div>
 
         {listError ? (
-          <ErrorBanner>
-            {listError} — retrying automatically.
-          </ErrorBanner>
+          <ErrorBanner>{listError} — retrying automatically.</ErrorBanner>
         ) : null}
 
         {loading ? (
@@ -333,9 +361,7 @@ const Sessions = () => {
           <div className="rounded border border-dashed border-border bg-surface px-4 py-6 text-center">
             <Search className="mx-auto h-4 w-4 text-muted-foreground/40" />
             <p className="mt-2 text-[12px] text-muted-foreground">
-              {searching
-                ? "Searching all threads…"
-                : "No matching threads."}
+              {searching ? "Searching all threads…" : "No matching threads."}
             </p>
           </div>
         ) : (
@@ -348,7 +374,8 @@ const Sessions = () => {
                   </div>
                   <div className="divide-y divide-border">
                     {group.threads.map((thread) => {
-                      const isDispatchThread = thread.voice_route?.role === "dispatcher";
+                      const isDispatchThread =
+                        thread.voice_route?.role === "dispatcher";
 
                       return (
                         <ThreadListItem
@@ -357,7 +384,9 @@ const Sessions = () => {
                           displayName={displayNames.get(thread.thread_id)}
                           timestamp="time"
                           onClick={() =>
-                            navigate(threadRoutePath(thread, { fromThreads: true }))
+                            navigate(
+                              threadRoutePath(thread, { fromThreads: true }),
+                            )
                           }
                           onToggleFavorite={(item) =>
                             void toggleThreadFavorite(item, !item.is_favorite)
@@ -370,45 +399,63 @@ const Sessions = () => {
                             isDispatchThread ? (
                               // Not archivable: keep the slot so the row's
                               // trailing controls align with the others.
-                              <span aria-hidden="true" className="h-6 w-6 shrink-0" />
+                              <span
+                                aria-hidden="true"
+                                className="h-6 w-6 shrink-0"
+                              />
                             ) : (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                                    title="Archive thread"
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                                  title="Rename thread"
+                                  aria-label="Rename thread"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRenameTarget(thread);
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                                      title="Archive thread"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Archive className="h-3 w-3 text-muted-foreground" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    <Archive className="h-3 w-3 text-muted-foreground" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      Archive thread?
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      This hides the thread from active thread
-                                      lists. If it is running, the current turn
-                                      will be interrupted first.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>
-                                      Cancel
-                                    </AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => deleteThread(thread)}
-                                    >
-                                      Archive
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Archive thread?
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This hides the thread from active thread
+                                        lists. If it is running, the current
+                                        turn will be interrupted first.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>
+                                        Cancel
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => deleteThread(thread)}
+                                      >
+                                        Archive
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </>
                             )
                           }
                         />
@@ -429,6 +476,19 @@ const Sessions = () => {
           </>
         )}
       </div>
+      <RenameThreadDialog
+        open={renameTarget !== null}
+        currentName={
+          renameTarget
+            ? (displayNames.get(renameTarget.thread_id) ??
+              threadDisplayName(renameTarget))
+            : ""
+        }
+        onOpenChange={(open) => {
+          if (!open) setRenameTarget(null);
+        }}
+        onRename={renameTargetThread}
+      />
     </DashboardLayout>
   );
 };
