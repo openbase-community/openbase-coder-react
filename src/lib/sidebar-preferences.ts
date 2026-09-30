@@ -12,9 +12,9 @@ import {
   Settings as SettingsIcon,
   ShieldAlert,
   SlidersHorizontal,
-  Smile,
   Wrench,
 } from "lucide-react";
+import { OpenbaseMark } from "@/components/OpenbaseMark";
 import { CONFIGURE_DEFAULT_PATH, CONFIGURE_TABS } from "./configure-tabs";
 
 export type SidebarSection = "workspace" | "system" | "plugins";
@@ -22,7 +22,7 @@ export type SidebarSection = "workspace" | "system" | "plugins";
 export type SidebarItem = {
   key: string;
   path: string;
-  icon: LucideIcon;
+  icon: LucideIcon | typeof OpenbaseMark;
   title: string;
   section: SidebarSection;
   externalUrl?: string;
@@ -54,7 +54,7 @@ export const BUILT_IN_SIDEBAR_ITEMS: SidebarItem[] = [
   {
     key: "dispatch",
     path: "/dashboard/dispatch",
-    icon: Smile,
+    icon: OpenbaseMark,
     title: "Dispatch",
     section: "workspace",
   },

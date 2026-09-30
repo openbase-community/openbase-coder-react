@@ -1,12 +1,13 @@
+import { OpenbaseMark } from "@/components/OpenbaseMark";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import { backendProvider, modelProvider } from "@/lib/model-provider";
 import { isDispatcherThread } from "@/lib/thread-display";
 import { cn } from "@/lib/utils";
 import type { ThreadInfo } from "@/types/session";
-import { MessageSquare, Smile } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 
 /**
- * Leading icon for a thread row: the Dispatcher's smile, otherwise the
+ * Leading icon for a thread row: the Openbase mark for Dispatcher, otherwise the
  * vendor mark of the engine the thread runs on (from its backend, falling
  * back to its model), otherwise a generic thread glyph.
  */
@@ -19,7 +20,7 @@ export function ThreadGlyph({
 }) {
   const classes = cn("h-3 w-3 shrink-0 text-muted-foreground", className);
   if (isDispatcherThread(thread)) {
-    return <Smile className={classes} />;
+    return <OpenbaseMark className={classes} />;
   }
   const provider =
     backendProvider(thread.backend) ??
