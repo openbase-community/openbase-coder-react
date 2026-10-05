@@ -1,9 +1,11 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { ModelBadge } from "@/components/ModelBadge";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { fleetApiPath } from "@/lib/fleet";
+import { projectName } from "@/lib/project-display";
 import { ArrowLeft, Play, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -319,9 +321,35 @@ export const RoutineDetail = () => {
                 <DetailField label="Last turn ID">
                   {routine.lastTurnId ?? ""}
                 </DetailField>
+                <DetailField label="Project">
+                  {routine.projectPath && !originHost ? (
+                    <Link
+                      to={`/dashboard/project?path=${encodeURIComponent(routine.projectPath)}`}
+                      className="text-info hover:underline"
+                      title={routine.projectPath}
+                    >
+                      {projectName(routine.projectPath)}
+                    </Link>
+                  ) : routine.projectPath ? (
+                    <span title={routine.projectPath}>
+                      {projectName(routine.projectPath)}
+                    </span>
+                  ) : (
+                    ""
+                  )}
+                </DetailField>
                 <DetailField label="Cwd">{routine.cwd ?? ""}</DetailField>
                 <DetailField label="Mode">{routine.mode ?? ""}</DetailField>
-                <DetailField label="Model">{routine.model ?? ""}</DetailField>
+                <DetailField label="Model">
+                  {routine.model ? (
+                    <ModelBadge
+                      model={routine.model}
+                      className="text-[length:inherit] text-inherit"
+                    />
+                  ) : (
+                    ""
+                  )}
+                </DetailField>
                 <DetailField label="Reasoning effort">
                   {routine.reasoningEffort ?? ""}
                 </DetailField>

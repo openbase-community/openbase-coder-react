@@ -14,7 +14,9 @@ import {
 } from "@/lib/thread-display";
 import { cn } from "@/lib/utils";
 import type { ThreadInfo } from "@/types/session";
-import { ChevronRight, Star, Terminal } from "lucide-react";
+import { ModelBadge } from "@/components/ModelBadge";
+import { ThreadGlyph } from "@/components/ThreadGlyph";
+import { ChevronRight, Star } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface ThreadListItemProps {
@@ -27,15 +29,17 @@ interface ThreadListItemProps {
   tagOptions?: TagOption[];
   tagsDisabled?: boolean;
   action?: ReactNode;
+  /** "time" when the surrounding list is already grouped by day. */
+  timestamp?: "datetime" | "time";
 }
 
-const formatUpdatedAt = (updatedAt: string) =>
-  new Date(updatedAt).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+const formatUpdatedAt = (updatedAt: string, mode: "datetime" | "time") =>
+  new Date(updatedAt).toLocaleString(
+    undefined,
+    mode === "time"
+      ? { hour: "numeric", minute: "2-digit" }
+      : { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" },
+  );
 
 export const ThreadListItem = ({
   thread,
@@ -47,8 +51,10 @@ export const ThreadListItem = ({
   tagOptions = [],
   tagsDisabled = false,
   action,
+  timestamp = "datetime",
 }: ThreadListItemProps) => {
   const isDeemphasized = shouldDeemphasizeThread(thread);
+  const isDispatcher = isDispatcherThread(thread);
   const agentVoiceName = threadAgentVoiceName(thread);
   const modelLabel = threadModelLabel(thread);
   const reasoningEffort =
@@ -73,33 +79,12 @@ export const ThreadListItem = ({
           }
         }}
         className={cn(
-          "group flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-surface-muted",
+          "group flex cursor-pointer items-center gap-2.5 py-1.5 transition-colors",
           isDeemphasized && "opacity-60 saturate-0 hover:opacity-80",
           showTopBorder && "border-t border-border",
         )}
       >
-        <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
-        {onToggleFavorite && !isDispatcherThread(thread) ? (
-          <button
-            type="button"
-            className={cn(
-              "flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface hover:text-foreground",
-              thread.is_favorite && "text-warning hover:text-warning",
-            )}
-            title={thread.is_favorite ? "Remove favorite" : "Favorite thread"}
-            aria-label={
-              thread.is_favorite ? "Remove favorite" : "Favorite thread"
-            }
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleFavorite(thread);
-            }}
-          >
-            <Star
-              className={cn("h-3 w-3", thread.is_favorite && "fill-current")}
-            />
-          </button>
-        ) : null}
+        <ThreadGlyph thread={thread} />
         <div className="flex min-w-0 flex-1 items-baseline gap-2">
           <span className="truncate text-[12.5px] font-medium text-foreground">
             {displayName ?? threadDisplayName(thread)}
@@ -130,14 +115,18 @@ export const ThreadListItem = ({
           ) : null}
         </div>
         {modelLabel ? (
-          <span
-            className="hidden shrink-0 font-mono text-[10px] text-muted-foreground md:inline"
+          <ModelBadge
+            model={thread.model ?? thread.current_turn?.model ?? modelLabel}
+            suffix={reasoningEffort ?? undefined}
             title={`${thread.model ?? modelLabel}${reasoningEffort ? ` · ${reasoningEffort} reasoning` : ""}`}
-          >
-            {modelLabel}
-            {reasoningEffort ? ` · ${reasoningEffort}` : ""}
-          </span>
+            className="hidden shrink-0 md:inline-flex"
+          />
         ) : null}
+        <StatusBadge
+          status={thread.status}
+          isLikelyStale={thread.is_likely_stale}
+          statusWarning={thread.status_warning}
+        />
         {onTagsChange ? (
           <TagPicker
             tags={thread.tags ?? []}
@@ -146,14 +135,36 @@ export const ThreadListItem = ({
             onChange={(tags) => onTagsChange(thread, tags)}
           />
         ) : null}
-        <StatusBadge
-          status={thread.status}
-          isLikelyStale={thread.is_likely_stale}
-          statusWarning={thread.status_warning}
-        />
         <span className="hidden shrink-0 font-mono text-[10.5px] text-muted-foreground tabular-nums sm:inline">
-          {formatUpdatedAt(thread.updated_at)}
+          {formatUpdatedAt(thread.updated_at, timestamp)}
         </span>
+        {onToggleFavorite ? (
+          isDispatcher ? (
+            // The Dispatcher cannot be favorited; reserve the slot so the
+            // trailing controls line up with every other row.
+            <span aria-hidden="true" className="h-6 w-6 shrink-0" />
+          ) : (
+            <button
+              type="button"
+              className={cn(
+                "flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface hover:text-foreground",
+                thread.is_favorite && "text-warning hover:text-warning",
+              )}
+              title={thread.is_favorite ? "Remove favorite" : "Favorite thread"}
+              aria-label={
+                thread.is_favorite ? "Remove favorite" : "Favorite thread"
+              }
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleFavorite(thread);
+              }}
+            >
+              <Star
+                className={cn("h-3 w-3", thread.is_favorite && "fill-current")}
+              />
+            </button>
+          )
+        ) : null}
         {action}
         <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
       </div>

@@ -392,207 +392,211 @@ export const CodingBackendSettings: React.FC<Props> = ({
 
   return (
     <Panel>
-      <div className="flex flex-col gap-3 border-b border-border px-3 py-2.5 lg:flex-row lg:items-center">
-        <div className="min-w-0 flex-1">
-          <p className="text-[12.5px] font-medium text-foreground">
-            Where agents run
-          </p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Local CLI runs both engines on this machine — each launch&apos;s
-            model picks Claude Code or Codex. Openbase Cloud runs Claude Code
-            with your Openbase login.
-          </p>
-          {settings ? (
-            <p className="mt-1 truncate text-[11px] text-muted-foreground">
-              Current: {currentOption?.label ?? currentLocation}
+      <div className="border-b border-border px-3 py-2.5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="min-w-0 flex-1">
+            <p className="text-[12.5px] font-medium text-foreground">
+              Where agents run
             </p>
-          ) : null}
-          {settings?.backend_note ? (
-            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-              {settings.backend_note}
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Local CLI runs both engines on this machine — each launch&apos;s
+              model picks Claude Code or Codex. Openbase Cloud runs Claude Code
+              with your Openbase login.
             </p>
-          ) : null}
-          {selectedOption && selectedOption.id !== currentLocation ? (
-            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-              {selectedOption.description}
-            </p>
-          ) : null}
-          {showClaudeAuth ? (
-            <div className="mt-1 space-y-0.5 font-mono text-[11px] text-muted-foreground">
-              <p>
-                Claude auth loggedIn:{" "}
-                {settings?.claude_auth?.logged_in ? "true" : "false"}
+            {settings ? (
+              <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                Current: {currentOption?.label ?? currentLocation}
               </p>
-              <p>{settings?.claude_auth?.command ?? "claude login"}</p>
-            </div>
-          ) : null}
-          {showCodexPlugins ? (
-            <div className="mt-2 grid gap-1.5 sm:max-w-xl sm:grid-cols-2">
-              {visibleCodexPlugins.map((plugin) => (
-                <div
-                  key={plugin.id}
-                  className="flex min-h-14 items-center justify-between gap-3 rounded border border-border bg-background px-2.5 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-[12px] font-medium text-foreground">
-                      {plugin.label}
-                    </p>
-                    <p className="mt-0.5 line-clamp-2 text-[10.5px] leading-3.5 text-muted-foreground">
-                      {plugin.plugin_id}
-                      {plugin.version ? ` · ${plugin.version}` : ""}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={plugin.enabled}
-                    onCheckedChange={(checked) => {
-                      void toggleCodexPlugin(plugin.id, checked);
-                    }}
-                    disabled={
-                      loading ||
-                      saving ||
-                      loadingCodexPlugins ||
-                      togglingCodexPlugin !== null
-                    }
-                    aria-label={`${plugin.label} plugin`}
-                  />
-                </div>
-              ))}
-              {loadingCodexPlugins && !codexPlugins ? (
-                <div className="flex min-h-14 items-center gap-2 rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  Loading Codex plugins…
-                </div>
-              ) : null}
-              {!loadingCodexPlugins && visibleCodexPlugins.length === 0 ? (
-                <div className="rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
-                  No Codex plugin toggles available.
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          {showClaudePlugins ? (
-            <div className="mt-2 grid gap-1.5 sm:max-w-xl sm:grid-cols-2">
-              {(claudePlugins?.plugins ?? []).map((plugin) => (
-                <div
-                  key={plugin.id}
-                  className="flex min-h-14 items-center justify-between gap-3 rounded border border-border bg-background px-2.5 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-[12px] font-medium text-foreground">
-                      {plugin.label}
-                    </p>
-                    <p className="mt-0.5 line-clamp-2 text-[10.5px] leading-3.5 text-muted-foreground">
-                      {plugin.plugin_id}
-                      {plugin.version ? ` · ${plugin.version}` : ""}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={plugin.enabled}
-                    onCheckedChange={(checked) => {
-                      void toggleClaudePlugin(plugin.id, checked);
-                    }}
-                    disabled={
-                      loading ||
-                      saving ||
-                      loadingClaudePlugins ||
-                      togglingClaudePlugin !== null
-                    }
-                    aria-label={`${plugin.label} plugin`}
-                  />
-                </div>
-              ))}
-              {loadingClaudePlugins && !claudePlugins ? (
-                <div className="flex min-h-14 items-center gap-2 rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  Loading Claude Code plugins…
-                </div>
-              ) : null}
-              {!loadingClaudePlugins && claudePlugins?.plugins.length === 0 ? (
-                <div className="rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
-                  No Claude Code plugin toggles available.
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          {message ? (
-            <p className="mt-1 text-[12px] text-success">{message}</p>
-          ) : null}
-          {error ? (
-            <p className="mt-1 text-[12px] text-destructive">{error}</p>
-          ) : null}
-        </div>
-        <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-          <Select
-            value={selectedLocation}
-            onValueChange={(value) => {
-              setSelectedLocation(value as "local" | "cloud");
-              setMessage(null);
-              setError(null);
-            }}
-            disabled={loading || saving}
-          >
-            <SelectTrigger className="h-8 min-w-0 text-[12px] sm:w-56">
-              <SelectValue
-                placeholder={loading ? "Loading…" : "Select location"}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {settings?.location_options.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2.5 text-[12px]"
-            onClick={() => {
-              void fetchSettings();
-              if (showCodexPlugins) {
-                void fetchCodexPlugins();
-              }
-              if (showClaudePlugins) {
-                void fetchClaudePlugins();
-              }
-            }}
-            disabled={loading || saving}
-            title="Refresh coding backend"
-          >
-            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2.5 text-[12px]"
-            onClick={() => {
-              setConfirmationOpen(true);
-            }}
-            disabled={!canSave}
-          >
-            <Save className="h-3 w-3" />
-            {saving ? "Changing…" : "Save backend"}
-          </Button>
-          {showClaudeAuth ? (
+            ) : null}
+            {settings?.backend_note ? (
+              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                {settings.backend_note}
+              </p>
+            ) : null}
+            {selectedOption && selectedOption.id !== currentLocation ? (
+              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                {selectedOption.description}
+              </p>
+            ) : null}
+            {showClaudeAuth ? (
+              <div className="mt-1 space-y-0.5 font-mono text-[11px] text-muted-foreground">
+                <p>
+                  Claude auth loggedIn:{" "}
+                  {settings?.claude_auth?.logged_in ? "true" : "false"}
+                </p>
+                <p>{settings?.claude_auth?.command ?? "claude login"}</p>
+              </div>
+            ) : null}
+            {message ? (
+              <p className="mt-1 text-[12px] text-success">{message}</p>
+            ) : null}
+            {error ? (
+              <p className="mt-1 text-[12px] text-destructive">{error}</p>
+            ) : null}
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+            <Select
+              value={selectedLocation}
+              onValueChange={(value) => {
+                setSelectedLocation(value as "local" | "cloud");
+                setMessage(null);
+                setError(null);
+              }}
+              disabled={loading || saving}
+            >
+              <SelectTrigger className="h-8 min-w-0 text-[12px] sm:w-56">
+                <SelectValue
+                  placeholder={loading ? "Loading…" : "Select location"}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {settings?.location_options.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="sm"
               className="h-8 px-2.5 text-[12px]"
               onClick={() => {
-                void syncClaudeAuth();
+                void fetchSettings();
+                if (showCodexPlugins) {
+                  void fetchCodexPlugins();
+                }
+                if (showClaudePlugins) {
+                  void fetchClaudePlugins();
+                }
               }}
-              disabled={loading || saving || syncingClaudeAuth}
-              title={settings?.claude_auth?.command ?? "claude login"}
+              disabled={loading || saving}
+              title="Refresh coding backend"
             >
-              <KeyRound
-                className={`h-3 w-3 ${syncingClaudeAuth ? "animate-pulse" : ""}`}
+              <RefreshCw
+                className={`h-3 w-3 ${loading ? "animate-spin" : ""}`}
               />
-              {syncingClaudeAuth ? "Checking…" : "Check Claude auth"}
+              Refresh
             </Button>
-          ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2.5 text-[12px]"
+              onClick={() => {
+                setConfirmationOpen(true);
+              }}
+              disabled={!canSave}
+            >
+              <Save className="h-3 w-3" />
+              {saving ? "Changing…" : "Save backend"}
+            </Button>
+            {showClaudeAuth ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2.5 text-[12px]"
+                onClick={() => {
+                  void syncClaudeAuth();
+                }}
+                disabled={loading || saving || syncingClaudeAuth}
+                title={settings?.claude_auth?.command ?? "claude login"}
+              >
+                <KeyRound
+                  className={`h-3 w-3 ${syncingClaudeAuth ? "animate-pulse" : ""}`}
+                />
+                {syncingClaudeAuth ? "Checking…" : "Check Claude auth"}
+              </Button>
+            ) : null}
+          </div>
         </div>
+        {showCodexPlugins ? (
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleCodexPlugins.map((plugin) => (
+              <div
+                key={plugin.id}
+                className="flex min-h-14 items-center justify-between gap-3 rounded border border-border bg-background px-2.5 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-[12px] font-medium text-foreground">
+                    {plugin.label}
+                  </p>
+                  <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
+                    {plugin.plugin_id}
+                    {plugin.version ? ` · ${plugin.version}` : ""}
+                  </p>
+                </div>
+                <Switch
+                  checked={plugin.enabled}
+                  onCheckedChange={(checked) => {
+                    void toggleCodexPlugin(plugin.id, checked);
+                  }}
+                  disabled={
+                    loading ||
+                    saving ||
+                    loadingCodexPlugins ||
+                    togglingCodexPlugin !== null
+                  }
+                  aria-label={`${plugin.label} plugin`}
+                />
+              </div>
+            ))}
+            {loadingCodexPlugins && !codexPlugins ? (
+              <div className="flex min-h-14 items-center gap-2 rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                Loading Codex plugins…
+              </div>
+            ) : null}
+            {!loadingCodexPlugins && visibleCodexPlugins.length === 0 ? (
+              <div className="rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
+                No Codex plugin toggles available.
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {showClaudePlugins ? (
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {(claudePlugins?.plugins ?? []).map((plugin) => (
+              <div
+                key={plugin.id}
+                className="flex min-h-14 items-center justify-between gap-3 rounded border border-border bg-background px-2.5 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-[12px] font-medium text-foreground">
+                    {plugin.label}
+                  </p>
+                  <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
+                    {plugin.plugin_id}
+                    {plugin.version ? ` · ${plugin.version}` : ""}
+                  </p>
+                </div>
+                <Switch
+                  checked={plugin.enabled}
+                  onCheckedChange={(checked) => {
+                    void toggleClaudePlugin(plugin.id, checked);
+                  }}
+                  disabled={
+                    loading ||
+                    saving ||
+                    loadingClaudePlugins ||
+                    togglingClaudePlugin !== null
+                  }
+                  aria-label={`${plugin.label} plugin`}
+                />
+              </div>
+            ))}
+            {loadingClaudePlugins && !claudePlugins ? (
+              <div className="flex min-h-14 items-center gap-2 rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                Loading Claude Code plugins…
+              </div>
+            ) : null}
+            {!loadingClaudePlugins && claudePlugins?.plugins.length === 0 ? (
+              <div className="rounded border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
+                No Claude Code plugin toggles available.
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <CodingBackendChangeDialog

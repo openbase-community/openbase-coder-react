@@ -5,6 +5,7 @@ import {
   collectMatchRanges,
   findInPageEnabledForPath,
   findInPageSupported,
+  getFindFocusTarget,
   scrollRangeIntoView,
 } from "@/lib/find-in-page";
 import { getRuntimeShell } from "@/lib/runtime-config";
@@ -103,6 +104,22 @@ const FindInPageBar: React.FC = () => {
       const modifier = event.metaKey || event.ctrlKey;
       if (modifier && !event.altKey && event.key.toLowerCase() === "f") {
         event.preventDefault();
+        // If the page owns Cmd/Ctrl+F with its own full-dataset search field
+        // (e.g. the threads list), focus that instead of the in-page find bar.
+        const focusTarget = getFindFocusTarget();
+        if (focusTarget) {
+          if (open) {
+            close();
+          }
+          focusTarget.focus();
+          if (
+            focusTarget instanceof HTMLInputElement ||
+            focusTarget instanceof HTMLTextAreaElement
+          ) {
+            focusTarget.select();
+          }
+          return;
+        }
         setOpen(true);
         inputRef.current?.select();
         inputRef.current?.focus();

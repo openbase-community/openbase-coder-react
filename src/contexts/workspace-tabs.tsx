@@ -133,13 +133,14 @@ export function useWorkspaceDraft(key: string, initialValue = "") {
   const drafts = runtime?.drafts ?? fallback;
   const setDraft = (
     update: string | undefined | ((current: string) => string),
+    targetKey = key,
   ) => {
     const next =
       typeof update === "function"
-        ? update(drafts.get(key) ?? initialValue)
+        ? update(drafts.get(targetKey) ?? initialValue)
         : update;
-    if (next === undefined || next === initialValue) drafts.delete(key);
-    else drafts.set(key, next);
+    if (next === undefined || next === initialValue) drafts.delete(targetKey);
+    else drafts.set(targetKey, next);
     if (runtime) context!.controller.changed();
     else setFallback(new Map(drafts));
   };

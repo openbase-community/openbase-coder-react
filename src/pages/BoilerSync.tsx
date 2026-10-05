@@ -1,3 +1,4 @@
+import { ConfigureTabs } from "@/components/ConfigureTabs";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
   ResourceError,
@@ -138,6 +139,7 @@ const BoilerSync = () => {
   return (
     <DashboardLayout>
       <div className="space-y-4">
+        <ConfigureTabs />
         <ResourcePageHeader
           title="Templates"
           loading={loading}

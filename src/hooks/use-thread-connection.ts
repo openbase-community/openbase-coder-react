@@ -17,14 +17,39 @@ import type { ThreadInfo } from "@/types/session";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+// Last-known snapshot per thread, kept across mounts (stale-while-revalidate):
+// re-opening a thread paints the previous state instantly while the socket and
+// refresh converge on fresh data. Bounded so long console sessions that touch
+// many threads don't retain every transcript.
+const SNAPSHOT_CACHE_LIMIT = 12;
+const threadSnapshotCache = new Map<string, ThreadInfo>();
+const cacheSnapshot = (id: string, snapshot: ThreadInfo) => {
+  threadSnapshotCache.delete(id);
+  threadSnapshotCache.set(id, snapshot);
+  if (threadSnapshotCache.size > SNAPSHOT_CACHE_LIMIT) {
+    const oldest = threadSnapshotCache.keys().next().value;
+    if (oldest !== undefined) threadSnapshotCache.delete(oldest);
+  }
+};
+
+// While the live socket is open it already pushes every state change; the
+// interval/focus refreshes then only serve as a convergence safety net, so
+// they are skipped unless the last full snapshot is at least this old.
+const SOCKET_SAFETY_REFRESH_MS = 30_000;
+
 export function useThreadConnection(threadId: string | undefined) {
   const { token } = useAuth();
-  const [thread, setThread] = useState<ThreadInfo | null>(null);
+  const cachedSnapshot = threadId ? threadSnapshotCache.get(threadId) : undefined;
+  const [thread, setThread] = useState<ThreadInfo | null>(cachedSnapshot ?? null);
   // A thread that only exists on a peer device is streamed and mutated by
   // connecting DIRECTLY to that device. The first fleet-scoped detail fetch
   // discovers the origin host; once known it sticks for the page's lifetime
-  // (the socket and every action then bypass the selected backend).
-  const [originHost, setOriginHost] = useState<string | null>(null);
+  // (the socket and every action then bypass the selected backend). A cached
+  // snapshot seeds it so a revisit connects straight to the peer instead of
+  // waterfalling through the selected backend first.
+  const [originHost, setOriginHost] = useState<string | null>(
+    cachedSnapshot?.origin_host ?? null,
+  );
   const [isConnected, setIsConnected] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoadingOlderTurns, setIsLoadingOlderTurns] = useState(false);
@@ -32,6 +57,19 @@ export function useThreadConnection(threadId: string | undefined) {
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const reconnectDelayRef = useRef(1000);
   const connectAttemptRef = useRef(0);
+  const lastSnapshotAtRef = useRef(0);
+  // A cache-seeded origin host may be stale (peer offline, thread migrated);
+  // until one fetch against it succeeds, a failure falls back to the selected
+  // backend instead of surfacing an error over perfectly reachable data. The
+  // failed host is then pinned for this mount so snapshot discovery doesn't
+  // re-adopt it and thrash the socket between the two hosts.
+  const hostVerifiedRef = useRef(false);
+  const failedHostRef = useRef<string | null>(null);
+
+  // Keep the cross-mount cache current so the next visit paints instantly.
+  useEffect(() => {
+    if (threadId && thread) cacheSnapshot(threadId, thread);
+  }, [threadId, thread]);
 
   const refreshThread = useCallback(async () => {
     if (!threadId) return;
@@ -42,6 +80,11 @@ export function useThreadConnection(threadId: string | undefined) {
         fleetApiPath(originHost, `/api/threads/${threadId}/?scope=fleet`),
       );
       if (!res.ok) {
+        if (originHost && !hostVerifiedRef.current) {
+          failedHostRef.current = originHost;
+          setOriginHost(null);
+          return;
+        }
         setLoadError(
           await extractErrorMessage(
             res,
@@ -51,13 +94,33 @@ export function useThreadConnection(threadId: string | undefined) {
         return;
       }
       const snapshot: ThreadInfo = await res.json();
-      if (snapshot.origin_host) setOriginHost(snapshot.origin_host);
+      if (originHost) hostVerifiedRef.current = true;
+      lastSnapshotAtRef.current = Date.now();
+      if (snapshot.origin_host && snapshot.origin_host !== failedHostRef.current) {
+        setOriginHost(snapshot.origin_host);
+      }
       setThread((prev) => reconcileThreadSnapshot(prev, snapshot));
       setLoadError(null);
     } catch {
+      if (originHost && !hostVerifiedRef.current) {
+        failedHostRef.current = originHost;
+        setOriginHost(null);
+        return;
+      }
       setLoadError("Unable to reach the local API.");
     }
   }, [threadId, originHost]);
+
+  const refreshIfStale = useCallback(() => {
+    const socketOpen = wsRef.current?.readyState === WebSocket.OPEN;
+    if (
+      socketOpen &&
+      Date.now() - lastSnapshotAtRef.current < SOCKET_SAFETY_REFRESH_MS
+    ) {
+      return;
+    }
+    void refreshThread();
+  }, [refreshThread]);
 
   const loadOlderTurns = useCallback(async () => {
     const cursor = thread?.history_next_cursor;
@@ -155,6 +218,7 @@ export function useThreadConnection(threadId: string | undefined) {
 
       switch (msg.type) {
         case "thread_state":
+          lastSnapshotAtRef.current = Date.now();
           setThread((prev) => reconcileThreadSnapshot(prev, msg.data));
           break;
 
@@ -198,6 +262,7 @@ export function useThreadConnection(threadId: string | undefined) {
           break;
 
         case "turn_completed":
+          lastSnapshotAtRef.current = Date.now();
           setThread((prev) => reconcileThreadSnapshot(prev, msg.data));
           break;
 
@@ -227,13 +292,16 @@ export function useThreadConnection(threadId: string | undefined) {
   useEffect(() => {
     void connect();
 
-    const interval = window.setInterval(refreshThread, 5000);
+    // With the socket open these are only a convergence safety net (see
+    // SOCKET_SAFETY_REFRESH_MS); with it closed they are the sole data path
+    // and fire on every tick.
+    const interval = window.setInterval(refreshIfStale, 5000);
     const handleFocus = () => {
-      void refreshThread();
+      refreshIfStale();
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        void refreshThread();
+        refreshIfStale();
       }
     };
 
@@ -254,7 +322,7 @@ export function useThreadConnection(threadId: string | undefined) {
         wsRef.current = null;
       }
     };
-  }, [connect, refreshThread]);
+  }, [connect, refreshIfStale]);
 
   const submitTurn = useCallback(
     async (action: ThreadTurnAction, prompt: string) => {

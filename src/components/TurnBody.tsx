@@ -1,12 +1,13 @@
 import { StatusBadge } from "@/components/StatusBadge";
 import { TurnFileEdits } from "@/components/TurnFileEdits";
 import { relativeTimeShort } from "@/lib/relative-time";
-import { shortModelLabel } from "@/lib/thread-display";
-import { voicePromptForDisplay } from "@/lib/voice-display";
+import { ProviderLogo } from "@/components/ProviderLogo";
+import { modelProvider, prettyModelLabel } from "@/lib/model-provider";
+import { userPromptForDisplay } from "@/lib/voice-display";
 import type { TurnInfo } from "@/types/session";
 import { ChevronDown, CornerUpLeft } from "lucide-react";
 import type { ReactNode, Ref } from "react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -26,8 +27,10 @@ export function UserBubble({
   hint?: string;
 }) {
   return (
-    <div className="flex justify-end">
-      <div className="max-w-[82%] rounded-2xl bg-user-message px-3.5 py-2 text-[13px] leading-relaxed text-foreground">
+    // w-full so the percentage cap is relative to the transcript column, not
+    // to a shrink-wrapped flex item (which squeezed bubbles to a few words).
+    <div className="flex w-full min-w-0 justify-end">
+      <div className="max-w-[80%] rounded-2xl bg-user-message px-4 py-2.5 text-sm leading-relaxed text-foreground">
         {hint ? (
           <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             {hint}
@@ -41,7 +44,7 @@ export function UserBubble({
             />
           ) : null}
           <span className="whitespace-pre-wrap break-words">
-            {voicePromptForDisplay(text)}
+            {userPromptForDisplay(text)}
           </span>
         </div>
       </div>
@@ -82,9 +85,15 @@ function TurnMeta({ turn }: { turn: TurnInfo }) {
     );
   }
   if (turn.model) {
+    const provider = modelProvider(turn.model);
     bits.push(
-      <span key="model" className="font-mono" title={turn.model}>
-        {shortModelLabel(turn.model)}
+      <span
+        key="model"
+        className="inline-flex items-center gap-1"
+        title={turn.model}
+      >
+        {provider ? <ProviderLogo provider={provider} className="h-3 w-3" /> : null}
+        {prettyModelLabel(turn.model)}
       </span>,
     );
   }
@@ -115,7 +124,7 @@ function TurnMeta({ turn }: { turn: TurnInfo }) {
  * Hovering the prompt bubble reveals a chevron on its left that collapses the
  * whole response; when collapsed the chevron stays put as a reminder.
  */
-export function TurnBody({
+function TurnBodyImpl({
   turn,
   outputRef,
   defaultOpen = true,
@@ -154,7 +163,7 @@ export function TurnBody({
   );
 
   return (
-    <div className="group/turn space-y-2">
+    <div className="group/turn space-y-4">
       <div className="flex items-start justify-end gap-1">
         {hasResponse ? (
           <button
@@ -194,3 +203,32 @@ export function TurnBody({
     </div>
   );
 }
+
+/**
+ * Turn snapshots are recreated wholesale on every HTTP refresh, so identity
+ * comparison alone would re-run the (expensive) markdown parse for every
+ * history turn on each streamed delta or poll. Steers and file edits are
+ * append-only, so their lengths stand in for deep equality.
+ */
+const sameTurn = (a: TurnInfo, b: TurnInfo) =>
+  a === b ||
+  (a.turn_id === b.turn_id &&
+    a.status === b.status &&
+    a.prompt === b.prompt &&
+    a.accumulated_output === b.accumulated_output &&
+    a.accumulated_stderr === b.accumulated_stderr &&
+    a.return_code === b.return_code &&
+    a.completed_at === b.completed_at &&
+    a.model === b.model &&
+    a.reasoning_effort === b.reasoning_effort &&
+    (a.steers?.length ?? 0) === (b.steers?.length ?? 0) &&
+    (a.file_edits?.length ?? 0) === (b.file_edits?.length ?? 0));
+
+export const TurnBody = memo(
+  TurnBodyImpl,
+  (prev, next) =>
+    prev.defaultOpen === next.defaultOpen &&
+    prev.directory === next.directory &&
+    prev.outputRef === next.outputRef &&
+    sameTurn(prev.turn, next.turn),
+);

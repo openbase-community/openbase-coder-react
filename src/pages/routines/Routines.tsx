@@ -1,17 +1,22 @@
+import { ConfigureTabs } from "@/components/ConfigureTabs";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { fleetApiPath } from "@/lib/fleet";
+import { fetchAllProjectPages, projectName } from "@/lib/project-display";
+import type { Project } from "@/types/session";
 import {
   CalendarClock,
   CheckCircle2,
+  Folder,
   Play,
   Plus,
   RefreshCw,
   Trash2,
   Terminal,
+  X,
 } from "lucide-react";
 import {
   type FormEvent,
@@ -50,7 +55,11 @@ function routineDetailPath(routine: Routine): string {
 const Routines = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const view = searchParams.get("view") === "templates" ? "templates" : "loops";
+  // ?project=<path> scopes the page to one tracked project (linked from the
+  // project page) and pre-fills new loops with that project as cwd.
+  const projectFilter = searchParams.get("project");
   const [routines, setRoutines] = useState<Routine[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [form, setForm] = useState(defaultForm);
   const [createOpen, setCreateOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -80,6 +89,32 @@ const Routines = () => {
     void fetchRoutines();
   }, [fetchRoutines]);
 
+  // Local projects only: a new loop is created on this device.
+  useEffect(() => {
+    let cancelled = false;
+    fetchAllProjectPages(apiFetch)
+      .then((items) => {
+        if (!cancelled) setProjects(items);
+      })
+      .catch(() => {
+        if (!cancelled) setProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const clearProjectFilter = useCallback(() => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("project");
+    setSearchParams(params);
+  }, [searchParams, setSearchParams]);
+
+  const openCreate = useCallback(() => {
+    setForm({ ...defaultForm, cwd: projectFilter ?? "" });
+    setCreateOpen(true);
+  }, [projectFilter]);
+
   const setView = useCallback(
     (nextView: "loops" | "templates") => {
       const params = new URLSearchParams(searchParams);
@@ -92,12 +127,16 @@ const Routines = () => {
 
   const sortedRoutines = useMemo(
     () =>
-      [...routines].sort((a, b) =>
-        String(a.nextRunAt ?? a.name).localeCompare(
-          String(b.nextRunAt ?? b.name),
+      routines
+        .filter(
+          (routine) => !projectFilter || routine.projectPath === projectFilter,
+        )
+        .sort((a, b) =>
+          String(a.nextRunAt ?? a.name).localeCompare(
+            String(b.nextRunAt ?? b.name),
+          ),
         ),
-      ),
-    [routines],
+    [projectFilter, routines],
   );
 
   const createRoutine = async (event: FormEvent<HTMLFormElement>) => {
@@ -232,13 +271,38 @@ const Routines = () => {
   return (
     <DashboardLayout>
       <div className="space-y-4">
+        <ConfigureTabs />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-base font-semibold tracking-tight text-foreground">
               Loops
             </h1>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
-              {routines.length} configured · all devices
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted-foreground">
+              {projectFilter ? (
+                <>
+                  <span>
+                    {sortedRoutines.length} of {routines.length} in
+                  </span>
+                  <span
+                    className="inline-flex items-center gap-1 rounded-sm bg-surface-muted px-1 font-mono text-[10.5px] text-foreground"
+                    title={projectFilter}
+                  >
+                    <Folder className="h-3 w-3" />
+                    {projectName(projectFilter)}
+                    <button
+                      type="button"
+                      onClick={clearProjectFilter}
+                      aria-label="Show loops for all projects"
+                      className="ml-0.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                  <span>· all devices</span>
+                </>
+              ) : (
+                <span>{routines.length} configured · all devices</span>
+              )}
             </p>
           </div>
           {view === "loops" ? (
@@ -246,7 +310,7 @@ const Routines = () => {
               <Button
                 size="sm"
                 className="h-7 px-2.5 text-[12px]"
-                onClick={() => setCreateOpen(true)}
+                onClick={openCreate}
               >
                 <Plus className="h-3 w-3" />
                 New loop
@@ -301,6 +365,7 @@ const Routines = () => {
           }}
           form={form}
           setForm={setForm}
+          projects={projects}
           submitting={submitting}
           onSubmit={(event) => void createRoutine(event)}
         />
@@ -319,12 +384,14 @@ const Routines = () => {
               <div className="rounded border border-dashed border-border bg-surface px-4 py-8 text-center">
                 <CalendarClock className="mx-auto h-4 w-4 text-muted-foreground/40" />
                 <p className="mt-2 text-[12px] text-muted-foreground">
-                  No loops configured.
+                  {projectFilter
+                    ? `No loops for ${projectName(projectFilter)}.`
+                    : "No loops configured."}
                 </p>
                 <Button
                   size="sm"
                   className="mt-4 h-7 px-2.5 text-[12px]"
-                  onClick={() => setCreateOpen(true)}
+                  onClick={openCreate}
                 >
                   <Plus className="h-3 w-3" />
                   New loop
@@ -358,6 +425,24 @@ const Routines = () => {
                             title={`Runs on ${routine.origin_device}`}
                           >
                             {routine.origin_device}
+                          </span>
+                        ) : null}
+                        {routine.projectPath && !routine.origin_host ? (
+                          <Link
+                            to={`/dashboard/project?path=${encodeURIComponent(routine.projectPath)}`}
+                            className="inline-flex shrink-0 items-center gap-1 rounded-sm bg-surface-muted px-1 font-mono text-[10px] text-muted-foreground hover:text-info"
+                            title={routine.projectPath}
+                          >
+                            <Folder className="h-3 w-3" />
+                            {projectName(routine.projectPath)}
+                          </Link>
+                        ) : routine.projectPath ? (
+                          <span
+                            className="inline-flex shrink-0 items-center gap-1 rounded-sm bg-surface-muted px-1 font-mono text-[10px] text-muted-foreground"
+                            title={`${routine.projectPath} on ${routine.origin_device ?? routine.origin_host}`}
+                          >
+                            <Folder className="h-3 w-3" />
+                            {projectName(routine.projectPath)}
                           </span>
                         ) : null}
                         {routine.enabled ? (

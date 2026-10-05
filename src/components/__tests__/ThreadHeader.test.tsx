@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { ThreadHeader } from "../ThreadHeader";
 import type { ThreadInfo } from "@/types/session";
 
@@ -39,12 +40,14 @@ function header(overrides: Partial<ThreadInfo> = {}, isConnected = true) {
     onOpenProject: vi.fn(),
   };
   render(
-    <ThreadHeader
-      thread={{ ...thread, ...overrides }}
-      isConnected={isConnected}
-      tagOptions={[]}
-      {...actions}
-    />,
+    <MemoryRouter>
+      <ThreadHeader
+        thread={{ ...thread, ...overrides }}
+        isConnected={isConnected}
+        tagOptions={[]}
+        {...actions}
+      />
+    </MemoryRouter>,
   );
   return actions;
 }
@@ -59,7 +62,8 @@ async function openMenu() {
 it("keeps the title and tag access visible without exposing secondary controls", async () => {
   const actions = header();
   expect(screen.getByRole("heading").textContent).toBe(thread.display_name);
-  expect(screen.getAllByRole("button")).toHaveLength(2);
+  // Tags, thread actions, and the model chip (links to Settings → Agents).
+  expect(screen.getAllByRole("button")).toHaveLength(3);
   expect(screen.queryByText(thread.thread_id)).toBeNull();
   expect(screen.queryByText("Review")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Tags" }));
@@ -138,5 +142,17 @@ it("keeps disconnection visible and hides unsupported dispatcher actions", async
   expect(screen.queryByRole("menuitem", { name: "Archive thread" })).toBeNull();
   expect(
     screen.queryByRole("menuitem", { name: "Favorite thread" }),
+  ).toBeNull();
+});
+
+it("explains the Dispatcher with a help icon only on the Dispatcher thread", () => {
+  header({ voice_route: { role: "dispatcher", active: true } });
+  expect(
+    screen.getByRole("button", { name: "What is the Dispatcher?" }),
+  ).toBeTruthy();
+  cleanup();
+  header();
+  expect(
+    screen.queryByRole("button", { name: "What is the Dispatcher?" }),
   ).toBeNull();
 });

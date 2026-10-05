@@ -16,15 +16,19 @@ export const isDispatcherThread = (thread: ThreadInfo) =>
 
 export const threadRoutePath = (
   thread: ThreadInfo,
-  options: { fromProject?: string | null } = {},
+  options: { fromProject?: string | null; fromThreads?: boolean } = {},
 ) => {
-  if (isDispatcherThread(thread)) {
-    return "/dashboard/dispatch";
+  const path = isDispatcherThread(thread)
+    ? "/dashboard/dispatch"
+    : `/dashboard/threads/${encodeURIComponent(thread.thread_id)}`;
+  // "from" lets the thread header offer a back button to the originating list.
+  if (options.fromProject) {
+    return `${path}?fromProject=${encodeURIComponent(options.fromProject)}`;
   }
-  const path = `/dashboard/threads/${encodeURIComponent(thread.thread_id)}`;
-  return options.fromProject
-    ? `${path}?fromProject=${encodeURIComponent(options.fromProject)}`
-    : path;
+  if (options.fromThreads) {
+    return `${path}?from=threads`;
+  }
+  return path;
 };
 
 export const threadDisplayName = (thread: ThreadInfo) => {

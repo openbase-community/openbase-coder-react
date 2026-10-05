@@ -99,9 +99,9 @@ it("supports vertical keyboard navigation, closing with draft protection, and pa
   fireEvent.keyDown(screen.getByRole("tab", { name: "Reports" }), {
     key: "Home",
   });
-  expect(controller.path).toBe("/dashboard");
+  expect(controller.path).toBe("/dashboard/dispatch");
   expect(document.activeElement).toBe(
-    screen.getByRole("tab", { name: "Overview" }),
+    screen.getByRole("tab", { name: "Dispatch" }),
   );
   fireEvent.keyDown(document.activeElement!, { key: "ArrowDown" });
   expect(controller.path).toBe("/dashboard/reports");
@@ -111,7 +111,7 @@ it("supports vertical keyboard navigation, closing with draft protection, and pa
   expect(controller.tabs).toHaveLength(2);
   act(() => controller.split(DockLocation.RIGHT));
   expect(screen.getAllByRole("tablist")).toHaveLength(2);
-  fireEvent.click(screen.getByRole("button", { name: "Close Overview" }));
+  fireEvent.click(screen.getByRole("button", { name: "Close Dispatch" }));
   expect(controller.tabs).toHaveLength(2);
 });
 
@@ -134,7 +134,7 @@ it("reorders existing tabs and moves them between pane lists without replacing t
     fireEvent(target, event);
   };
   drop(
-    screen.getByRole("tab", { name: "Overview" }),
+    screen.getByRole("tab", { name: "Dispatch" }),
     screen.getByRole("tab", { name: "Reports" }),
   );
   expect(controller.tabs.map((tab) => tab.getId())).toEqual([
@@ -145,7 +145,7 @@ it("reorders existing tabs and moves them between pane lists without replacing t
   const split = controller.focused!;
   drop(
     screen.getByRole("tab", { name: "Reports" }),
-    screen.getAllByRole("tab", { name: "Overview" })[1],
+    screen.getAllByRole("tab", { name: "Dispatch" })[1],
   );
   expect(report.getParent()).toBe(split.getParent());
   expect(controller.tabs).toHaveLength(3);

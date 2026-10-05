@@ -4,7 +4,6 @@ import { projectTabTarget } from "@/lib/workspace-tabs";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Input } from "@/components/ui/input";
-import { Panel } from "@/components/ui/panel";
 import {
   Tooltip,
   TooltipContent,
@@ -179,7 +178,7 @@ const Projects = () => {
               : "No projects match."}
           </div>
         ) : (
-          <Panel>
+          <div className="divide-y divide-border">
             {filtered.map((project, idx) => {
               const rows = [
                 { project, depth: 0, trunk: undefined as Project | undefined },
@@ -225,16 +224,18 @@ const Projects = () => {
                               openProject(rowProject);
                             }
                           }}
-                          className={`group flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-muted ${
+                          className={`group flex w-full items-center gap-3 py-2 text-left transition-colors ${
                             rowIndex > 0 ? "border-t border-border/60" : ""
-                          } ${depth > 0 ? "bg-surface-muted/40 pl-8" : ""}`}
+                          } ${depth > 0 ? "pl-8" : ""}`}
                         >
                           <TooltipProvider delayDuration={150}>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="shrink-0">
-                                  <span
-                                    className={`block h-2 w-2 rounded-full ${gs.dot}`}
+                                  <FolderOpen
+                                    className={`h-4 w-4 ${gs.text}`}
+                                    strokeWidth={1.9}
+                                    aria-label={gs.label}
                                   />
                                 </span>
                               </TooltipTrigger>
@@ -277,7 +278,7 @@ const Projects = () => {
                           )}
 
                           <div className="workspace-project-label flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
-                            <span className="truncate text-[13px] font-medium text-foreground">
+                            <span className="max-w-[60%] shrink-0 truncate text-[14px] font-medium text-foreground">
                               {displayName}
                             </span>
                             <span className="truncate font-mono text-[11px] text-muted-foreground/70">
@@ -355,7 +356,7 @@ const Projects = () => {
                 </div>
               );
             })}
-          </Panel>
+          </div>
         )}
 
         {!projectsLoading && nextProjectsUrl ? (

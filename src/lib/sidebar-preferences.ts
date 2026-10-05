@@ -1,24 +1,21 @@
 import {
   Activity,
-  Brain,
-  CalendarClock,
   Cloud,
   FilePenLine,
   FileText,
   FolderOpen,
   FolderSync,
-  Home,
   LucideIcon,
   MessageSquare,
   Monitor,
-  PackageOpen,
+  Radio,
   Server,
   Settings as SettingsIcon,
   ShieldAlert,
-  Terminal,
+  SlidersHorizontal,
   Wrench,
-  Zap,
 } from "lucide-react";
+import { CONFIGURE_DEFAULT_PATH, CONFIGURE_TABS } from "./configure-tabs";
 
 export type SidebarSection = "workspace" | "system" | "plugins";
 
@@ -31,6 +28,8 @@ export type SidebarItem = {
   externalUrl?: string;
   exact?: boolean;
   locked?: boolean;
+  /** Extra route prefixes that should also highlight this item. */
+  activePaths?: readonly string[];
 };
 
 export const SIDEBAR_HIDDEN_ITEMS_STORAGE_KEY =
@@ -38,14 +37,6 @@ export const SIDEBAR_HIDDEN_ITEMS_STORAGE_KEY =
 export const SIDEBAR_PREFERENCES_EVENT = "openbase-coder:sidebar-preferences";
 
 export const BUILT_IN_SIDEBAR_ITEMS: SidebarItem[] = [
-  {
-    key: "overview",
-    path: "/dashboard",
-    icon: Home,
-    title: "Overview",
-    section: "workspace",
-    exact: true,
-  },
   {
     key: "projects",
     path: "/dashboard/projects",
@@ -63,14 +54,14 @@ export const BUILT_IN_SIDEBAR_ITEMS: SidebarItem[] = [
   {
     key: "dispatch",
     path: "/dashboard/dispatch",
-    icon: MessageSquare,
+    icon: Radio,
     title: "Dispatch",
     section: "workspace",
   },
   {
     key: "threads",
     path: "/dashboard/threads",
-    icon: Terminal,
+    icon: MessageSquare,
     title: "Threads",
     section: "workspace",
   },
@@ -82,32 +73,12 @@ export const BUILT_IN_SIDEBAR_ITEMS: SidebarItem[] = [
     section: "workspace",
   },
   {
-    key: "routines",
-    path: "/dashboard/loops",
-    icon: CalendarClock,
-    title: "Loops",
+    key: "configure",
+    path: CONFIGURE_DEFAULT_PATH,
+    icon: SlidersHorizontal,
+    title: "Configure",
     section: "workspace",
-  },
-  {
-    key: "skills",
-    path: "/dashboard/skills",
-    icon: Zap,
-    title: "Skills",
-    section: "workspace",
-  },
-  {
-    key: "memories",
-    path: "/dashboard/memories",
-    icon: Brain,
-    title: "Memories",
-    section: "workspace",
-  },
-  {
-    key: "templates",
-    path: "/dashboard/boilersync",
-    icon: PackageOpen,
-    title: "Templates",
-    section: "workspace",
+    activePaths: CONFIGURE_TABS.map((tab) => tab.path),
   },
   {
     key: "status",

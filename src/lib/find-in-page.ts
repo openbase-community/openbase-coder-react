@@ -24,6 +24,24 @@ export function findInPageEnabledForPath(pathname: string): boolean {
   );
 }
 
+/**
+ * Some pages own Cmd/Ctrl+F themselves: they render a real search field that
+ * queries the full dataset server-side (e.g. the threads list, whose field
+ * searches ALL threads, not just the rows currently rendered). Such a field
+ * opts in with `data-find-focus-target`; when one is present and visible,
+ * Cmd/Ctrl+F should focus it rather than open the in-page find bar (which only
+ * matches already-loaded content). Returns the visible target, or null.
+ */
+export function getFindFocusTarget(): HTMLElement | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  const target = document.querySelector<HTMLElement>(
+    "[data-find-focus-target]",
+  );
+  return target && isVisible(target) ? target : null;
+}
+
 export function findInPageSupported(): boolean {
   return (
     typeof window !== "undefined" &&
