@@ -78,22 +78,36 @@ export const SyncDaemonCard: React.FC = () => {
   const [settings, setSettings] = useState<SyncDaemonSettings | null>(null);
   const [status, setStatus] = useState<SyncDaemonStatus | null>(null);
   const [conflicts, setConflicts] = useState<SyncDaemonConflict[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [unreachable, setUnreachable] = useState(false);
   const [resolving, setResolving] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       const res = await apiFetch("/api/sync/daemon/settings/");
-      if (!res.ok) return;
+      if (!res.ok) {
+        throw new Error(
+          await extractErrorMessage(res, "Unable to load Openbase Sync status."),
+        );
+      }
       const data = (await res.json()) as SyncDaemonSettings;
       setSettings(data);
-      if (!data.configured) return;
+      setError(null);
+      if (!data.configured) {
+        setStatus(null);
+        setConflicts([]);
+        setUnreachable(false);
+        return;
+      }
       const [statusRes, conflictsRes] = await Promise.all([
         apiFetch("/api/sync/daemon/status/"),
         apiFetch("/api/sync/daemon/conflicts/"),
       ]);
       if (!statusRes.ok) {
         setUnreachable(true);
+        setStatus(null);
+        setConflicts([]);
         return;
       }
       setUnreachable(false);
@@ -103,9 +117,17 @@ export const SyncDaemonCard: React.FC = () => {
           conflicts: SyncDaemonConflict[];
         };
         setConflicts(payload.conflicts ?? []);
+      } else {
+        setConflicts([]);
       }
-    } catch {
-      // the next poll retries
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load Openbase Sync status.",
+      );
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -139,7 +161,32 @@ export const SyncDaemonCard: React.FC = () => {
     }
   };
 
-  if (!settings) return null;
+  if (loading && !settings) {
+    return (
+      <Panel className="space-y-2 p-4">
+        <div className="flex items-center gap-2">
+          <Radio className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold">Openbase Sync</h2>
+          <Badge variant="outline">loading</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">Loading Openbase Sync...</p>
+      </Panel>
+    );
+  }
+  if (!settings) {
+    return (
+      <Panel className="space-y-2 p-4">
+        <div className="flex items-center gap-2">
+          <Radio className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold">Openbase Sync</h2>
+          <Badge variant="destructive">unavailable</Badge>
+        </div>
+        <p className="text-sm text-destructive">
+          {error ?? "Unable to load Openbase Sync status."}
+        </p>
+      </Panel>
+    );
+  }
   if (!settings.configured) {
     return (
       <Panel className="space-y-2 p-4">
@@ -170,6 +217,7 @@ export const SyncDaemonCard: React.FC = () => {
           <Badge variant="secondary">waiting for peer</Badge>
         )}
       </div>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {status ? (
         <div className="grid gap-2 text-sm sm:grid-cols-2">
           <div>
