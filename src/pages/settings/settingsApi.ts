@@ -145,6 +145,39 @@ export type BackendModelSettingsResponse = {
   restart_hint: string;
 };
 
+export type VoiceEngine = "live" | "pipeline";
+
+export type VoiceModelOption = {
+  id: string;
+  label: string;
+  description: string;
+  engine: VoiceEngine;
+  is_default: boolean;
+};
+
+export type LiveVoiceProviderOption = {
+  id: string;
+  label: string;
+  description: string;
+  is_default: boolean;
+};
+
+export type VoiceModelSettingsResponse = {
+  model: string;
+  engine: VoiceEngine;
+  default: string;
+  options: VoiceModelOption[];
+  live_voice_provider: string;
+  live_voice_provider_options: LiveVoiceProviderOption[];
+  // False when GPT-Live is selected: the STT/TTS provider pickers below
+  // only drive the classic pipeline.
+  pipeline_settings_relevant: boolean;
+  config_path: string;
+  changed: boolean;
+  restart_required: boolean;
+  applies_hint: string;
+};
+
 export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
 
 export type ReasoningSettingsResponse = {
