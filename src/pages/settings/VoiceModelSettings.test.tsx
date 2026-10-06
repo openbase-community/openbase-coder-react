@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { apiFetch } from "@/lib/api";
 import { VoiceModelSettings } from "./VoiceModelSettings";
@@ -16,7 +15,8 @@ const gptLiveSettings: VoiceModelSettingsResponse = {
     {
       id: "gpt-live-1",
       label: "GPT-Live 1",
-      description: "OpenAI's full-duplex voice model.",
+      description:
+        "OpenAI's full-duplex voice model. Runs through Openbase Cloud with your Openbase account.",
       engine: "live",
       is_default: true,
     },
@@ -25,21 +25,6 @@ const gptLiveSettings: VoiceModelSettingsResponse = {
       label: "Classic pipeline",
       description: "Speech-to-text, then the agent's turn, then text-to-speech.",
       engine: "pipeline",
-      is_default: false,
-    },
-  ],
-  live_voice_provider: "openbase_cloud",
-  live_voice_provider_options: [
-    {
-      id: "openbase_cloud",
-      label: "Openbase Cloud",
-      description: "GPT-Live through your Openbase account; no OpenAI key needed.",
-      is_default: true,
-    },
-    {
-      id: "openai",
-      label: "OpenAI (your key)",
-      description: "GPT-Live straight from OpenAI with your own key.",
       is_default: false,
     },
   ],
@@ -61,35 +46,36 @@ const response = (data: VoiceModelSettingsResponse) =>
   ({ ok: true, json: async () => data }) as Response;
 
 const renderSettings = (onEngineChange = vi.fn()) =>
-  render(
-    <MemoryRouter>
-      <VoiceModelSettings onEngineChange={onEngineChange} />
-    </MemoryRouter>,
-  );
+  render(<VoiceModelSettings onEngineChange={onEngineChange} />);
 
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
 });
 
-it("shows GPT-Live as the current default and the GPT-Live source picker", async () => {
+it("shows GPT-Live as the current default with its description and the applies hint", async () => {
   vi.mocked(apiFetch).mockResolvedValueOnce(response(gptLiveSettings));
   const onEngineChange = vi.fn();
   renderSettings(onEngineChange);
 
   expect(await screen.findByText("Current: GPT-Live 1 (Live)")).toBeTruthy();
   expect(screen.getAllByText("Default").length).toBeGreaterThan(0);
-  expect(screen.getByText("OpenAI's full-duplex voice model.")).toBeTruthy();
-  expect(screen.getByText("GPT-Live source")).toBeTruthy();
-  expect(screen.getByText("Current: Openbase Cloud")).toBeTruthy();
+  expect(
+    screen.getByText(
+      "OpenAI's full-duplex voice model. Runs through Openbase Cloud with your Openbase account.",
+    ),
+  ).toBeTruthy();
   expect(
     screen.getByText("The new voice model applies to the next voice call."),
   ).toBeTruthy();
+  // GPT-Live always runs through Openbase Cloud: no source picker, no key hint.
+  expect(screen.queryByText("GPT-Live source")).toBeNull();
+  expect(screen.queryByText("OPENAI_API_KEY")).toBeNull();
   expect(apiFetch).toHaveBeenCalledWith("/api/settings/voice-model/");
   await waitFor(() => expect(onEngineChange).toHaveBeenCalledWith("live"));
 });
 
-it("hides the GPT-Live source picker when the classic pipeline is selected", async () => {
+it("shows the classic pipeline without a default badge and reports the pipeline engine", async () => {
   vi.mocked(apiFetch).mockResolvedValueOnce(response(pipelineSettings));
   const onEngineChange = vi.fn();
   renderSettings(onEngineChange);
@@ -97,23 +83,8 @@ it("hides the GPT-Live source picker when the classic pipeline is selected", asy
   expect(
     await screen.findByText("Current: Classic pipeline (Classic pipeline)"),
   ).toBeTruthy();
-  expect(screen.queryByText("GPT-Live source")).toBeNull();
   expect(screen.queryByText("Default")).toBeNull();
   await waitFor(() => expect(onEngineChange).toHaveBeenCalledWith("pipeline"));
-});
-
-it("explains that the OpenAI source needs a key and links to the env settings", async () => {
-  vi.mocked(apiFetch).mockResolvedValueOnce(
-    response({ ...gptLiveSettings, live_voice_provider: "openai" }),
-  );
-  renderSettings();
-
-  expect(await screen.findByText("Current: OpenAI (your key)")).toBeTruthy();
-  expect(screen.getByText("OPENAI_API_KEY")).toBeTruthy();
-  const link = screen.getByRole("link", {
-    name: "Advanced → Environment Variables",
-  });
-  expect(link.getAttribute("href")).toBe("/dashboard/settings?section=advanced");
 });
 
 it("disables Save while the selection matches the saved value and follows the server on Refresh", async () => {
@@ -122,11 +93,8 @@ it("disables Save while the selection matches the saved value and follows the se
   renderSettings(onEngineChange);
 
   await screen.findByText("Current: GPT-Live 1 (Live)");
-  const saveButtons = screen.getAllByRole("button", { name: "Save" });
-  expect(saveButtons).toHaveLength(2);
-  expect(saveButtons.every((button) => (button as HTMLButtonElement).disabled)).toBe(
-    true,
-  );
+  const saveButton = screen.getByRole("button", { name: "Save" });
+  expect((saveButton as HTMLButtonElement).disabled).toBe(true);
 
   // Radix Select is not interactive under jsdom; a Refresh that returns the
   // pipeline model exercises the same apply path a successful save uses.
@@ -138,7 +106,6 @@ it("disables Save while the selection matches the saved value and follows the se
     await screen.findByText("Current: Classic pipeline (Classic pipeline)"),
   ).toBeTruthy();
   await waitFor(() => expect(onEngineChange).toHaveBeenLastCalledWith("pipeline"));
-  expect(screen.queryByText("GPT-Live source")).toBeNull();
 });
 
 it("surfaces API errors", async () => {

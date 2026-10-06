@@ -12,7 +12,6 @@ import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { RefreshCw, Save } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import {
   extractErrorMessage,
   type VoiceEngine,
@@ -23,8 +22,6 @@ const VOICE_ENGINE_LABELS: Record<VoiceEngine, string> = {
   live: "Live",
   pipeline: "Classic pipeline",
 };
-
-const OPENAI_LIVE_VOICE_PROVIDER_ID = "openai";
 
 type Props = {
   /**
@@ -51,9 +48,8 @@ export const VoiceModelSettings: React.FC<Props> = ({ onEngineChange }) => {
     null,
   );
   const [model, setModel] = useState("");
-  const [liveVoiceProvider, setLiveVoiceProvider] = useState("");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<"model" | "provider" | null>(null);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +57,6 @@ export const VoiceModelSettings: React.FC<Props> = ({ onEngineChange }) => {
     (data: VoiceModelSettingsResponse) => {
       setSettings(data);
       setModel(data.model);
-      setLiveVoiceProvider(data.live_voice_provider);
       onEngineChange?.(data.engine);
     },
     [onEngineChange],
@@ -94,62 +89,43 @@ export const VoiceModelSettings: React.FC<Props> = ({ onEngineChange }) => {
     void fetchSettings();
   }, [fetchSettings]);
 
-  const saveSetting = useCallback(
-    async (
-      which: "model" | "provider",
-      body: { model?: string; live_voice_provider?: string },
-    ) => {
-      setSaving(which);
-      setMessage(null);
-      setError(null);
-      try {
-        const res = await apiFetch("/api/settings/voice-model/", {
-          method: "PUT",
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) {
-          setError(
-            await extractErrorMessage(
-              res,
-              `Unable to save voice model settings: ${res.status}`,
-            ),
-          );
-          setSaving(null);
-          return;
-        }
-        const data = (await res.json()) as VoiceModelSettingsResponse;
-        applySettings(data);
-        setMessage(
-          `${which === "model" ? "Voice model" : "GPT-Live source"} saved. ${data.applies_hint}`,
+  const saveModel = useCallback(async () => {
+    if (!model) {
+      return;
+    }
+    setSaving(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await apiFetch("/api/settings/voice-model/", {
+        method: "PUT",
+        body: JSON.stringify({ model }),
+      });
+      if (!res.ok) {
+        setError(
+          await extractErrorMessage(
+            res,
+            `Unable to save voice model settings: ${res.status}`,
+          ),
         );
-      } catch {
-        setError("Unable to reach the local API.");
+        setSaving(false);
+        return;
       }
-      setSaving(null);
-    },
-    [applySettings],
-  );
+      const data = (await res.json()) as VoiceModelSettingsResponse;
+      applySettings(data);
+      setMessage(`Voice model saved. ${data.applies_hint}`);
+    } catch {
+      setError("Unable to reach the local API.");
+    }
+    setSaving(false);
+  }, [applySettings, model]);
 
   const options = settings?.options ?? [];
-  const providerOptions = settings?.live_voice_provider_options ?? [];
   const currentOption = options.find((option) => option.id === settings?.model);
   const selectedOption = options.find((option) => option.id === model);
-  const selectedEngine = selectedOption?.engine ?? settings?.engine ?? null;
-  const showProviderRow = selectedEngine === "live";
-  const currentProviderOption = providerOptions.find(
-    (option) => option.id === settings?.live_voice_provider,
-  );
-  const selectedProviderOption = providerOptions.find(
-    (option) => option.id === liveVoiceProvider,
-  );
-  const busy = loading || saving !== null;
-  const canSaveModel =
+  const busy = loading || saving;
+  const canSave =
     Boolean(settings) && Boolean(model) && !busy && model !== settings?.model;
-  const canSaveProvider =
-    Boolean(settings) &&
-    Boolean(liveVoiceProvider) &&
-    !busy &&
-    liveVoiceProvider !== settings?.live_voice_provider;
 
   return (
     <Panel>
@@ -211,99 +187,15 @@ export const VoiceModelSettings: React.FC<Props> = ({ onEngineChange }) => {
             size="sm"
             className="h-8 px-2.5 text-[12px]"
             onClick={() => {
-              void saveSetting("model", { model });
+              void saveModel();
             }}
-            disabled={!canSaveModel}
+            disabled={!canSave}
           >
             <Save className="h-3 w-3" />
-            {saving === "model" ? "Saving..." : "Save"}
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </div>
-      {showProviderRow ? (
-        <div className="flex flex-col gap-3 border-b border-border px-3 py-2.5 lg:flex-row lg:items-center">
-          <div className="min-w-0 flex-1">
-            <p className="text-[12.5px] font-medium text-foreground">
-              GPT-Live source
-            </p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Where GPT-Live comes from when it is the voice model.
-            </p>
-            {settings ? (
-              <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[11px] text-muted-foreground">
-                <span>
-                  Current:{" "}
-                  {currentProviderOption?.label ?? settings.live_voice_provider}
-                </span>
-                {currentProviderOption?.is_default ? <DefaultBadge /> : null}
-              </p>
-            ) : null}
-            {selectedProviderOption ? (
-              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                {selectedProviderOption.description}
-              </p>
-            ) : null}
-            {liveVoiceProvider === OPENAI_LIVE_VOICE_PROVIDER_ID ? (
-              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                Needs <code className="font-mono">OPENAI_API_KEY</code> in{" "}
-                <code className="font-mono">~/.openbase/.env</code>. Add it
-                under{" "}
-                <Link
-                  className="underline"
-                  to="/dashboard/settings?section=advanced"
-                >
-                  Advanced → Environment Variables
-                </Link>
-                .
-              </p>
-            ) : null}
-          </div>
-          <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-            <Select
-              value={liveVoiceProvider}
-              onValueChange={(value) => {
-                setLiveVoiceProvider(value);
-                setMessage(null);
-                setError(null);
-              }}
-              disabled={busy || providerOptions.length === 0}
-            >
-              <SelectTrigger
-                className="h-8 min-w-0 text-[12px] sm:w-64"
-                aria-label="GPT-Live source"
-              >
-                <SelectValue
-                  placeholder={loading ? "Loading..." : "Select source"}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {providerOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    <span className="inline-flex items-center">
-                      {option.label}
-                      {option.is_default ? <DefaultBadge /> : null}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2.5 text-[12px]"
-              onClick={() => {
-                void saveSetting("provider", {
-                  live_voice_provider: liveVoiceProvider,
-                });
-              }}
-              disabled={!canSaveProvider}
-            >
-              <Save className="h-3 w-3" />
-              {saving === "provider" ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        </div>
-      ) : null}
       <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
           {message ? (

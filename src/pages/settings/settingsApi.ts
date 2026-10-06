@@ -155,20 +155,11 @@ export type VoiceModelOption = {
   is_default: boolean;
 };
 
-export type LiveVoiceProviderOption = {
-  id: string;
-  label: string;
-  description: string;
-  is_default: boolean;
-};
-
 export type VoiceModelSettingsResponse = {
   model: string;
   engine: VoiceEngine;
   default: string;
   options: VoiceModelOption[];
-  live_voice_provider: string;
-  live_voice_provider_options: LiveVoiceProviderOption[];
   // False when GPT-Live is selected: the STT/TTS provider pickers below
   // only drive the classic pipeline.
   pipeline_settings_relevant: boolean;
