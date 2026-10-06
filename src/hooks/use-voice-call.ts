@@ -4,6 +4,9 @@ import {
   AGENT_STATUS_TOPIC,
   getLiveKitServerUrl,
   LIVEKIT_DISPATCH_AGENT_NAME,
+  parseVoiceEngine,
+  VOICE_ENGINE_ATTRIBUTE,
+  type VoiceEngine,
 } from "@/lib/livekit-call";
 import { trackProductAnalytics } from "@/lib/product-analytics";
 import {
@@ -46,6 +49,10 @@ function roomTokenErrorMessage(status: number, payload: RoomTokenResponse) {
   }
 }
 
+function readVoiceEngine(participant: RemoteParticipant): VoiceEngine | null {
+  return parseVoiceEngine(participant.attributes?.[VOICE_ENGINE_ATTRIBUTE]);
+}
+
 function readAgentState(participant: RemoteParticipant): VoiceAgentState {
   const state = participant.attributes?.[AGENT_STATE_ATTRIBUTE];
   if (
@@ -68,6 +75,10 @@ export function useVoiceCall() {
   const [status, setStatus] = useState<VoiceCallStatus>("idle");
   const [muted, setMuted] = useState(false);
   const [agentState, setAgentState] = useState<VoiceAgentState>(null);
+  // Engine the agent announced (`openbase.voice.engine`). Informational here:
+  // the browser client never auto-mutes, so there is nothing to gate; the
+  // call UI shows it so a full-duplex call is recognizable.
+  const [voiceEngine, setVoiceEngine] = useState<VoiceEngine | null>(null);
   const [roomName, setRoomName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
@@ -99,6 +110,7 @@ export function useVoiceCall() {
     roomRef.current = null;
     setStatus("idle");
     setAgentState(null);
+    setVoiceEngine(null);
     setRoomName(null);
     setMuted(false);
     if (audioContainerRef.current) {
@@ -193,10 +205,14 @@ export function useVoiceCall() {
           if (participant.isLocal) return;
           const state = readAgentState(participant as RemoteParticipant);
           if (state) setAgentState(state);
+          const engine = readVoiceEngine(participant as RemoteParticipant);
+          if (engine) setVoiceEngine(engine);
         })
         .on(RoomEvent.ParticipantConnected, (participant) => {
           const state = readAgentState(participant);
           if (state) setAgentState(state);
+          const engine = readVoiceEngine(participant);
+          if (engine) setVoiceEngine(engine);
         })
         .on(RoomEvent.DataReceived, (data, _participant, _kind, topic) => {
           if (topic !== AGENT_STATUS_TOPIC) return;
@@ -238,6 +254,8 @@ export function useVoiceCall() {
       for (const participant of room.remoteParticipants.values()) {
         const state = readAgentState(participant);
         if (state) setAgentState(state);
+        const engine = readVoiceEngine(participant);
+        if (engine) setVoiceEngine(engine);
       }
       setStatus("connected");
       const call = analyticsCallRef.current;
@@ -275,6 +293,7 @@ export function useVoiceCall() {
     status,
     muted,
     agentState,
+    voiceEngine,
     roomName,
     error,
     audioContainerRef,
