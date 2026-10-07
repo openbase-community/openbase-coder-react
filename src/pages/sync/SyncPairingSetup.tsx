@@ -6,6 +6,7 @@ import { extractErrorMessage } from "@/lib/api-errors";
 import { Laptop, Radio, RefreshCw, Server } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { withRestartNote } from "./restartNote";
 
 export type SyncPairingCandidate = {
   id: string;
@@ -91,7 +92,7 @@ export const SyncPairingSetup: React.FC<{
       if (!res.ok) {
         throw new Error(await extractErrorMessage(res, fallback));
       }
-      toast.success(success);
+      toast.success(await withRestartNote(res, success));
       await onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : fallback);

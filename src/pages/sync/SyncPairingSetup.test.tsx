@@ -132,6 +132,26 @@ it("makes this computer the hub", async () => {
   expect(fetchMock.mock.calls[1][1]?.method).toBe("POST");
 });
 
+it("says when Openbase must restart to finish (Docker)", async () => {
+  fetchMock
+    .mockResolvedValueOnce(
+      jsonResponse({ signed_in: true, role: "none", candidates: [] }),
+    )
+    .mockResolvedValueOnce(
+      jsonResponse({ role: "hub", roots: [], restart_required: true }),
+    );
+
+  render(<SyncPairingSetup onChanged={vi.fn()} />);
+  await screen.findByText(/No always-on computer yet/);
+  fireEvent.click(screen.getByText("Make this my always-on computer"));
+
+  await waitFor(() =>
+    expect(toast.success).toHaveBeenCalledWith(
+      "This computer is now your always-on computer. Restart Openbase to finish.",
+    ),
+  );
+});
+
 it("asks to sign in when this computer is signed out", async () => {
   fetchMock.mockResolvedValueOnce(
     jsonResponse({ signed_in: false, role: "none", candidates: [] }),

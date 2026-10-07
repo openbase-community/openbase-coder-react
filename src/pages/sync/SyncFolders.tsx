@@ -5,6 +5,7 @@ import { extractErrorMessage } from "@/lib/api-errors";
 import { X } from "lucide-react";
 import React, { useState } from "react";
 import { toast } from "sonner";
+import { RESTART_NOTE } from "./restartNote";
 
 export type SyncFolderRoot = { id?: string; path?: string };
 
@@ -21,7 +22,7 @@ const changeRoot = async (
   method: "POST" | "DELETE",
   path: string,
   fallback: string,
-): Promise<PeerResult[]> => {
+): Promise<{ peers: PeerResult[]; note: string }> => {
   const res = await apiFetch("/api/sync/daemon/roots/", {
     method,
     headers: { "Content-Type": "application/json" },
@@ -30,8 +31,14 @@ const changeRoot = async (
   if (!res.ok) {
     throw new Error(await extractErrorMessage(res, fallback));
   }
-  const payload = (await res.json()) as { peers?: PeerResult[] };
-  return payload.peers ?? [];
+  const payload = (await res.json()) as {
+    peers?: PeerResult[];
+    restart_required?: boolean;
+  };
+  return {
+    peers: payload.peers ?? [],
+    note: payload.restart_required ? RESTART_NOTE : "",
+  };
 };
 
 const warnFailedPeers = (peers: PeerResult[]) => {
@@ -60,10 +67,13 @@ export const SyncFolders: React.FC<{
     if (!path) return;
     setBusy("add");
     try {
-      warnFailedPeers(
-        await changeRoot("POST", path, "Unable to add the folder."),
+      const { peers, note } = await changeRoot(
+        "POST",
+        path,
+        "Unable to add the folder.",
       );
-      toast.success(`Syncing ${path}.`);
+      warnFailedPeers(peers);
+      toast.success(`Syncing ${path}.${note}`);
       setNewPath("");
       await onChanged();
     } catch (err) {
@@ -78,10 +88,15 @@ export const SyncFolders: React.FC<{
   const remove = async (path: string) => {
     setBusy(path);
     try {
-      warnFailedPeers(
-        await changeRoot("DELETE", path, "Unable to stop syncing the folder."),
+      const { peers, note } = await changeRoot(
+        "DELETE",
+        path,
+        "Unable to stop syncing the folder.",
       );
-      toast.success(`Stopped syncing ${path}. The files stay where they are.`);
+      warnFailedPeers(peers);
+      toast.success(
+        `Stopped syncing ${path}. The files stay where they are.${note}`,
+      );
       await onChanged();
     } catch (err) {
       toast.error(

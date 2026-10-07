@@ -19,6 +19,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { SyncFolders } from "./SyncFolders";
 import { SyncPairingSetup } from "./SyncPairingSetup";
+import { withRestartNote } from "./restartNote";
 
 const POLL_MS = 5000;
 
@@ -189,7 +190,12 @@ export const SyncDaemonCard: React.FC = () => {
       if (!res.ok) {
         throw new Error(await extractErrorMessage(res, "Unable to stop syncing."));
       }
-      toast.success("Stopped syncing on this computer. Your files were not changed.");
+      toast.success(
+        await withRestartNote(
+          res,
+          "Stopped syncing on this computer. Your files were not changed.",
+        ),
+      );
       await refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unable to stop syncing.");
