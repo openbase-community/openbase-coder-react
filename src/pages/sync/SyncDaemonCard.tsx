@@ -1,3 +1,14 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
@@ -6,6 +17,8 @@ import { extractErrorMessage } from "@/lib/api-errors";
 import { Radio } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { SyncFolders } from "./SyncFolders";
+import { SyncPairingSetup } from "./SyncPairingSetup";
 
 const POLL_MS = 5000;
 
@@ -17,6 +30,9 @@ export type SyncDaemonSettings = {
   sync_group?: string;
   peer_hot?: string;
   listen_hot?: string;
+  hub_is_self?: boolean;
+  hub_name?: string | null;
+  hub_host?: string | null;
   roots: { id?: string; path?: string }[];
 };
 
@@ -82,6 +98,7 @@ export const SyncDaemonCard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [unreachable, setUnreachable] = useState(false);
   const [resolving, setResolving] = useState<number | null>(null);
+  const [leaving, setLeaving] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -161,6 +178,26 @@ export const SyncDaemonCard: React.FC = () => {
     }
   };
 
+  const leave = async () => {
+    setLeaving(true);
+    try {
+      const res = await apiFetch("/api/sync/daemon/pairing/leave/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      if (!res.ok) {
+        throw new Error(await extractErrorMessage(res, "Unable to stop syncing."));
+      }
+      toast.success("Stopped syncing on this computer. Your files were not changed.");
+      await refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to stop syncing.");
+    } finally {
+      setLeaving(false);
+    }
+  };
+
   if (loading && !settings) {
     return (
       <Panel className="space-y-2 p-4">
@@ -188,27 +225,25 @@ export const SyncDaemonCard: React.FC = () => {
     );
   }
   if (!settings.configured) {
-    return (
-      <Panel className="space-y-2 p-4">
-        <div className="flex items-center gap-2">
-          <Radio className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-base font-semibold">Openbase Sync</h2>
-          <Badge variant="outline">not configured</Badge>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          The hub/edge mirror daemon is not set up on this computer. Configure
-          it with <code>openbase-coder sync-daemon configure</code>.
-        </p>
-      </Panel>
-    );
+    return <SyncPairingSetup onChanged={refresh} />;
   }
+
+  const hubLabel = settings.hub_is_self
+    ? null
+    : (settings.hub_name ?? settings.hub_host ?? null);
 
   return (
     <Panel className="space-y-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Radio className="h-4 w-4 text-muted-foreground" />
         <h2 className="text-base font-semibold">Openbase Sync</h2>
-        <Badge variant="outline">{settings.role ?? "?"}</Badge>
+        <Badge variant="outline">
+          {settings.role === "hub"
+            ? "always-on (hub)"
+            : settings.role === "edge"
+              ? "edge"
+              : (settings.role ?? "?")}
+        </Badge>
         {unreachable ? (
           <Badge variant="destructive">daemon not answering</Badge>
         ) : status?.peers?.length ? (
@@ -217,26 +252,21 @@ export const SyncDaemonCard: React.FC = () => {
           <Badge variant="secondary">waiting for peer</Badge>
         )}
       </div>
+      <p className="text-sm text-muted-foreground">
+        {settings.role === "hub"
+          ? "This is your always-on computer. Your other computers sync with it."
+          : hubLabel
+            ? `Syncing with ${hubLabel}, your always-on computer.`
+            : "Syncing with your always-on computer."}
+      </p>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {status ? (
-        <div className="grid gap-2 text-sm sm:grid-cols-2">
-          <div>
-            <div className="text-muted-foreground">Roots</div>
-            <ul className="space-y-1">
-              {status.roots.map((root) => (
-                <li key={root.id} className="font-mono text-xs">
-                  {root.path}{" "}
-                  <span className="text-muted-foreground">
-                    · {root.entries.toLocaleString()} entries
-                    {root.pending_fetches > 0
-                      ? ` · ${root.pending_fetches} transferring`
-                      : ""}
-                    {root.scanning ? " · scanning" : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+      <div className="grid gap-3 text-sm sm:grid-cols-2">
+        <SyncFolders
+          roots={settings.roots}
+          status={status?.roots}
+          onChanged={refresh}
+        />
+        {status ? (
           <div>
             <div className="text-muted-foreground">Peers</div>
             <ul className="space-y-1">
@@ -252,8 +282,8 @@ export const SyncDaemonCard: React.FC = () => {
               )}
             </ul>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
       {conflicts.length > 0 ? (
         <div className="space-y-2">
           <div className="text-sm font-medium">
@@ -299,6 +329,33 @@ export const SyncDaemonCard: React.FC = () => {
       ) : status && !unreachable ? (
         <p className="text-xs text-muted-foreground">No conflicts.</p>
       ) : null}
+      <div className="border-t pt-3">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" variant="outline" disabled={leaving}>
+              {leaving ? "Stopping…" : "Stop syncing on this computer"}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Stop syncing on this computer?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {settings.role === "hub"
+                  ? "Your other computers will stop syncing with it. "
+                  : ""}
+                Files already here stay where they are. You can set up sync
+                again later.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void leave()}>
+                Stop syncing
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </Panel>
   );
 };
