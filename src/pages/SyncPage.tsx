@@ -8,6 +8,7 @@ import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { SyncConflictsCard } from "./sync/SyncConflictsCard";
+import { SyncDaemonCard } from "./sync/SyncDaemonCard";
 import { SyncExplainerCard } from "./sync/SyncExplainerCard";
 import { SyncFoldersCard } from "./sync/SyncFoldersCard";
 import { SyncHistoryCard } from "./sync/SyncHistoryCard";
@@ -392,6 +393,7 @@ const SyncPage = () => {
           </Button>
         </div>
 
+        <SyncDaemonCard />
         {loading ? (
           <div className="text-[12px] text-muted-foreground">Loading…</div>
         ) : !settings ? (

@@ -6,10 +6,15 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { ThreadHeader } from "../ThreadHeader";
+import { apiFetch } from "@/lib/api";
 import type { ThreadInfo } from "@/types/session";
+
+// The Dispatcher thread's model menu loads settings on mount; never let it hit
+// the real network (or still be in flight when jsdom is torn down).
+vi.mock("@/lib/api", () => ({ apiFetch: vi.fn() }));
 
 const thread: ThreadInfo = {
   thread_id: "thread-one",
@@ -25,6 +30,12 @@ const thread: ThreadInfo = {
   turn_history: [],
   tags: ["Review"],
 };
+
+beforeEach(() => {
+  vi.mocked(apiFetch).mockImplementation(
+    async () => new Response("unavailable", { status: 503 }),
+  );
+});
 
 afterEach(() => {
   cleanup();
@@ -138,6 +149,7 @@ it("opens CLI instructions outside the menu and copies the command", async () =>
 it("keeps disconnection visible and hides unsupported dispatcher actions", async () => {
   header({ voice_route: { role: "dispatcher", active: true } }, false);
   expect(screen.getByLabelText("Disconnected")).toBeTruthy();
+  await waitFor(() => expect(apiFetch).toHaveBeenCalled());
   await openMenu();
   expect(screen.queryByRole("menuitem", { name: "Archive thread" })).toBeNull();
   expect(
@@ -145,11 +157,14 @@ it("keeps disconnection visible and hides unsupported dispatcher actions", async
   ).toBeNull();
 });
 
-it("explains the Dispatcher with a help icon only on the Dispatcher thread", () => {
+it("explains the Dispatcher with a help icon only on the Dispatcher thread", async () => {
   header({ voice_route: { role: "dispatcher", active: true } });
   expect(
     screen.getByRole("button", { name: "What is the Dispatcher?" }),
   ).toBeTruthy();
+  await waitFor(() =>
+    expect(apiFetch).toHaveBeenCalledWith("/api/settings/backend-model/", expect.anything()),
+  );
   cleanup();
   header();
   expect(

@@ -24,6 +24,7 @@ const Call = () => {
     status,
     muted,
     agentState,
+    voiceEngine,
     roomName,
     error,
     audioContainerRef,
@@ -58,6 +59,7 @@ const Call = () => {
               {roomName ? (
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   Room {roomName}
+                  {voiceEngine === "live" ? " · Live voice" : ""}
                 </p>
               ) : null}
               <div className="mt-6 flex items-center justify-center gap-2">

@@ -12,7 +12,7 @@ import { apiFetch } from "@/lib/api";
 import { modelProvider } from "@/lib/model-provider";
 import type { BackendModelSettingsResponse } from "@/pages/settings/settingsApi";
 import { AlertTriangle, Check, ChevronDown, LoaderCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -36,26 +36,41 @@ export function DispatcherModelMenu() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const load = async ({ quiet = false } = {}) => {
+  // Requests can outlive the header (navigating away, or a test tearing down
+  // its DOM). React state setters touch `window` internally, so never call
+  // them once unmounted.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const load = async ({ quiet = false, signal }: { quiet?: boolean; signal?: AbortSignal } = {}) => {
     setLoading(true);
     try {
-      const res = await apiFetch("/api/settings/backend-model/");
+      const res = await apiFetch("/api/settings/backend-model/", { signal });
       if (!res.ok) throw new Error(`Unable to load model settings: ${res.status}`);
       const data = (await res.json()) as BackendModelSettingsResponse;
+      if (signal?.aborted) return;
       cachedSettings = data;
-      setSettings(data);
+      if (mounted.current) setSettings(data);
     } catch (caught) {
+      if (signal?.aborted) return;
       if (!quiet) toast.error(caught instanceof Error ? caught.message : "Unable to load model settings");
     } finally {
-      setLoading(false);
+      if (mounted.current) setLoading(false);
     }
   };
 
   // This control reflects the configured default (what the next dispatcher
   // session will use), not whatever model the current thread last ran on,
-  // so fetch it up front rather than on first open.
+  // so fetch it up front rather than on first open. Unmounting cancels it.
   useEffect(() => {
-    void load({ quiet: true });
+    const controller = new AbortController();
+    void load({ quiet: true, signal: controller.signal });
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -70,7 +85,7 @@ export function DispatcherModelMenu() {
       if (!res.ok) throw new Error(`Unable to save model: ${res.status}`);
       const data = (await res.json()) as BackendModelSettingsResponse;
       cachedSettings = data;
-      setSettings(data);
+      if (mounted.current) setSettings(data);
       const label = data.options.find((option) => option.id === model)?.label ?? model;
       toast.success(`Dispatcher model set to ${label}.`, {
         description: data.restart_required ? data.restart_hint : undefined,
@@ -78,7 +93,7 @@ export function DispatcherModelMenu() {
     } catch (caught) {
       toast.error(caught instanceof Error ? caught.message : "Unable to save model");
     } finally {
-      setSaving(false);
+      if (mounted.current) setSaving(false);
     }
   };
 

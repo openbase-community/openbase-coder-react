@@ -10,8 +10,10 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import React, { type ReactNode } from "react";
+import React, { useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
+import type { VoiceEngine } from "./settings/settingsApi";
+import { VoiceModelSettings } from "./settings/VoiceModelSettings";
 import { ApprovalReviewSettings } from "./settings/ApprovalReviewSettings";
 import { AuthenticationSettings } from "./settings/AuthenticationSettings";
 import { AppearanceSettings } from "./settings/AppearanceSettings";
@@ -117,6 +119,9 @@ const Settings: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const section = resolveSection(searchParams.get("section"));
   const isNativeShell = getRuntimeShell() === "electron";
+  // The saved voice engine, reported by the voice model picker so the
+  // STT/TTS provider pickers can mark themselves as pipeline-only.
+  const [voiceEngine, setVoiceEngine] = useState<VoiceEngine | null>(null);
 
   const setSection = (next: SettingsSectionId) => {
     setSearchParams(
@@ -153,8 +158,10 @@ const Settings: React.FC = () => {
     voice: (
       <>
         {isNativeShell ? <LiveKitCompanionSettings /> : null}
+        <VoiceModelSettings onEngineChange={setVoiceEngine} />
         <DispatcherVoiceSettings
           onRestartScheduled={openbaseServices.applyRestartResponse}
+          voiceEngine={voiceEngine}
         />
       </>
     ),

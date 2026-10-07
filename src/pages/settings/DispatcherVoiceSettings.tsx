@@ -17,15 +17,36 @@ import {
   type STTSettingsResponse,
   type TTSSettingsResponse,
   type TTSVoice,
+  type VoiceEngine,
 } from "./settingsApi";
 
 type Props = {
   onRestartScheduled: (data: OpenbaseServicesResponse, delayMs: number) => void;
+  /**
+   * The saved voice engine (from the voice model picker). When it is
+   * "live", the STT/TTS providers below only matter for the classic
+   * pipeline, so their rows are marked as such without being hidden.
+   */
+  voiceEngine?: VoiceEngine | null;
 };
+
+export const PIPELINE_ONLY_NOTE =
+  "Used by the Classic pipeline only. The selected voice model (GPT-Live) does its own listening and speaking.";
+
+const PipelineOnlyBadge: React.FC = () => (
+  <span
+    className="ml-1.5 inline-flex items-center rounded-full border border-border px-1.5 py-0 align-middle text-[9.5px] font-medium uppercase tracking-wide text-muted-foreground"
+    title={PIPELINE_ONLY_NOTE}
+  >
+    Classic pipeline only
+  </span>
+);
 
 export const DispatcherVoiceSettings: React.FC<Props> = ({
   onRestartScheduled,
+  voiceEngine = null,
 }) => {
+  const pipelineOnly = voiceEngine === "live";
   const [ttsSettings, setTtsSettings] = useState<TTSSettingsResponse | null>(
     null,
   );
@@ -317,15 +338,24 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
 
   return (
     <Panel>
-      <div className="flex flex-col gap-3 border-b border-border px-3 py-2.5 lg:flex-row lg:items-center">
+      <div
+        className={`flex flex-col gap-3 border-b border-border px-3 py-2.5 lg:flex-row lg:items-center ${pipelineOnly ? "opacity-70" : ""}`}
+        data-pipeline-only={pipelineOnly ? "true" : undefined}
+      >
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
             Text-to-speech provider
+            {pipelineOnly ? <PipelineOnlyBadge /> : null}
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             Select the provider and voice used by the Dispatcher and Super
             Agents. Recreate the Dispatcher thread to apply a saved change.
           </p>
+          {pipelineOnly ? (
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {PIPELINE_ONLY_NOTE}
+            </p>
+          ) : null}
           {dispatcherVoice ? (
             <p className="mt-1 truncate text-[11px] text-muted-foreground">
               Current:{" "}
@@ -428,15 +458,24 @@ export const DispatcherVoiceSettings: React.FC<Props> = ({
           </Button>
         </div>
       </div>
-      <div className="flex flex-col gap-3 px-3 py-2.5 lg:flex-row lg:items-center">
+      <div
+        className={`flex flex-col gap-3 px-3 py-2.5 lg:flex-row lg:items-center ${pipelineOnly ? "opacity-70" : ""}`}
+        data-pipeline-only={pipelineOnly ? "true" : undefined}
+      >
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-foreground">
             Speech-to-text provider
+            {pipelineOnly ? <PipelineOnlyBadge /> : null}
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             Select cloud transcription, Openbase Cloud, or the local MLX Whisper
             model.
           </p>
+          {pipelineOnly ? (
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {PIPELINE_ONLY_NOTE}
+            </p>
+          ) : null}
           {sttSettings ? (
             <p className="mt-1 truncate text-[11px] text-muted-foreground">
               Current: {currentSttProviderEntry?.name ?? sttSettings.provider}

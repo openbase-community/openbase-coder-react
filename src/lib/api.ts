@@ -6,6 +6,9 @@ import { getBackendUrl } from "@/lib/runtime-config";
  */
 export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   const token = await getValidAccessToken();
+  // The caller may have been cancelled (e.g. a component unmounted) while the
+  // token was resolving; bail before touching runtime config or the network.
+  init?.signal?.throwIfAborted();
   const headers = new Headers(init?.headers);
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
