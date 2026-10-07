@@ -122,6 +122,7 @@ export const SyncPairingSetup: React.FC<{
   const hubs = candidates.filter(
     (candidate) => candidate.reachable && candidate.role === "hub",
   );
+  const signedOut = data?.signed_in === false;
 
   return (
     <Panel className="space-y-3 p-4">
@@ -221,7 +222,7 @@ export const SyncPairingSetup: React.FC<{
         <Button
           size="sm"
           variant="outline"
-          disabled={busy !== null}
+          disabled={busy !== null || signedOut}
           onClick={() => void becomeHub()}
         >
           {busy === "hub" ? "Setting up…" : "Make this my always-on computer"}

@@ -142,4 +142,7 @@ it("asks to sign in when this computer is signed out", async () => {
   expect(
     await screen.findByText("Sign in to Openbase to see your other computers."),
   ).toBeTruthy();
+  expect(
+    screen.getByText("Make this my always-on computer").closest("button")?.disabled,
+  ).toBe(true);
 });
