@@ -49,10 +49,10 @@ it("keeps the saved value visible when an enable fails", async () => {
   expect(syncing.getAttribute("aria-checked")).toBe("false");
 });
 
-it("reports paused transport instead of implying that selected skills are syncing", async () => {
+it("reports missing Openbase Sync instead of implying that selected skills are syncing", async () => {
   vi.mocked(apiFetch).mockResolvedValueOnce(response({ ...initial, sync_skills_across_devices: true, device_sync_enabled: false }));
   renderSettings();
-  expect(await screen.findByRole("status")).toHaveProperty("textContent", expect.stringContaining("device sync is paused"));
+  expect(await screen.findByRole("status")).toHaveProperty("textContent", expect.stringContaining("Openbase Sync is not set up on this computer"));
 });
 
 it("focuses and scrolls to the skills panel when opened from the Skills shortcut", async () => {

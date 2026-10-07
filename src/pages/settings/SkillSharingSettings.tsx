@@ -27,7 +27,7 @@ const preferences: Array<{ key: Preference; label: string; description: string }
     key: "sync_skills_across_devices",
     label: "Sync my skills across devices",
     description:
-      "Share personal skills with your paired computers. Turning this off keeps your files on every device and leaves unrelated folder sync unchanged.",
+      "Share personal skills with your other computers through Openbase Sync. Turning this off keeps your files on every device.",
   },
 ];
 
@@ -116,7 +116,7 @@ export function SkillSharingSettings() {
           ))}
           {settings.sync_skills_across_devices && !settings.device_sync_enabled ? (
             <p role="status" className="px-3 py-2 text-[12px] text-muted-foreground">
-              Skill sharing is selected, but device sync is paused. <Link className="underline" to="/dashboard/sync">Open Sync</Link> to resume it.
+              Skill sharing is selected, but Openbase Sync is not set up on this computer. <Link className="underline" to="/dashboard/sync">Open Sync</Link> to set it up.
             </p>
           ) : null}
           {settings.link_result && (settings.link_result.conflicts > 0 || settings.link_result.errors > 0) ? (
