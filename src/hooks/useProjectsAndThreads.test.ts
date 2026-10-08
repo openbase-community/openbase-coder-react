@@ -14,7 +14,10 @@ describe.each(["threads", "projects"] as const)("%s pagination", (kind) => {
   const nextKey = kind === "threads" ? "nextThreadsUrl" : "nextProjectsUrl";
   const moreKey = kind === "threads" ? "loadMoreThreads" : "loadMoreProjects";
   let result: { current: ReturnType<typeof useProjectsAndThreads> };
-  let rerender: (props: { loadAllThreads: boolean }) => void;
+  let rerender: (props: {
+    loadAllThreads?: boolean;
+    loadAllProjects?: boolean;
+  }) => void;
   let items: { thread_id: string; path: string; name: string }[];
   let blockedPage: number | null;
   let releasePage: () => void;
@@ -54,7 +57,7 @@ describe.each(["threads", "projects"] as const)("%s pagination", (kind) => {
     await act(async () => {
       ({ result, rerender } = renderHook(
         (props) => useProjectsAndThreads(props),
-        { initialProps: { loadAllThreads: false } },
+        { initialProps: { loadAllThreads: false, loadAllProjects: false } },
       ));
     });
   });
@@ -86,6 +89,25 @@ describe.each(["threads", "projects"] as const)("%s pagination", (kind) => {
     expect(result.current.threads).toEqual(items);
     expect(result.current.nextThreadsUrl).toBeNull();
   });
+
+  it.skipIf(kind !== "projects")(
+    "loads every page for the complete sidebar, including after polling",
+    async () => {
+      expect(result.current.projects).toHaveLength(25);
+      await act(async () => rerender({ loadAllProjects: true }));
+      expect(result.current.projects).toEqual(items);
+      expect(result.current.nextProjectsUrl).toBeNull();
+
+      items.push({
+        thread_id: "older",
+        path: "/projects/older",
+        name: "Older match",
+      });
+      await refresh();
+      expect(result.current.projects).toEqual(items);
+      expect(result.current.nextProjectsUrl).toBeNull();
+    },
+  );
 
   it.skipIf(kind !== "threads")("stops scanning when filters are cleared during a request", async () => {
     blockedPage = 2;

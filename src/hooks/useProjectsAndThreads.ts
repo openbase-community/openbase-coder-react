@@ -13,7 +13,10 @@ import {
 } from "@/lib/project-display";
 import type { Project, ThreadInfo } from "@/types/session";
 
-export const useProjectsAndThreads = ({ loadAllThreads = false } = {}) => {
+export const useProjectsAndThreads = ({
+  loadAllThreads = false,
+  loadAllProjects = false,
+} = {}) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [threads, setThreads] = useState<ThreadInfo[]>([]);
   const [totalThreadCount, setTotalThreadCount] = useState(0);
@@ -222,14 +225,37 @@ export const useProjectsAndThreads = ({ loadAllThreads = false } = {}) => {
       });
       setTotalProjectCount(page.count);
       setNextProjectsUrl(page.next);
+      setProjectsError(null);
       void refreshProjectStatuses(page.projects);
     } catch (err) {
+      setProjectsError(toErrorMessage(err));
       toast.error(toErrorMessage(err));
     } finally {
       pagination.loadingMore = false;
       setLoadingMoreProjects(false);
     }
   }, [nextProjectsUrl, refreshProjectStatuses]);
+
+  // The shell sidebar needs the full project list so every project can appear
+  // in the Projects section, not just the first recent-projects page.
+  useEffect(() => {
+    if (
+      loadAllProjects &&
+      nextProjectsUrl &&
+      !projectsLoading &&
+      !loadingMoreProjects &&
+      !projectsError
+    ) {
+      void loadMoreProjects();
+    }
+  }, [
+    loadAllProjects,
+    nextProjectsUrl,
+    projectsLoading,
+    loadingMoreProjects,
+    projectsError,
+    loadMoreProjects,
+  ]);
 
   useEffect(() => {
     void fetchData();

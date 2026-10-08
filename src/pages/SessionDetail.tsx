@@ -14,6 +14,7 @@ import type { VoiceAgentState, VoiceCallStatus } from "@/hooks/use-voice-call";
 import { useMarkEntityRead } from "@/contexts/notifications";
 import { useThreadWebSocket } from "@/hooks/use-session-websocket";
 import { useThreadTerminalTab } from "@/hooks/useThreadTerminalTab";
+import { useSidebarThreads } from "@/hooks/useSidebarThreads";
 import { useTagOptions } from "@/hooks/useTagOptions";
 import { apiFetch } from "@/lib/api";
 import { fleetApiPath } from "@/lib/fleet";
@@ -131,6 +132,43 @@ const SessionDetail = ({
   const { tagOptions, refreshTagOptions } = useTagOptions();
   const [prompt, setPrompt] = useWorkspaceDraft(`thread-prompt:${threadId}`);
   useWorkspaceTabTitle(thread ? threadDisplayName(thread) : undefined);
+  // Showing a thread opens it in the threads sidebar (like a terminal tab)
+  // and expands its project; a later rename only refreshes an entry that is
+  // still open, so closing it from the sidebar sticks.
+  const sidebarThreads = useSidebarThreads();
+  const shownThreadId = thread?.thread_id;
+  const shownDirectory = thread?.directory;
+  const shownName = thread ? threadDisplayName(thread) : undefined;
+  const shownOriginHost = thread?.origin_host ?? null;
+  const shownIsDispatcher = Boolean(thread && isDispatcherThread(thread));
+  useEffect(() => {
+    if (!shownThreadId || !shownDirectory || !shownName || shownIsDispatcher)
+      return;
+    sidebarThreads.openThread({
+      thread_id: shownThreadId,
+      directory: shownDirectory,
+      name: shownName,
+      origin_host: shownOriginHost,
+    });
+    // Register once per thread; the next effect keeps the name current.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownThreadId, shownIsDispatcher]);
+  useEffect(() => {
+    if (!shownThreadId || !shownDirectory || !shownName || shownIsDispatcher)
+      return;
+    sidebarThreads.updateThread(shownThreadId, {
+      directory: shownDirectory,
+      name: shownName,
+      origin_host: shownOriginHost,
+    });
+  }, [
+    sidebarThreads,
+    shownThreadId,
+    shownDirectory,
+    shownName,
+    shownOriginHost,
+    shownIsDispatcher,
+  ]);
   const [isSubmittingPrompt, setIsSubmittingPrompt] = useState(false);
   const [activePromptMode, setActivePromptMode] = useState<"steer" | "queue">(
     "steer",
