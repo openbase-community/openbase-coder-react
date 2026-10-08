@@ -282,7 +282,7 @@ export const describeHealth = ({
       tone = "warn";
       title = "Syncing is not making progress";
       lines.push(
-        "The backlog has not shrunk in the last minute. It resumes on its own once the other computer catches up; if it stays stuck, check that both computers are awake and online.",
+        "The backlog has not shrunk in the last minute. Openbase Sync keeps trying; if it stays stuck, check that both computers are awake and online, then the sync-daemon service logs.",
       );
     } else if (progress?.perSecond) {
       const eta =
