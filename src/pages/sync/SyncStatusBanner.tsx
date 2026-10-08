@@ -36,7 +36,7 @@ const ToneIcon: React.FC<{ tone: HealthTone }> = ({ tone }) => {
 /** The answer to "is my sync healthy, and what needs me?" */
 export const SyncStatusBanner: React.FC<{
   health: SyncHealth;
-  attention?: { conflicts: number; staleLocks: number | null };
+  attention?: { conflicts: number; staleLocks: number | null; lowDisk?: string[] };
 }> = ({ health, attention }) => (
   <div
     role="status"
@@ -68,6 +68,12 @@ export const SyncStatusBanner: React.FC<{
           style={{ width: `${Math.round(health.progress * 100)}%` }}
         />
       </div>
+    ) : null}
+    {attention?.lowDisk?.length ? (
+      <p className="pl-6 text-xs text-destructive">
+        Low disk on {attention.lowDisk.join(", ")}: sync writes there are paused
+        until space returns. Free some space or sync fewer folders here.
+      </p>
     ) : null}
     {attention && (attention.conflicts || attention.staleLocks) ? (
       <div className="flex flex-wrap gap-3 pl-6 text-xs">

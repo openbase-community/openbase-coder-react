@@ -6,6 +6,8 @@ import {
 import { RunDetail } from "@/components/RunDetail";
 import { ThreadHeader } from "@/components/ThreadHeader";
 import { ContinuationLinks } from "@/components/thread/ContinuationLinks";
+import { MovedThreadNotice } from "@/components/thread/MovedThreadNotice";
+import { isThreadMovedAway } from "@/lib/thread-push";
 import { ThreadTerminal } from "@/components/thread/ThreadTerminal";
 import { TurnBody, UserBubble } from "@/components/TurnBody";
 import { Button } from "@/components/ui/button";
@@ -269,9 +271,12 @@ const SessionDetail = ({
     });
   };
 
+  // A thread pushed to a durable machine continues there; this copy is
+  // read-only (the server refuses turns too).
+  const movedAway = isThreadMovedAway(thread);
   const handleStartTurn = async () => {
     const trimmed = prompt.trim();
-    if (!trimmed || isSubmittingPrompt) return;
+    if (!trimmed || isSubmittingPrompt || movedAway) return;
     setIsSubmittingPrompt(true);
     try {
       const accepted = await (hasActiveCurrentTurn
@@ -304,6 +309,7 @@ const SessionDetail = ({
   // An empty composer offers the voice call; typing turns it back into send.
   const showCallButton =
     Boolean(call) &&
+    !movedAway &&
     !inCall &&
     !hasActiveCurrentTurn &&
     prompt.trim().length === 0;
@@ -402,6 +408,11 @@ const SessionDetail = ({
             onOpenProject={openProject}
             onRename={rename}
             onBack={goBack}
+            onPushed={() => {
+              // The old copy now answers fleet reads with the moved one, so
+              // a refresh follows the thread to its durable machine.
+              void refreshThread();
+            }}
             onContinued={(next) => {
               setPrompt(prompt, `thread-prompt:${next.thread_id}`);
               setPrompt("");
@@ -473,6 +484,9 @@ const SessionDetail = ({
           <div className="mx-auto w-full max-w-[720px] space-y-8">
             {thread ? (
               <ContinuationLinks key={thread.thread_id} thread={thread} />
+            ) : null}
+            {thread?.moved_to ? (
+              <MovedThreadNotice thread={thread} onChanged={refreshThread} />
             ) : null}
             {thread && (connectionLost || loadError) ? (
               <div className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-[12px] text-warning">
@@ -631,8 +645,11 @@ const SessionDetail = ({
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyDown={handleKeyDown}
                   aria-label="Turn prompt"
+                  disabled={movedAway}
                   placeholder={
-                    hasActiveCurrentTurn
+                    movedAway
+                      ? `Moved to ${thread?.moved_to?.device ?? "another computer"}. Continue it there.`
+                      : hasActiveCurrentTurn
                       ? activePromptMode === "steer"
                         ? "Steer the active turn…"
                         : "Queue a follow-up turn…"
@@ -658,7 +675,10 @@ const SessionDetail = ({
                   <Button
                     onClick={() => void handleStartTurn()}
                     disabled={
-                      !isConnected || !prompt.trim() || isSubmittingPrompt
+                      !isConnected ||
+                      !prompt.trim() ||
+                      isSubmittingPrompt ||
+                      movedAway
                     }
                     aria-busy={isSubmittingPrompt}
                     size="icon"

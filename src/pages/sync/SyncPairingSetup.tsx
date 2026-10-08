@@ -7,6 +7,7 @@ import { Laptop, Radio, RefreshCw, Server } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { withRestartNote } from "./restartNote";
+import { SyncFolderChooser, type SyncFolderChoice } from "./SyncFolderChooser";
 
 export type SyncPairingCandidate = {
   id: string;
@@ -54,6 +55,8 @@ export const SyncPairingSetup: React.FC<{
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // the hub whose folders are being chosen before joining
+  const [choosing, setChoosing] = useState<SyncPairingCandidate | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,11 +113,11 @@ export const SyncPairingSetup: React.FC<{
       "Unable to set up this computer.",
     );
 
-  const join = (candidate: SyncPairingCandidate) =>
+  const join = (candidate: SyncPairingCandidate, choice: SyncFolderChoice) =>
     run(
       candidate.id,
       "/api/sync/daemon/pairing/join/",
-      { hub: candidate.id },
+      { hub: candidate.id, roots: choice.roots, project_only: choice.projectOnly },
       `Syncing with ${candidate.name}.`,
       `Unable to sync with ${candidate.name}.`,
     );
@@ -184,12 +187,10 @@ export const SyncPairingSetup: React.FC<{
                     {candidate.reachable && candidate.role === "hub" ? (
                       <Button
                         size="sm"
-                        disabled={busy !== null}
-                        onClick={() => void join(candidate)}
+                        disabled={busy !== null || choosing !== null}
+                        onClick={() => setChoosing(candidate)}
                       >
-                        {busy === candidate.id
-                          ? "Connecting…"
-                          : "Sync with this"}
+                        Sync with this
                       </Button>
                     ) : candidate.error ? (
                       <span className="text-xs text-muted-foreground">
@@ -199,6 +200,15 @@ export const SyncPairingSetup: React.FC<{
                   </li>
                 ))}
               </ul>
+            ) : null}
+            {choosing ? (
+              <SyncFolderChooser
+                hubId={choosing.id}
+                hubName={choosing.name}
+                busy={busy === choosing.id}
+                onJoin={(choice) => join(choosing, choice)}
+                onCancel={() => setChoosing(null)}
+              />
             ) : null}
             {hubs.length === 0 ? (
               <p className="text-xs text-muted-foreground">

@@ -128,6 +128,7 @@ type Routes = {
   staleLocks?: unknown;
   detail?: Record<number, unknown>;
   post?: (path: string, body: unknown) => Response;
+  available?: unknown;
 };
 
 const route = (routes: Routes) =>
@@ -144,6 +145,11 @@ const route = (routes: Routes) =>
       return routes.statusCode && routes.statusCode >= 400
         ? jsonResponse({ error: "down" }, { status: routes.statusCode })
         : jsonResponse(routes.status ?? edgeStatus);
+    }
+    if (path === "/api/sync/daemon/roots/available/") {
+      return routes.available
+        ? jsonResponse(routes.available)
+        : jsonResponse({ error: "offline" }, { status: 502 });
     }
     if (path === "/api/sync/daemon/conflicts/") {
       return jsonResponse({ conflicts: routes.conflicts ?? [] });
@@ -508,13 +514,97 @@ it("adds and removes folders", async () => {
   expect(addInit?.method).toBe("POST");
   expect(JSON.parse(String(addInit?.body))).toEqual({ path: "~/Documents" });
 
+  // an edge asks where to stop syncing; a full copy suggests everywhere
   fireEvent.click(screen.getByLabelText("Stop syncing ~/.openbase/thread-sync"));
+  fireEvent.click(await screen.findByText("everywhere"));
   await waitFor(() => expect(mutations()).toHaveLength(2));
   const [, removeInit] = mutations()[1];
   expect(removeInit?.method).toBe("DELETE");
   expect(JSON.parse(String(removeInit?.body))).toEqual({
     path: "~/.openbase/thread-sync",
+    scope: "everywhere",
   });
+});
+
+it("a project-only computer adds the hub's other folders and removes here only", async () => {
+  route({
+    settings: { ...edgeSettings, project_only: true },
+    available: {
+      role: "edge",
+      hub_name: "mini",
+      project_only: true,
+      folders: [
+        { id: "projects", path: "~/Projects", files: 1200, bytes: 2048, synced_here: true },
+        { id: "projects-gamma", path: "~/Projects/gamma", files: 7, bytes: 1024 * 1024, synced_here: false },
+      ],
+      disk: { free_bytes: 1, total_bytes: 2 },
+    },
+  });
+  render(<SyncDaemonCard />);
+
+  expect(await screen.findByText("Also on mini, not synced here:")).toBeTruthy();
+  expect(screen.getByText(/~\/Projects\/gamma · 7 files · 1.0 MB/)).toBeTruthy();
+  fireEvent.click(screen.getByText("Sync here"));
+  await waitFor(() => expect(mutations()).toHaveLength(1));
+  expect(JSON.parse(String(mutations()[0][1]?.body))).toEqual({ path: "~/Projects/gamma" });
+
+  fireEvent.click(screen.getByLabelText("Stop syncing ~/.openbase/thread-sync"));
+  fireEvent.click(await screen.findByText("on this computer"));
+  await waitFor(() => expect(mutations()).toHaveLength(2));
+  expect(JSON.parse(String(mutations()[1][1]?.body))).toEqual({
+    path: "~/.openbase/thread-sync",
+    scope: "this_computer",
+  });
+});
+
+it("shows each folder's disk and warns when it is low", async () => {
+  const MB = 1024 * 1024;
+  route({
+    status: {
+      ...edgeStatus,
+      overview: {
+        state: "in_sync",
+        role: "edge",
+        device: "laptop",
+        peers_connected: 1,
+        offline_peers: [],
+        totals: { unsent: 0, unacked: 0, pending_fetches: 0, entries: 1200 },
+        roots: [
+          {
+            ...edgeStatus.roots[0],
+            pins: [],
+            ignore: [],
+            unsent: 0,
+            unacked: 0,
+            peers: [],
+            bytes: 40 * MB,
+            disk: {
+              free_bytes: 300 * MB,
+              total_bytes: 5 * 1024 * MB,
+              low_water_bytes: 512 * MB,
+              low_water_auto: true,
+              below_low_water: true,
+              held_files: 3,
+              held_bytes: 2 * MB,
+              refused_writes: 3,
+              lazy_threshold_bytes: 51 * MB,
+              pinned_threshold_bytes: 256 * MB,
+            },
+          },
+        ],
+        attention: { conflicts: 0, stale_locks: 0, low_disk: ["/Users/x/Projects"], needed: true },
+      },
+    },
+  });
+  render(<SyncDaemonCard />);
+
+  expect(await screen.findByText(/· 40.0 MB/)).toBeTruthy();
+  expect(
+    screen.getByText(
+      "Disk: 300.0 MB free of 5.0 GB · sync keeps 512.0 MB free · Low disk: sync writes here are paused until space returns (3 files, 2.0 MB waiting)",
+    ),
+  ).toBeTruthy();
+  expect(screen.getByText(/Low disk on \/Users\/x\/Projects/)).toBeTruthy();
 });
 
 it("stops syncing only after confirmation", async () => {
@@ -563,4 +653,54 @@ it("on the hub, says so and waits for its computers", async () => {
   expect(await screen.findByText("No other computer connected")).toBeTruthy();
   expect(screen.getByText("Computers syncing with this one")).toBeTruthy();
   expect(screen.getByText(/not connected/)).toBeTruthy();
+});
+
+it("lists the projects synced here and the hub's other projects", async () => {
+  route({
+    settings: {
+      ...edgeSettings,
+      project_only: true,
+      roots: [{ id: "projects", path: "~/Projects", only: ["app", "site"] }],
+    },
+    available: {
+      role: "edge",
+      hub_name: "mini",
+      project_only: true,
+      folders: [
+        {
+          id: "projects",
+          path: "~/Projects",
+          files: 900000,
+          bytes: 1,
+          synced_here: false,
+          partly_synced_here: true,
+          only: ["app", "site"],
+          subfolders: [
+            { name: "app", path: "~/Projects/app", files: 3, bytes: 3, synced_here: true },
+            { name: "site", path: "~/Projects/site", files: 4, bytes: 4, synced_here: true },
+            { name: "tools", path: "~/Projects/tools", files: 9, bytes: 2048, synced_here: false },
+          ],
+        },
+      ],
+      disk: { free_bytes: 1, total_bytes: 2 },
+    },
+  });
+  render(<SyncDaemonCard />);
+
+  expect(await screen.findByText("~/Projects/app")).toBeTruthy();
+  expect(screen.getByText(/some projects/)).toBeTruthy();
+  expect(await screen.findByText(/~\/Projects\/tools · 9 files · 2.0 KB/)).toBeTruthy();
+  // the folder itself is synced in part: not offered as a whole
+  expect(screen.queryByText(/^~\/Projects · 900,000 files/)).toBeNull();
+
+  fireEvent.click(screen.getByText("Sync here"));
+  await waitFor(() => expect(mutations()).toHaveLength(1));
+  expect(JSON.parse(String(mutations()[0][1]?.body))).toEqual({ path: "~/Projects/tools" });
+
+  fireEvent.click(screen.getByLabelText("Stop syncing ~/Projects/site"));
+  await waitFor(() => expect(mutations()).toHaveLength(2));
+  expect(JSON.parse(String(mutations()[1][1]?.body))).toEqual({
+    path: "~/Projects/site",
+    scope: "this_computer",
+  });
 });

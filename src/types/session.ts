@@ -27,6 +27,16 @@ export interface TurnInfo {
   file_edits?: string[];
 }
 
+/** Where a thread pushed to a durable machine now lives (set on the old copy). */
+export interface ThreadMovedTo {
+  /** "pushing"/"uncertain" while the push is unfinished; "moved" after. */
+  state: "pushing" | "uncertain" | "moved";
+  device?: string | null;
+  host?: string | null;
+  thread_id?: string | null;
+  at?: string | null;
+}
+
 export interface ThreadInfo {
   thread_id: string;
   directory: string;
@@ -58,6 +68,8 @@ export interface ThreadInfo {
   continued_from?: { thread_id: string; name: string };
   continuations?: Array<{ thread_id: string; name: string }>;
   continuation_context?: { omitted: boolean; message_count: number };
+  /** Set when this copy is read-only because the thread moved away. */
+  moved_to?: ThreadMovedTo | null;
   queued_turns?: QueuedTurn[];
   status: ThreadStatus;
   voice_route?: {

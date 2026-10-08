@@ -43,6 +43,9 @@ import { RenameThreadDialog } from "./RenameThreadDialog";
 import { ResumeThreadDialog } from "./ResumeThreadDialog";
 import { threadDisplayName } from "@/lib/thread-display";
 import { BackendSwitchMenu, type Continuation } from "./BackendSwitchMenu";
+import { PushToDurableMenu } from "./PushToDurableMenu";
+import { PushThreadDialog } from "./PushThreadDialog";
+import type { DurableTarget, PushResult } from "@/lib/thread-push";
 
 interface ThreadActionsMenuProps {
   thread: ThreadInfo;
@@ -51,6 +54,8 @@ interface ThreadActionsMenuProps {
   onArchive: () => Promise<void>;
   onOpenProject: () => void;
   onContinued?: (thread: Continuation) => void;
+  /** Called after the thread moved to a durable machine. */
+  onPushed?: (result: PushResult) => void;
   onRename?: (name: string) => Promise<void>;
   /** Opens the rename dialog from outside the menu (e.g. the title). */
   renameOpen?: boolean;
@@ -64,12 +69,14 @@ export function ThreadActionsMenu({
   onArchive,
   onOpenProject,
   onContinued,
+  onPushed,
   onRename,
   renameOpen: renameOpenProp,
   onRenameOpenChange,
 }: ThreadActionsMenuProps) {
   const trigger = useRef<HTMLButtonElement>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [pushTarget, setPushTarget] = useState<DurableTarget | null>(null);
   const [renameOpenState, setRenameOpenState] = useState(false);
   const renameOpen = renameOpenProp ?? renameOpenState;
   const setRenameOpen = (open: boolean) => {
@@ -127,7 +134,7 @@ export function ThreadActionsMenu({
           align="end"
           className="w-72 max-w-[calc(100vw-2rem)]"
           onCloseAutoFocus={(event) => {
-            if (archiveOpen || renameOpen || resumeCommand)
+            if (archiveOpen || renameOpen || resumeCommand || pushTarget)
               event.preventDefault();
           }}
         >
@@ -152,6 +159,9 @@ export function ThreadActionsMenu({
           <DropdownMenuSeparator />
           {!isDispatcher && onContinued ? (
             <BackendSwitchMenu thread={thread} onContinued={onContinued} />
+          ) : null}
+          {!isDispatcher && onPushed && !thread.moved_to ? (
+            <PushToDurableMenu thread={thread} onChoose={setPushTarget} />
           ) : null}
           {thread.directory ? (
             <DropdownMenuItem
@@ -222,6 +232,17 @@ export function ThreadActionsMenu({
           currentName={threadDisplayName(thread)}
           onOpenChange={setRenameOpen}
           onRename={onRename}
+          onCloseAutoFocus={restoreFocus}
+        />
+      ) : null}
+      {onPushed ? (
+        <PushThreadDialog
+          thread={thread}
+          target={pushTarget}
+          onOpenChange={(open) => {
+            if (!open) setPushTarget(null);
+          }}
+          onPushed={onPushed}
           onCloseAutoFocus={restoreFocus}
         />
       ) : null}
