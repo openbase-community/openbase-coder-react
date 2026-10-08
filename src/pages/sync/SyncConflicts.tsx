@@ -37,15 +37,24 @@ const BULK_CHUNK = 100;
 
 type Action = "keep_local" | "use_remote";
 
+const localHash = (conflict: SyncDaemonConflict) =>
+  conflict.a_is_local === false ? conflict.b_hash : conflict.a_hash;
+
+const remoteHash = (conflict: SyncDaemonConflict) =>
+  conflict.a_is_local === false ? conflict.a_hash : conflict.b_hash;
+
 const choiceLabels = (conflict: SyncDaemonConflict, other: string) => {
-  if (conflict.kind === "delete-edit" && !conflict.a_hash) {
+  if (conflict.kind === "delete-edit" && !localHash(conflict)) {
     return { keep: "Keep it deleted", take: `Restore ${other}'s version` };
   }
-  if (conflict.kind === "delete-edit" && !conflict.b_hash) {
+  if (conflict.kind === "delete-edit" && !remoteHash(conflict)) {
     return { keep: "Keep this computer's", take: `Delete it, as on ${other}` };
   }
   return { keep: "Keep this computer's", take: `Take ${other}'s` };
 };
+
+const remoteDevice = (conflict: SyncDaemonConflict) =>
+  conflict.a_is_local === false ? conflict.a_device : conflict.b_device;
 
 const resolveRequest = async (body: Record<string, unknown>) => {
   const res = await apiFetch("/api/sync/daemon/conflicts/resolve/", {
@@ -80,7 +89,7 @@ const ConflictRow: React.FC<{
   onResolve,
   now,
 }) => {
-  const other = otherName(conflict.b_device);
+  const other = otherName(remoteDevice(conflict));
   const resolvable = isResolvable(conflict);
   const labels = choiceLabels(conflict, other);
   const created = conflictCreatedAt(conflict);
@@ -339,7 +348,7 @@ export const SyncConflicts: React.FC<{
       toast.success(
         action === "keep_local"
           ? "Kept this computer's version."
-          : `Took ${otherName(conflict.b_device)}'s version.`,
+          : `Took ${otherName(remoteDevice(conflict))}'s version.`,
       );
       setSelected([conflict.id], false);
       await onChanged();

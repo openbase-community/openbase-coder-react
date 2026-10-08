@@ -57,3 +57,24 @@ it("labels the choices of a deletion conflict by what they do", () => {
   expect(screen.getByText("Keep it deleted")).toBeTruthy();
   expect(screen.getByText("Restore mini's version")).toBeTruthy();
 });
+
+it("labels the remote computer correctly when this computer is side b", () => {
+  render(
+    <SyncConflicts
+      conflicts={[
+        {
+          ...conflict(4, "notes/y.md", "delete-edit", "notes"),
+          a_device: "mini",
+          b_device: "laptop",
+          a_is_local: false,
+          b_hash: "",
+        },
+      ]}
+      otherName={(d) => d}
+      onChanged={() => {}}
+    />,
+  );
+  expect(screen.getByText(/this computer vs mini/)).toBeTruthy();
+  expect(screen.getByText("Keep it deleted")).toBeTruthy();
+  expect(screen.getByText("Restore mini's version")).toBeTruthy();
+});

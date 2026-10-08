@@ -74,10 +74,12 @@ const FileDetail: React.FC<{
   otherName: string;
 }> = ({ conflict, detail, otherName }) => {
   const { a, b, ancestor } = detail.versions;
+  const aLabel = conflict.a_is_local === false ? otherName : "This computer";
+  const bLabel = conflict.a_is_local === false ? "This computer" : otherName;
   const tabs: { id: Tab; label: string; version?: SyncVersion }[] = [
     ...(detail.diff != null ? [{ id: "diff" as Tab, label: "Differences" }] : []),
-    { id: "a", label: "This computer", version: a },
-    { id: "b", label: otherName, version: b },
+    { id: "a", label: aLabel, version: a },
+    { id: "b", label: bLabel, version: b },
     ...(ancestor.hash
       ? [{ id: "ancestor" as Tab, label: "Last agreed", version: ancestor }]
       : []),
@@ -88,9 +90,9 @@ const FileDetail: React.FC<{
   return (
     <div className="space-y-2">
       <dl className="grid gap-x-3 gap-y-0.5 text-[11px] sm:grid-cols-[auto_1fr]">
-        <dt className="text-muted-foreground">This computer</dt>
+        <dt className="text-muted-foreground">{aLabel}</dt>
         <dd className="font-mono">{versionSummary(a)}</dd>
-        <dt className="text-muted-foreground">{otherName}</dt>
+        <dt className="text-muted-foreground">{bLabel}</dt>
         <dd className="font-mono">{versionSummary(b)}</dd>
         <dt className="text-muted-foreground">Last agreed</dt>
         <dd className="font-mono">
@@ -128,8 +130,7 @@ const FileDetail: React.FC<{
         detail.diff ? (
           <>
             <p className="text-[11px] text-muted-foreground">
-              Lines marked − are {otherName}'s, lines marked + are this
-              computer's.
+              Lines marked − are {bLabel}'s, lines marked + are {aLabel}'s.
               {detail.diff_truncated ? " The diff is cut short." : ""}
             </p>
             <DiffBlock diff={detail.diff} />

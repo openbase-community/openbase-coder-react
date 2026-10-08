@@ -335,6 +335,63 @@ it("resolves one conflict and opens its versions", async () => {
   });
 });
 
+it("labels the local side correctly when it is side B", async () => {
+  const conflict = {
+    ...fileConflict(12, "ws/cli/pkg/config.py", "ws/cli"),
+    a_device: "gabes-mac-mini",
+    b_device: "laptop",
+    a_is_local: false,
+  };
+  route({
+    conflicts: [conflict],
+    detail: {
+      12: {
+        conflict,
+        detail: {
+          kind: "content",
+          versions: {
+            a: {
+              hash: "a".repeat(64),
+              available: true,
+              size: 7,
+              binary: false,
+              truncated: false,
+              text: "mini\n",
+            },
+            b: {
+              hash: "b".repeat(64),
+              available: true,
+              size: 6,
+              binary: false,
+              truncated: false,
+              text: "mine\n",
+            },
+            ancestor: {
+              hash: "",
+              available: false,
+              size: null,
+              binary: false,
+              truncated: false,
+              text: null,
+            },
+          },
+          diff: "--- laptop\n+++ mini\n@@ -1 +1 @@\n-mine\n+mini\n",
+          diff_truncated: false,
+          current: { exists: true, size: 6, modified: null, is_dir: false },
+        },
+      },
+    },
+  });
+
+  render(<SyncDaemonCard />);
+
+  fireEvent.click(await screen.findByText("pkg/config.py"));
+  expect(await screen.findByText("+mini")).toBeTruthy();
+  expect(screen.getByText("Take mini's")).toBeTruthy();
+  fireEvent.click(screen.getByRole("tab", { name: "This computer" }));
+  expect(screen.getByText("mine")).toBeTruthy();
+});
+
 it("bulk-resolves a selected group after a confirmation stating the count", async () => {
   const conflicts = [
     fileConflict(1, "ws/cli/a.txt", "ws/cli"),
