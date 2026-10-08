@@ -309,6 +309,7 @@ const SessionDetail = ({
   // An empty composer offers the voice call; typing turns it back into send.
   const showCallButton =
     Boolean(call) &&
+    !movedAway &&
     !inCall &&
     !hasActiveCurrentTurn &&
     prompt.trim().length === 0;
