@@ -4,12 +4,17 @@ import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import React, { useEffect, useState } from "react";
 import { formatBytes, formatCount } from "./syncHealth";
-import type { SyncDiskUsage, SyncHubFolder, SyncHubFoldersPreview } from "./syncTypes";
+import type {
+  SyncDiskUsage,
+  SyncHubFolder,
+  SyncHubFoldersPreview,
+  SyncHubSubfolder,
+} from "./syncTypes";
 
 /** What the user chose: the folders, and whether this computer is project-only. */
 export type SyncFolderChoice = { roots: string[]; projectOnly: boolean };
 
-const folderSize = (folder: SyncHubFolder) =>
+const folderSize = (folder: SyncHubFolder | SyncHubSubfolder) =>
   folder.files == null
     ? "size unknown"
     : `${formatCount(folder.files)} files · ${formatBytes(folder.bytes)}`;
@@ -50,7 +55,12 @@ export const SyncFolderChooser: React.FC<{
         if (cancelled) return;
         setPreview(data);
         setSelected(
-          new Set(data.folders.filter((f) => f.selected).map((f) => f.path)),
+          new Set([
+            ...data.folders.filter((f) => f.selected).map((f) => f.path),
+            ...data.folders.flatMap((f) =>
+              (f.subfolders ?? []).filter((sub) => sub.selected).map((sub) => sub.path),
+            ),
+          ]),
         );
       } catch (err) {
         if (!cancelled) {
@@ -92,7 +102,12 @@ export const SyncFolderChooser: React.FC<{
     );
   }
 
-  const chosen = preview.folders.filter((f) => selected.has(f.path));
+  // a whole folder covers its projects; otherwise its chosen projects count
+  const chosenFolders = preview.folders.filter((f) => selected.has(f.path));
+  const chosenParts = preview.folders
+    .filter((f) => !selected.has(f.path))
+    .flatMap((f) => (f.subfolders ?? []).filter((sub) => selected.has(sub.path)));
+  const chosen = [...chosenFolders, ...chosenParts];
   const known = chosen.every((f) => f.bytes != null);
   const total = chosen.reduce((sum, f) => sum + (f.bytes ?? 0), 0);
   const free = preview.this_computer.disk?.free_bytes ?? null;
@@ -112,23 +127,57 @@ export const SyncFolderChooser: React.FC<{
         </p>
       ) : null}
       <ul className="space-y-1.5">
-        {preview.folders.map((folder) => (
-          <li key={folder.path} className="flex items-center gap-2 text-xs">
-            <Checkbox
-              id={`sync-folder-${folder.id}`}
-              checked={selected.has(folder.path)}
-              onCheckedChange={(value) => toggle(folder.path, value === true)}
-              aria-label={`Sync ${folder.path}`}
-            />
-            <label
-              htmlFor={`sync-folder-${folder.id}`}
-              className="min-w-0 flex-1 truncate font-mono"
-            >
-              {folder.path}
-            </label>
-            <span className="shrink-0 text-muted-foreground">{folderSize(folder)}</span>
-          </li>
-        ))}
+        {preview.folders.map((folder) => {
+          const whole = selected.has(folder.path);
+          const subfolders = folder.subfolders ?? [];
+          return (
+            <li key={folder.path} className="space-y-1 text-xs">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id={`sync-folder-${folder.id}`}
+                  checked={whole}
+                  onCheckedChange={(value) => toggle(folder.path, value === true)}
+                  aria-label={`Sync ${folder.path}`}
+                />
+                <label
+                  htmlFor={`sync-folder-${folder.id}`}
+                  className="min-w-0 flex-1 truncate font-mono"
+                >
+                  {folder.path}
+                </label>
+                <span className="shrink-0 text-muted-foreground">
+                  {folderSize(folder)}
+                </span>
+              </div>
+              {subfolders.length > 0 && !whole ? (
+                <ul
+                  className="max-h-48 space-y-1 overflow-auto pl-6"
+                  aria-label={`Projects in ${folder.path}`}
+                >
+                  {subfolders.map((sub) => (
+                    <li key={sub.path} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`sync-folder-${folder.id}-${sub.name}`}
+                        checked={selected.has(sub.path)}
+                        onCheckedChange={(value) => toggle(sub.path, value === true)}
+                        aria-label={`Sync ${sub.path}`}
+                      />
+                      <label
+                        htmlFor={`sync-folder-${folder.id}-${sub.name}`}
+                        className="min-w-0 flex-1 truncate font-mono"
+                      >
+                        {sub.name}
+                      </label>
+                      <span className="shrink-0 text-muted-foreground">
+                        {folderSize(sub)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
       <p className={`text-xs ${tight ? "text-destructive" : "text-muted-foreground"}`}>
         {chosen.length === 0
@@ -152,9 +201,9 @@ export const SyncFolderChooser: React.FC<{
         >
           {busy
             ? "Connecting…"
-            : chosen.length === preview.folders.length
+            : chosenFolders.length === preview.folders.length
               ? "Sync all folders"
-              : `Sync ${chosen.length} of ${preview.folders.length} folders`}
+              : `Sync ${chosen.length} ${chosen.length === 1 ? "folder" : "folders"}`}
         </Button>
         <Button size="sm" variant="ghost" disabled={busy} onClick={onCancel}>
           Cancel

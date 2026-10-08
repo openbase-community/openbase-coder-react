@@ -14,6 +14,8 @@ export type SyncFolderRoot = {
   path?: string;
   pins?: string[];
   ignore?: string[];
+  /** Root-relative paths synced here (a project-only computer); absent: all. */
+  only?: string[];
 };
 
 const peerBacklogLine = (
@@ -112,6 +114,18 @@ export const SyncFolders: React.FC<{
   const [available, setAvailable] = useState<SyncAvailableRoots | null>(null);
   const statusById = new Map((status ?? []).map((root) => [root.id, root]));
   const edge = role === "edge";
+  // the hub's folders not synced here, and on a project-only computer the
+  // projects inside them (a folder synced in part lists its other projects)
+  const addable = (available?.folders ?? []).flatMap((folder) => {
+    if (folder.synced_here) return [];
+    const parts = (folder.subfolders ?? [])
+      .filter((sub) => !sub.synced_here)
+      .map((sub) => ({ path: sub.path, files: sub.files, bytes: sub.bytes }));
+    const whole = folder.partly_synced_here
+      ? []
+      : [{ path: folder.path, files: folder.files, bytes: folder.bytes }];
+    return projectOnly || folder.partly_synced_here ? [...whole, ...parts] : whole;
+  });
 
   const loadAvailable = useCallback(async () => {
     if (!edge) return;
@@ -208,6 +222,9 @@ export const SyncFolders: React.FC<{
               <div className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 truncate font-mono">
                   {path}
+                  {root.only?.length ? (
+                    <span className="text-muted-foreground"> · some projects</span>
+                  ) : null}
                   {live ? (
                     <span className="text-muted-foreground">
                       {" "}
@@ -258,6 +275,28 @@ export const SyncFolders: React.FC<{
                   </Button>
                 </div>
               ) : null}
+              {(root.only ?? []).map((rel) => {
+                const part = `${path.replace(/\/$/, "")}/${rel}`;
+                return (
+                  <div key={part} className="flex items-center gap-2 pl-2">
+                    <span className="min-w-0 flex-1 truncate font-mono text-[11px]">
+                      {part}
+                    </span>
+                    {roots.length > 1 || (root.only ?? []).length > 1 ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-5 w-5 p-0"
+                        aria-label={`Stop syncing ${part}`}
+                        disabled={busy !== null}
+                        onClick={() => void remove(part, "this_computer")}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    ) : null}
+                  </div>
+                );
+              })}
               {live?.disk ? <DiskNote disk={live.disk} /> : null}
               {live?.peers?.map((peer) => (
                 <div
@@ -283,15 +322,13 @@ export const SyncFolders: React.FC<{
           );
         })}
       </ul>
-      {edge && available?.folders.some((folder) => !folder.synced_here) ? (
+      {edge && addable.length > 0 ? (
         <div className="space-y-1 pt-1">
           <div className="text-[11px] text-muted-foreground">
-            Also on {available.hub_name ?? "the hub"}, not synced here:
+            Also on {available?.hub_name ?? "the hub"}, not synced here:
           </div>
-          <ul className="space-y-1">
-            {available.folders
-              .filter((folder) => !folder.synced_here)
-              .map((folder) => (
+          <ul className="max-h-48 space-y-1 overflow-auto">
+            {addable.map((folder) => (
                 <li key={folder.path} className="flex items-center gap-2 text-xs">
                   <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">
                     {folder.path}

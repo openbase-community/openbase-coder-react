@@ -13,10 +13,27 @@ export type SyncDaemonSettings = {
   hub_host?: string | null;
   /** Syncs only chosen folders and keeps large files on the hub (a cloud workspace). */
   project_only?: boolean;
-  roots: { id?: string; path?: string; pins?: string[]; ignore?: string[] }[];
+  roots: {
+    id?: string;
+    path?: string;
+    pins?: string[];
+    ignore?: string[];
+    /** Root-relative paths this computer syncs in the folder (absent: all). */
+    only?: string[];
+  }[];
 };
 
 export type SyncDiskUsage = { free_bytes: number | null; total_bytes: number | null };
+
+/** A folder inside one of the hub's folders (a project of ~/Projects). */
+export type SyncHubSubfolder = {
+  name: string;
+  path: string;
+  files: number | null;
+  bytes: number | null;
+  selected?: boolean;
+  synced_here?: boolean;
+};
 
 /** One of the hub's folders, with its size from the hub (null: unknown). */
 export type SyncHubFolder = {
@@ -24,6 +41,11 @@ export type SyncHubFolder = {
   path: string;
   files: number | null;
   bytes: number | null;
+  /** Projects inside (null: the hub could not say). */
+  subfolders?: SyncHubSubfolder[] | null;
+  /** An edge syncing only some projects of this folder, and which. */
+  partly_synced_here?: boolean;
+  only?: string[];
   /** Join preview: preselected (every folder on a laptop, none on a cloud workspace). */
   selected?: boolean;
   synced_here?: boolean;

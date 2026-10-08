@@ -654,3 +654,53 @@ it("on the hub, says so and waits for its computers", async () => {
   expect(screen.getByText("Computers syncing with this one")).toBeTruthy();
   expect(screen.getByText(/not connected/)).toBeTruthy();
 });
+
+it("lists the projects synced here and the hub's other projects", async () => {
+  route({
+    settings: {
+      ...edgeSettings,
+      project_only: true,
+      roots: [{ id: "projects", path: "~/Projects", only: ["app", "site"] }],
+    },
+    available: {
+      role: "edge",
+      hub_name: "mini",
+      project_only: true,
+      folders: [
+        {
+          id: "projects",
+          path: "~/Projects",
+          files: 900000,
+          bytes: 1,
+          synced_here: false,
+          partly_synced_here: true,
+          only: ["app", "site"],
+          subfolders: [
+            { name: "app", path: "~/Projects/app", files: 3, bytes: 3, synced_here: true },
+            { name: "site", path: "~/Projects/site", files: 4, bytes: 4, synced_here: true },
+            { name: "tools", path: "~/Projects/tools", files: 9, bytes: 2048, synced_here: false },
+          ],
+        },
+      ],
+      disk: { free_bytes: 1, total_bytes: 2 },
+    },
+  });
+  render(<SyncDaemonCard />);
+
+  expect(await screen.findByText("~/Projects/app")).toBeTruthy();
+  expect(screen.getByText(/some projects/)).toBeTruthy();
+  expect(await screen.findByText(/~\/Projects\/tools · 9 files · 2.0 KB/)).toBeTruthy();
+  // the folder itself is synced in part: not offered as a whole
+  expect(screen.queryByText(/^~\/Projects · 900,000 files/)).toBeNull();
+
+  fireEvent.click(screen.getByText("Sync here"));
+  await waitFor(() => expect(mutations()).toHaveLength(1));
+  expect(JSON.parse(String(mutations()[0][1]?.body))).toEqual({ path: "~/Projects/tools" });
+
+  fireEvent.click(screen.getByLabelText("Stop syncing ~/Projects/site"));
+  await waitFor(() => expect(mutations()).toHaveLength(2));
+  expect(JSON.parse(String(mutations()[1][1]?.body))).toEqual({
+    path: "~/Projects/site",
+    scope: "this_computer",
+  });
+});

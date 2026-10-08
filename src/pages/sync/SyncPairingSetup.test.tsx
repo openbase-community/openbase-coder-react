@@ -221,7 +221,7 @@ it("on a cloud workspace, preselects nothing and joins project-only", async () =
 
   expect(await screen.findByText(/This is a cloud workspace with a small disk/)).toBeTruthy();
   expect(screen.getByText("No folder chosen.", { exact: false })).toBeTruthy();
-  const join = screen.getByText("Sync 0 of 2 folders").closest("button");
+  const join = screen.getByText("Sync 0 folders").closest("button");
   expect(join?.disabled).toBe(true);
 
   // the 2 GB folder does not fit in 1.5 GB free: warned
@@ -231,7 +231,7 @@ it("on a cloud workspace, preselects nothing and joins project-only", async () =
   fireEvent.click(screen.getByLabelText("Sync ~/Projects/beta"));
   expect(screen.queryByText(/That may not fit/)).toBeNull();
   expect(screen.getByText(/About 40.0 MB to sync · this computer: 1.5 GB free of 5.0 GB/)).toBeTruthy();
-  fireEvent.click(screen.getByText("Sync 1 of 2 folders"));
+  fireEvent.click(screen.getByText("Sync 1 folder"));
 
   await waitFor(() => expect(onChanged).toHaveBeenCalled());
   expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({
@@ -256,4 +256,48 @@ it("shows why the hub's folders could not be listed, and goes back", async () =>
   expect(await screen.findByText("Could not reach mini.")).toBeTruthy();
   fireEvent.click(screen.getByText("Back"));
   expect(screen.queryByText("Could not reach mini.")).toBeNull();
+});
+
+it("chooses one project inside a folder the hub syncs whole", async () => {
+  const onChanged = vi.fn();
+  const preview = {
+    ...cloudPreview,
+    folders: [
+      {
+        id: "projects",
+        path: "~/Projects",
+        files: 900_000,
+        bytes: 80 * GB,
+        selected: false,
+        subfolders: [
+          { name: "app", path: "~/Projects/app", files: 300, bytes: 90 * 1024 * 1024, selected: false },
+          { name: "site", path: "~/Projects/site", files: 40, bytes: 2 * 1024 * 1024, selected: false },
+        ],
+      },
+    ],
+  };
+  fetchMock
+    .mockResolvedValueOnce(jsonResponse({ signed_in: true, role: "none", candidates: [mini] }))
+    .mockResolvedValueOnce(jsonResponse(preview))
+    .mockResolvedValueOnce(jsonResponse({ role: "edge", hub_name: "mini" }));
+
+  render(<SyncPairingSetup onChanged={onChanged} />);
+  fireEvent.click(await screen.findByText("Sync with this"));
+
+  expect(await screen.findByText("300 files · 90.0 MB")).toBeTruthy();
+  fireEvent.click(screen.getByLabelText("Sync ~/Projects/app"));
+  expect(screen.getByText(/About 90.0 MB to sync/)).toBeTruthy();
+  // choosing the whole folder hides its projects (it covers them)
+  fireEvent.click(screen.getByLabelText("Sync ~/Projects"));
+  expect(screen.queryByLabelText("Sync ~/Projects/site")).toBeNull();
+  expect(await screen.findByText(/That may not fit/)).toBeTruthy();
+  fireEvent.click(screen.getByLabelText("Sync ~/Projects"));
+  fireEvent.click(screen.getByText("Sync 1 folder"));
+
+  await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({
+    hub: "mini.net.example",
+    roots: ["~/Projects/app"],
+    project_only: true,
+  });
 });
