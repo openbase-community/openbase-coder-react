@@ -75,9 +75,14 @@ export const SyncExplainerCard: React.FC = () => (
       <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
         <p className="text-[11.5px] text-foreground">Set up</p>
         <p className="text-[11px] text-muted-foreground">
-          Run <Command>openbase-coder sync-daemon configure</Command> on each
-          computer; add <Command>--with-product-folders</Command> to include
-          thread sync and skills.
+          On the computer that stays on, choose “Make this my always-on
+          computer”. Then, on each other computer, pick it under “Sync with…”.
+          Both computers must be signed in to the same Openbase account.
+        </p>
+        <p className="text-[11px] text-muted-foreground">
+          From a terminal: <Command>openbase-coder sync-daemon pair hub</Command>{" "}
+          on the always-on computer, then{" "}
+          <Command>openbase-coder sync-daemon pair join &lt;name&gt;</Command>.
         </p>
         <p className="text-[11px] text-muted-foreground">
           Computers that used the previous sync engine: preview the move with{" "}

@@ -29,14 +29,20 @@ afterEach(() => {
 });
 
 it("shows the Openbase Sync card and the explainer, with no legacy sync routes", async () => {
-  fetchMock.mockResolvedValue(jsonResponse({ configured: false, roots: [] }));
+  fetchMock.mockImplementation(async (url) =>
+    String(url).includes("/pairing/candidates/")
+      ? jsonResponse({ signed_in: true, role: "none", candidates: [] })
+      : jsonResponse({ configured: false, roots: [] }),
+  );
 
   render(<SyncPage />);
 
-  expect(await screen.findByText("not configured")).toBeTruthy();
+  expect(await screen.findByText("not syncing")).toBeTruthy();
   expect(screen.getByText("How Openbase Sync works")).toBeTruthy();
   expect(screen.getByText(/never file-synced/)).toBeTruthy();
-  expect(screen.getByText("--with-product-folders")).toBeTruthy();
+  expect(
+    screen.getByText("openbase-coder sync-daemon pair hub"),
+  ).toBeTruthy();
   expect(
     screen.getByText("openbase-coder sync migrate-from-syncthing"),
   ).toBeTruthy();
