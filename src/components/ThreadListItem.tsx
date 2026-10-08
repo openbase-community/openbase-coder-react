@@ -105,6 +105,14 @@ export const ThreadListItem = ({
           <span className="truncate font-mono text-[11px] text-muted-foreground/70">
             {threadProjectLabel(thread)}
           </span>
+          {thread.moved_to?.state === "moved" ? (
+            <span
+              className="shrink-0 rounded-sm bg-surface-muted px-1 font-mono text-[10px] text-muted-foreground"
+              title={`Moved to ${thread.moved_to.device ?? "another computer"}; this copy is read-only`}
+            >
+              → {thread.moved_to.device ?? "moved"}
+            </span>
+          ) : null}
           {thread.origin_device ? (
             <span
               className="shrink-0 rounded-sm bg-surface-muted px-1 font-mono text-[10px] text-muted-foreground"

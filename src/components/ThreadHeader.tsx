@@ -9,6 +9,7 @@ import { DispatcherHelp } from "@/components/thread/DispatcherHelp";
 import { DispatcherModelMenu } from "@/components/thread/DispatcherModelMenu";
 import { ThreadActionsMenu } from "@/components/thread/ThreadActionsMenu";
 import type { Continuation } from "@/components/thread/BackendSwitchMenu";
+import type { PushResult } from "@/lib/thread-push";
 import type { TagOption } from "@/lib/item-tags";
 import { isDispatcherThread, threadDisplayName } from "@/lib/thread-display";
 import type { ThreadInfo } from "@/types/session";
@@ -22,6 +23,7 @@ interface ThreadHeaderProps {
   onArchive: () => Promise<void>;
   onOpenProject: () => void;
   onContinued?: (thread: Continuation) => void;
+  onPushed?: (result: PushResult) => void;
   onRename?: (name: string) => Promise<void>;
   onBack?: () => void;
 }
