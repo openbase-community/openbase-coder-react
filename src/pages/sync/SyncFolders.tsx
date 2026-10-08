@@ -6,14 +6,26 @@ import { X } from "lucide-react";
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { RESTART_NOTE } from "./restartNote";
+import { formatCount, plural } from "./syncHealth";
+import type { SyncOverviewRoot } from "./syncTypes";
 
-export type SyncFolderRoot = { id?: string; path?: string };
+export type SyncFolderRoot = {
+  id?: string;
+  path?: string;
+  pins?: string[];
+  ignore?: string[];
+};
 
-export type SyncFolderStatus = {
-  id: string;
-  entries: number;
-  pending_fetches: number;
-  scanning: boolean;
+const peerBacklogLine = (
+  peer: SyncOverviewRoot["peers"][number],
+  peerName: (device: string) => string,
+) => {
+  const name = peerName(peer.device);
+  const parts: string[] = [];
+  if (peer.unsent) parts.push(`${formatCount(peer.unsent)} to send`);
+  if (peer.unacked) parts.push(`${formatCount(peer.unacked)} awaiting confirmation`);
+  const outgoing = parts.length ? parts.join(", ") : "all sent";
+  return `${name}: ${outgoing} · received through change #${formatCount(peer.received_seq)}`;
 };
 
 type PeerResult = { name: string; ok: boolean; error: string | null };
@@ -54,9 +66,10 @@ const warnFailedPeers = (peers: PeerResult[]) => {
 /** The synced folders, with add and remove. Changes apply on both computers. */
 export const SyncFolders: React.FC<{
   roots: SyncFolderRoot[];
-  status?: SyncFolderStatus[];
+  status?: SyncOverviewRoot[];
+  peerName?: (device: string) => string;
   onChanged: () => void | Promise<void>;
-}> = ({ roots, status, onChanged }) => {
+}> = ({ roots, status, peerName = (device) => device, onChanged }) => {
   const [newPath, setNewPath] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const statusById = new Map((status ?? []).map((root) => [root.id, root]));
@@ -116,35 +129,58 @@ export const SyncFolders: React.FC<{
         {roots.map((root) => {
           const path = root.path ?? root.id ?? "";
           const live = root.id ? statusById.get(root.id) : undefined;
+          const pins = live?.pins?.length ? live.pins : (root.pins ?? []);
+          const ignore = live?.ignore?.length
+            ? live.ignore
+            : (root.ignore ?? []);
           return (
-            <li
-              key={root.id ?? path}
-              className="flex items-center gap-2 text-xs"
-            >
-              <span className="min-w-0 flex-1 truncate font-mono">
-                {path}
-                {live ? (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    · {live.entries.toLocaleString()} entries
-                    {live.pending_fetches > 0
-                      ? ` · ${live.pending_fetches} transferring`
-                      : ""}
-                    {live.scanning ? " · scanning" : ""}
-                  </span>
+            <li key={root.id ?? path} className="space-y-0.5 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate font-mono">
+                  {path}
+                  {live ? (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {live.entries.toLocaleString()} entries
+                      {live.pending_fetches > 0
+                        ? ` · ${live.pending_fetches} transferring`
+                        : ""}
+                      {live.scanning ? " · scanning" : ""}
+                    </span>
+                  ) : null}
+                </span>
+                {roots.length > 1 ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0"
+                    aria-label={`Stop syncing ${path}`}
+                    disabled={busy !== null}
+                    onClick={() => void remove(path)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
                 ) : null}
-              </span>
-              {roots.length > 1 ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 w-6 p-0"
-                  aria-label={`Stop syncing ${path}`}
-                  disabled={busy !== null}
-                  onClick={() => void remove(path)}
+              </div>
+              {live?.peers?.map((peer) => (
+                <div
+                  key={peer.device}
+                  className={`pl-2 text-[11px] ${peer.unsent || peer.unacked ? "text-foreground" : "text-muted-foreground"}`}
                 >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
+                  {peerBacklogLine(peer, peerName)}
+                </div>
+              ))}
+              {pins.length ? (
+                <div className="pl-2 text-[11px] text-muted-foreground">
+                  Pinned (kept in full on one computer only):{" "}
+                  <span className="font-mono">{pins.join(", ")}</span>
+                </div>
+              ) : null}
+              {ignore.length ? (
+                <div className="pl-2 text-[11px] text-muted-foreground">
+                  {plural(ignore.length, "path")} kept on this computer only:{" "}
+                  <span className="font-mono">{ignore.join(", ")}</span>
+                </div>
               ) : null}
             </li>
           );

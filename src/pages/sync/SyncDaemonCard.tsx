@@ -15,176 +15,168 @@ import { Panel } from "@/components/ui/panel";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
 import { Radio } from "lucide-react";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { SyncComputers } from "./SyncComputers";
+import { SyncConflicts } from "./SyncConflicts";
 import { SyncFolders } from "./SyncFolders";
 import { SyncPairingSetup } from "./SyncPairingSetup";
+import { SyncStaleLocks } from "./SyncStaleLocks";
+import { SyncStatusBanner } from "./SyncStatusBanner";
 import { withRestartNote } from "./restartNote";
+import {
+  backlogOf,
+  backlogProgress,
+  describeHealth,
+  overviewOf,
+  trackBacklog,
+  type BacklogTrack,
+} from "./syncHealth";
+import type {
+  SyncDaemonConflict,
+  SyncDaemonSettings,
+  SyncDaemonStatus,
+  SyncStaleLocksResponse,
+} from "./syncTypes";
 
-const POLL_MS = 5000;
+export type {
+  SyncDaemonConflict,
+  SyncDaemonPeer,
+  SyncDaemonSettings,
+  SyncDaemonStatus,
+} from "./syncTypes";
 
-export type SyncDaemonSettings = {
-  configured: boolean;
-  reachable?: boolean;
-  role?: string;
-  device_id?: string;
-  sync_group?: string;
-  peer_hot?: string;
-  listen_hot?: string;
-  hub_is_self?: boolean;
-  hub_name?: string | null;
-  hub_host?: string | null;
-  roots: { id?: string; path?: string }[];
-};
+/** Status is cheap to ask for; conflicts and lock scans less so. */
+export const POLL_MS = 5000;
+export const CONFLICTS_EVERY = 3; // polls (15 s)
+export const STALE_LOCKS_EVERY = 12; // polls (60 s)
 
-export type SyncDaemonPeer = {
-  device: string;
-  role: string;
-  rtt_ms: number;
-  roots: Record<
-    string,
-    { sent_seq: number; acked_seq: number; applied_peer_seq: number }
-  >;
-};
-
-export type SyncDaemonStatus = {
-  device: string;
-  role: string;
-  uptime_s: number;
-  roots: {
-    id: string;
-    path: string;
-    entries: number;
-    seq: number;
-    pending_fetches: number;
-    scanning: boolean;
-  }[];
-  peers: SyncDaemonPeer[];
-  open_conflicts: number;
-  metrics?: {
-    local_changes: number;
-    remote_applied: number;
-    conflicts: number;
-    merges: number;
-    bytes_sent: number;
-    bytes_received: number;
-  };
-};
-
-export type SyncDaemonConflict = {
-  id: number;
-  root: string;
-  path: string;
-  kind: string;
-  a_device: string;
-  b_device: string;
-  created_ns: number;
-  label?: string;
-};
-
-const kindLabel: Record<string, string> = {
-  content: "Both sides edited",
-  "delete-edit": "Deleted on one side, edited on the other",
-  type: "File vs directory",
-  collision: "Name collision",
-  "sqlite-writer": "Database written on both sides",
-  "git-branch": "Branch diverged",
+/** The home directory, from a root configured as `~/x` and served as `/…/x`. */
+const homeFrom = (
+  settings: SyncDaemonSettings | null,
+  status: SyncDaemonStatus | null,
+) => {
+  for (const root of settings?.roots ?? []) {
+    if (!root.id || !root.path?.startsWith("~/")) continue;
+    const live = status?.roots?.find((entry) => entry.id === root.id);
+    const suffix = root.path.slice(1);
+    if (live?.path?.endsWith(suffix)) {
+      return live.path.slice(0, live.path.length - suffix.length);
+    }
+  }
+  return null;
 };
 
 export const SyncDaemonCard: React.FC = () => {
   const [settings, setSettings] = useState<SyncDaemonSettings | null>(null);
   const [status, setStatus] = useState<SyncDaemonStatus | null>(null);
   const [conflicts, setConflicts] = useState<SyncDaemonConflict[]>([]);
+  const [staleLocks, setStaleLocks] = useState<SyncStaleLocksResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unreachable, setUnreachable] = useState(false);
-  const [resolving, setResolving] = useState<number | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const backlog = useRef<BacklogTrack>({ samples: [], peak: 0 });
+  const tick = useRef(0);
+  const lockScanRunning = useRef(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      const res = await apiFetch("/api/sync/daemon/settings/");
-      if (!res.ok) {
-        throw new Error(
-          await extractErrorMessage(res, "Unable to load Openbase Sync status."),
-        );
-      }
-      const data = (await res.json()) as SyncDaemonSettings;
-      setSettings(data);
-      setError(null);
-      if (!data.configured) {
-        setStatus(null);
-        setConflicts([]);
-        setUnreachable(false);
-        return;
-      }
-      const [statusRes, conflictsRes] = await Promise.all([
-        apiFetch("/api/sync/daemon/status/"),
-        apiFetch("/api/sync/daemon/conflicts/"),
-      ]);
-      if (!statusRes.ok) {
-        setUnreachable(true);
-        setStatus(null);
-        setConflicts([]);
-        return;
-      }
-      setUnreachable(false);
-      // The daemon sends null (not []) for empty lists, e.g. a new hub with
-      // no edge connected yet.
-      const rawStatus = (await statusRes.json()) as SyncDaemonStatus;
-      setStatus({
-        ...rawStatus,
-        roots: rawStatus.roots ?? [],
-        peers: rawStatus.peers ?? [],
-      });
-      if (conflictsRes.ok) {
-        const payload = (await conflictsRes.json()) as {
-          conflicts: SyncDaemonConflict[];
-        };
-        setConflicts(payload.conflicts ?? []);
-      } else {
-        setConflicts([]);
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load Openbase Sync status.",
-      );
-    } finally {
-      setLoading(false);
-    }
+  const loadConflicts = useCallback(async () => {
+    const res = await apiFetch("/api/sync/daemon/conflicts/");
+    if (!res.ok) return;
+    const payload = (await res.json()) as {
+      conflicts: SyncDaemonConflict[] | null;
+    };
+    setConflicts(payload.conflicts ?? []);
   }, []);
 
+  const loadStaleLocks = useCallback(async (refresh = false) => {
+    const res = await apiFetch(
+      `/api/sync/daemon/stale-locks/${refresh ? "?refresh=1" : ""}`,
+    );
+    if (!res.ok) return;
+    const payload = (await res.json()) as SyncStaleLocksResponse;
+    lockScanRunning.current = payload.refreshing;
+    setStaleLocks(payload);
+  }, []);
+
+  const refresh = useCallback(
+    async ({ all = false }: { all?: boolean } = {}) => {
+      const count = tick.current++;
+      try {
+        const res = await apiFetch("/api/sync/daemon/settings/");
+        if (!res.ok) {
+          throw new Error(
+            await extractErrorMessage(
+              res,
+              "Unable to load Openbase Sync status.",
+            ),
+          );
+        }
+        const data = (await res.json()) as SyncDaemonSettings;
+        setSettings(data);
+        setError(null);
+        setNow(Date.now());
+        if (!data.configured) {
+          setStatus(null);
+          setConflicts([]);
+          setStaleLocks(null);
+          setUnreachable(false);
+          return;
+        }
+        const statusRes = await apiFetch("/api/sync/daemon/status/");
+        if (!statusRes.ok) {
+          setUnreachable(true);
+          setStatus(null);
+          setConflicts([]);
+          return;
+        }
+        setUnreachable(false);
+        // The daemon sends null (not []) for empty lists, e.g. a new hub with
+        // no edge connected yet.
+        const rawStatus = (await statusRes.json()) as SyncDaemonStatus;
+        const next = {
+          ...rawStatus,
+          roots: rawStatus.roots ?? [],
+          peers: rawStatus.peers ?? [],
+        };
+        backlog.current = trackBacklog(backlog.current, {
+          at: Date.now(),
+          backlog: backlogOf(overviewOf(next)),
+        });
+        setStatus(next);
+        const loads: Promise<void>[] = [];
+        if (all || count % CONFLICTS_EVERY === 0) loads.push(loadConflicts());
+        if (
+          all ||
+          lockScanRunning.current ||
+          count % STALE_LOCKS_EVERY === 0
+        ) {
+          loads.push(loadStaleLocks());
+        }
+        await Promise.all(loads);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load Openbase Sync status.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadConflicts, loadStaleLocks],
+  );
+
+  const refreshAll = useCallback(() => refresh({ all: true }), [refresh]);
+
   useEffect(() => {
-    void refresh();
+    void refresh({ all: true });
     const timer = window.setInterval(() => void refresh(), POLL_MS);
     return () => window.clearInterval(timer);
   }, [refresh]);
-
-  const resolve = async (id: number, action: "keep_local" | "use_remote") => {
-    setResolving(id);
-    try {
-      const res = await apiFetch("/api/sync/daemon/conflicts/resolve/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, action }),
-      });
-      if (!res.ok) {
-        throw new Error(await extractErrorMessage(res, "Unable to resolve."));
-      }
-      toast.success(
-        action === "keep_local"
-          ? "Kept this computer's version."
-          : "Took the other computer's version.",
-      );
-      await refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to resolve.");
-    } finally {
-      setResolving(null);
-    }
-  };
 
   const leave = async () => {
     setLeaving(true);
@@ -195,7 +187,9 @@ export const SyncDaemonCard: React.FC = () => {
         body: "{}",
       });
       if (!res.ok) {
-        throw new Error(await extractErrorMessage(res, "Unable to stop syncing."));
+        throw new Error(
+          await extractErrorMessage(res, "Unable to stop syncing."),
+        );
       }
       toast.success(
         await withRestartNote(
@@ -203,13 +197,52 @@ export const SyncDaemonCard: React.FC = () => {
           "Stopped syncing on this computer. Your files were not changed.",
         ),
       );
-      await refresh();
+      await refreshAll();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to stop syncing.");
+      toast.error(
+        err instanceof Error ? err.message : "Unable to stop syncing.",
+      );
     } finally {
       setLeaving(false);
     }
   };
+
+  const overview = useMemo(
+    () => (status && !unreachable ? overviewOf(status) : null),
+    [status, unreachable],
+  );
+  const hubDevice =
+    status?.peers?.find((peer) => peer.role === "hub")?.device ??
+    overview?.offline_peers.find((peer) => peer.role === "hub")?.device ??
+    null;
+  // the paired computer's name, else its sync device id, else its address
+  const hubLabel = settings?.hub_is_self
+    ? null
+    : (settings?.hub_name ?? hubDevice ?? settings?.hub_host ?? null);
+  const peerName = useCallback(
+    (device: string) =>
+      hubLabel && device === hubDevice ? hubLabel : device,
+    [hubLabel, hubDevice],
+  );
+  const staleLockCount =
+    staleLocks?.locks?.length ?? overview?.attention.stale_locks ?? null;
+  const shownOverview = overview
+    ? {
+        ...overview,
+        attention: {
+          ...overview.attention,
+          conflicts: Math.max(overview.attention.conflicts, conflicts.length),
+          stale_locks: staleLockCount,
+        },
+      }
+    : null;
+  const health = describeHealth({
+    overview: shownOverview,
+    unreachable,
+    hubLabel,
+    progress: overview ? backlogProgress(backlog.current) : null,
+    now,
+  });
 
   if (loading && !settings) {
     return (
@@ -219,7 +252,9 @@ export const SyncDaemonCard: React.FC = () => {
           <h2 className="text-base font-semibold">Openbase Sync</h2>
           <Badge variant="outline">loading</Badge>
         </div>
-        <p className="text-sm text-muted-foreground">Loading Openbase Sync...</p>
+        <p className="text-sm text-muted-foreground">
+          Loading Openbase Sync...
+        </p>
       </Panel>
     );
   }
@@ -238,12 +273,8 @@ export const SyncDaemonCard: React.FC = () => {
     );
   }
   if (!settings.configured) {
-    return <SyncPairingSetup onChanged={refresh} />;
+    return <SyncPairingSetup onChanged={refreshAll} />;
   }
-
-  const hubLabel = settings.hub_is_self
-    ? null
-    : (settings.hub_name ?? settings.hub_host ?? null);
 
   return (
     <Panel className="space-y-3 p-4">
@@ -273,74 +304,55 @@ export const SyncDaemonCard: React.FC = () => {
             : "Syncing with your always-on computer."}
       </p>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      <SyncStatusBanner
+        health={health}
+        attention={
+          shownOverview
+            ? {
+                conflicts: shownOverview.attention.conflicts,
+                staleLocks: shownOverview.attention.stale_locks,
+              }
+            : undefined
+        }
+      />
       <div className="grid gap-3 text-sm sm:grid-cols-2">
         <SyncFolders
           roots={settings.roots}
-          status={status?.roots}
-          onChanged={refresh}
+          status={overview?.roots}
+          peerName={peerName}
+          onChanged={refreshAll}
         />
         {status ? (
-          <div>
-            <div className="text-muted-foreground">Peers</div>
-            <ul className="space-y-1">
-              {status.peers.length === 0 ? (
-                <li className="text-xs text-muted-foreground">none</li>
-              ) : (
-                status.peers.map((peer) => (
-                  <li key={peer.device} className="text-xs">
-                    <span className="font-mono">{peer.device}</span> ({peer.role}
-                    {peer.rtt_ms > 0 ? `, ${peer.rtt_ms.toFixed(0)} ms` : ""})
-                  </li>
-                ))
-              )}
-            </ul>
-          </div>
+          <SyncComputers
+            role={settings.role}
+            peers={status.peers}
+            overview={overview}
+            hubLabel={hubLabel}
+            peerName={peerName}
+            now={now}
+          />
         ) : null}
       </div>
-      {conflicts.length > 0 ? (
-        <div className="space-y-2">
-          <div className="text-sm font-medium">
-            {conflicts.length} conflict{conflicts.length === 1 ? "" : "s"}
-          </div>
-          <ul className="space-y-2">
-            {conflicts.map((conflict) => (
-              <li
-                key={conflict.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-sm"
-              >
-                <div className="min-w-0">
-                  <div className="truncate font-mono text-xs">
-                    {conflict.path}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {kindLabel[conflict.kind] ?? conflict.kind}
-                    {conflict.label ? ` · ${conflict.label}` : ""}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={resolving === conflict.id}
-                    onClick={() => void resolve(conflict.id, "keep_local")}
-                  >
-                    Keep mine
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={resolving === conflict.id}
-                    onClick={() => void resolve(conflict.id, "use_remote")}
-                  >
-                    Take theirs
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+      {status && !unreachable ? (
+        <div className="border-t pt-3">
+          <SyncConflicts
+            conflicts={conflicts}
+            otherName={peerName}
+            onChanged={refreshAll}
+            now={now}
+          />
         </div>
-      ) : status && !unreachable ? (
-        <p className="text-xs text-muted-foreground">No conflicts.</p>
+      ) : null}
+      {status && !unreachable ? (
+        <div className="border-t pt-3">
+          <SyncStaleLocks
+            data={staleLocks}
+            home={homeFrom(settings, status)}
+            onChanged={() => loadStaleLocks()}
+            onRefresh={() => void loadStaleLocks(true)}
+            now={now}
+          />
+        </div>
       ) : null}
       <div className="border-t pt-3">
         <AlertDialog>
