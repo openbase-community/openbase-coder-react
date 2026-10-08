@@ -120,7 +120,7 @@ function ShellSidebar({ insetWindowControls }: { insetWindowControls: boolean })
 
   if (isMobile) {
     return (
-      <Sidebar className="border-r-0">
+      <Sidebar className="border-r-0" mobileTitle="Navigation">
         {body}
         <NavRail
           orientation="horizontal"
@@ -154,6 +154,23 @@ function ShellSidebar({ insetWindowControls }: { insetWindowControls: boolean })
   );
 }
 
+/** Shows or hides the threads sidebar; on small screens it opens the sheet
+ * that holds both the sidebar and the rail. */
+export function ThreadsSidebarTrigger() {
+  const { isMobile, open, openMobile } = useSidebar();
+  const expanded = isMobile ? openMobile : open;
+  const label = isMobile
+    ? `${expanded ? "Close" : "Open"} navigation`
+    : `${expanded ? "Hide" : "Show"} threads sidebar`;
+  return (
+    <SidebarTrigger
+      aria-label={label}
+      aria-expanded={expanded}
+      title={isMobile ? label : `${label} (⌘B)`}
+    />
+  );
+}
+
 function ShellHeader({ insetWindowControls }: { insetWindowControls: boolean }) {
   const { isMobile, open } = useSidebar();
   const health = useHealthWarnings();
@@ -174,13 +191,12 @@ function ShellHeader({ insetWindowControls }: { insetWindowControls: boolean }) 
           padLeft,
         )}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <SidebarTrigger
-            aria-label={open ? "Hide threads sidebar" : "Show threads sidebar"}
-            title={`${open ? "Hide" : "Show"} sidebar (⌘B)`}
-          />
+        {/* The trigger never shrinks: on a phone the right-hand cluster
+            would otherwise collapse this column and cover the button. */}
+        <div className="flex shrink-0 items-center gap-2">
+          <ThreadsSidebarTrigger />
         </div>
-        <div className="flex min-w-0 shrink items-center gap-1">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-1">
           <RuntimeFreshnessWarning freshness={health.freshness} />
           <WorkspaceToolbar />
           <NotificationsDropdown />

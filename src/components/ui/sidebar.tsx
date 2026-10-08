@@ -8,7 +8,13 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -162,6 +168,8 @@ const Sidebar = React.forwardRef<
     side?: "left" | "right"
     variant?: "sidebar" | "floating" | "inset"
     collapsible?: "offcanvas" | "icon" | "none"
+    /** Accessible name of the sheet the sidebar becomes on small screens. */
+    mobileTitle?: string
   }
 >(
   (
@@ -169,6 +177,7 @@ const Sidebar = React.forwardRef<
       side = "left",
       variant = "sidebar",
       collapsible = "offcanvas",
+      mobileTitle = "Sidebar",
       className,
       children,
       ...props
@@ -206,6 +215,12 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
+            {/* Radix dialogs need a title (and description) for screen
+                readers; the sheet's content already shows what it is. */}
+            <SheetHeader className="sr-only">
+              <SheetTitle>{mobileTitle}</SheetTitle>
+              <SheetDescription>{mobileTitle} navigation</SheetDescription>
+            </SheetHeader>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
