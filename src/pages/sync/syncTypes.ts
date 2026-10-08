@@ -11,7 +11,59 @@ export type SyncDaemonSettings = {
   hub_is_self?: boolean;
   hub_name?: string | null;
   hub_host?: string | null;
+  /** Syncs only chosen folders and keeps large files on the hub (a cloud workspace). */
+  project_only?: boolean;
   roots: { id?: string; path?: string; pins?: string[]; ignore?: string[] }[];
+};
+
+export type SyncDiskUsage = { free_bytes: number | null; total_bytes: number | null };
+
+/** One of the hub's folders, with its size from the hub (null: unknown). */
+export type SyncHubFolder = {
+  id: string;
+  path: string;
+  files: number | null;
+  bytes: number | null;
+  /** Join preview: preselected (every folder on a laptop, none on a cloud workspace). */
+  selected?: boolean;
+  synced_here?: boolean;
+  exists_here?: boolean;
+};
+
+/** `GET /api/sync/daemon/pairing/hub-folders/?hub=` */
+export type SyncHubFoldersPreview = {
+  hub_name: string;
+  hub_host: string;
+  folders: SyncHubFolder[];
+  this_computer: {
+    cloud_workspace: boolean;
+    project_only_default: boolean;
+    disk: SyncDiskUsage;
+  };
+  project_only: boolean;
+};
+
+/** `GET /api/sync/daemon/roots/available/` (an edge: the hub's folders). */
+export type SyncAvailableRoots = {
+  role: string;
+  hub_name: string | null;
+  project_only?: boolean;
+  folders: SyncHubFolder[];
+  disk: SyncDiskUsage;
+};
+
+/** A root's volume and the limits the daemon enforces on it. */
+export type SyncRootDisk = {
+  free_bytes: number | null;
+  total_bytes: number | null;
+  low_water_bytes: number;
+  low_water_auto: boolean;
+  below_low_water: boolean;
+  held_files: number;
+  held_bytes: number;
+  refused_writes: number;
+  lazy_threshold_bytes: number;
+  pinned_threshold_bytes: number;
 };
 
 export type SyncPeerRootProgress = {
@@ -54,6 +106,9 @@ export type SyncOverviewRoot = SyncDaemonRoot & {
   unsent: number;
   unacked: number;
   peers: SyncOverviewPeerBacklog[];
+  /** Absent from older Openbase versions. */
+  bytes?: number;
+  disk?: SyncRootDisk | null;
 };
 
 export type SyncOverview = {
@@ -72,8 +127,18 @@ export type SyncOverview = {
   attention: {
     conflicts: number;
     stale_locks: number | null;
+    /** Folders whose disk is below the free-space floor (absent: older Openbase). */
+    low_disk?: string[];
     needed: boolean;
   };
+  versions?: {
+    usage_bytes: number;
+    quota_bytes: number;
+    quota_auto: boolean;
+    retention_days: number;
+    over_quota: boolean;
+  } | null;
+  thin?: boolean;
 };
 
 export type SyncDaemonStatus = {

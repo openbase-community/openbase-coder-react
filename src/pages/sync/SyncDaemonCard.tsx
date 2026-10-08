@@ -311,6 +311,7 @@ export const SyncDaemonCard: React.FC = () => {
             ? {
                 conflicts: shownOverview.attention.conflicts,
                 staleLocks: shownOverview.attention.stale_locks,
+                lowDisk: shownOverview.attention.low_disk,
               }
             : undefined
         }
@@ -320,6 +321,8 @@ export const SyncDaemonCard: React.FC = () => {
           roots={settings.roots}
           status={overview?.roots}
           peerName={peerName}
+          role={settings.role}
+          projectOnly={settings.project_only === true}
           onChanged={refreshAll}
         />
         {status ? (
