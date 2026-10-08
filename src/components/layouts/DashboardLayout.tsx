@@ -71,7 +71,7 @@ function CliVersionLine() {
 function ShellSidebar({ insetWindowControls }: { insetWindowControls: boolean }) {
   const navigate = useNavigate();
   const { isMobile, open, setOpenMobile } = useSidebar();
-  const lists = useProjectsAndThreads();
+  const lists = useProjectsAndThreads({ loadAllProjects: true });
   const body = (
     <>
       <SidebarHeader
