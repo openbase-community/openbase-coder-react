@@ -129,7 +129,14 @@ export const SyncDaemonCard: React.FC = () => {
         return;
       }
       setUnreachable(false);
-      setStatus((await statusRes.json()) as SyncDaemonStatus);
+      // The daemon sends null (not []) for empty lists, e.g. a new hub with
+      // no edge connected yet.
+      const rawStatus = (await statusRes.json()) as SyncDaemonStatus;
+      setStatus({
+        ...rawStatus,
+        roots: rawStatus.roots ?? [],
+        peers: rawStatus.peers ?? [],
+      });
       if (conflictsRes.ok) {
         const payload = (await conflictsRes.json()) as {
           conflicts: SyncDaemonConflict[];

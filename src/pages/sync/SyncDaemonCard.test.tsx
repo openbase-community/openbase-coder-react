@@ -231,3 +231,21 @@ it("stops syncing only after confirmation", async () => {
   await waitFor(() => expect(mutations()).toHaveLength(1));
   expect(mutations()[0][0]).toBe("/api/sync/daemon/pairing/leave/");
 });
+
+it("renders a new hub whose daemon reports no peers as null", async () => {
+  fetchMock.mockImplementation(async (url) => {
+    const path = String(url);
+    if (path === "/api/sync/daemon/settings/") {
+      return jsonResponse({ ...edgeSettings, role: "hub", hub_is_self: true });
+    }
+    if (path === "/api/sync/daemon/status/") {
+      return jsonResponse({ ...edgeStatus, role: "hub", peers: null });
+    }
+    return jsonResponse({ conflicts: null });
+  });
+
+  render(<SyncDaemonCard />);
+
+  expect(await screen.findByText("waiting for peer")).toBeTruthy();
+  await waitFor(() => expect(screen.getByText("none")).toBeTruthy());
+});
