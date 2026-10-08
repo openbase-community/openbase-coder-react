@@ -97,8 +97,10 @@ const SidebarProvider = React.forwardRef<
     // Adds a keyboard shortcut to toggle the sidebar.
     React.useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
+        // Compare case-insensitively so Caps Lock, Shift, and synthetic
+        // "Meta+B" key events all reach the toggle.
         if (
-          event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
+          event.key.toLowerCase() === SIDEBAR_KEYBOARD_SHORTCUT &&
           (event.metaKey || event.ctrlKey)
         ) {
           event.preventDefault()
