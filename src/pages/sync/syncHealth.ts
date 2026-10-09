@@ -76,6 +76,13 @@ export const fallbackOverview = (status: SyncDaemonStatus): SyncOverview => {
     pending_fetches: roots.reduce((sum, root) => sum + root.pending_fetches, 0),
     entries: roots.reduce((sum, root) => sum + root.entries, 0),
   };
+  const heldDeletes = roots
+    .filter((root) => root.held_deletes)
+    .map((root) => ({
+      id: root.id,
+      path: root.path,
+      count: root.held_deletes ?? 0,
+    }));
   const state = !peers.length
     ? status.role === "hub"
       ? "waiting"
@@ -96,7 +103,8 @@ export const fallbackOverview = (status: SyncDaemonStatus): SyncOverview => {
     attention: {
       conflicts: status.open_conflicts ?? 0,
       stale_locks: null,
-      needed: Boolean(status.open_conflicts),
+      held_deletes: heldDeletes,
+      needed: Boolean(status.open_conflicts || heldDeletes.length),
     },
   };
 };
