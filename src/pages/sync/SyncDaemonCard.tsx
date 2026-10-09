@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { SyncComputers } from "./SyncComputers";
 import { SyncConflicts } from "./SyncConflicts";
 import { SyncFolders } from "./SyncFolders";
+import { SyncHeldDeletes } from "./SyncHeldDeletes";
 import { SyncPairingSetup } from "./SyncPairingSetup";
 import { SyncStaleLocks } from "./SyncStaleLocks";
 import { SyncStatusBanner } from "./SyncStatusBanner";
@@ -28,6 +29,7 @@ import {
   backlogOf,
   backlogProgress,
   describeHealth,
+  heldDeleteTotal,
   overviewOf,
   trackBacklog,
   type BacklogTrack,
@@ -36,6 +38,7 @@ import type {
   SyncDaemonConflict,
   SyncDaemonSettings,
   SyncDaemonStatus,
+  SyncHeldDeletesResponse,
   SyncStaleLocksResponse,
 } from "./syncTypes";
 
@@ -74,6 +77,9 @@ export const SyncDaemonCard: React.FC = () => {
   const [staleLocks, setStaleLocks] = useState<SyncStaleLocksResponse | null>(
     null,
   );
+  const [heldDeletes, setHeldDeletes] = useState<SyncHeldDeletesResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unreachable, setUnreachable] = useState(false);
@@ -100,6 +106,14 @@ export const SyncDaemonCard: React.FC = () => {
     const payload = (await res.json()) as SyncStaleLocksResponse;
     lockScanRunning.current = payload.refreshing;
     setStaleLocks(payload);
+  }, []);
+
+  // Listing held deletions walks the daemon's held set: ask only while the
+  // status says something is held.
+  const loadHeldDeletes = useCallback(async () => {
+    const res = await apiFetch("/api/sync/daemon/held-deletes/");
+    if (!res.ok) return;
+    setHeldDeletes((await res.json()) as SyncHeldDeletesResponse);
   }, []);
 
   const refresh = useCallback(
@@ -149,6 +163,11 @@ export const SyncDaemonCard: React.FC = () => {
         setStatus(next);
         const loads: Promise<void>[] = [];
         if (all || count % CONFLICTS_EVERY === 0) loads.push(loadConflicts());
+        if (heldDeleteTotal(overviewOf(next)) === 0) {
+          setHeldDeletes(null);
+        } else if (all || count % CONFLICTS_EVERY === 0) {
+          loads.push(loadHeldDeletes());
+        }
         if (
           all ||
           lockScanRunning.current ||
@@ -167,7 +186,7 @@ export const SyncDaemonCard: React.FC = () => {
         setLoading(false);
       }
     },
-    [loadConflicts, loadStaleLocks],
+    [loadConflicts, loadHeldDeletes, loadStaleLocks],
   );
 
   const refreshAll = useCallback(() => refresh({ all: true }), [refresh]);
@@ -336,6 +355,18 @@ export const SyncDaemonCard: React.FC = () => {
           />
         ) : null}
       </div>
+      {status && !unreachable && heldDeletes?.roots.length ? (
+        <div className="border-t pt-3">
+          <SyncHeldDeletes
+            data={heldDeletes}
+            onChanged={refreshAll}
+            displayPath={(path) => {
+              const home = homeFrom(settings, status);
+              return home && path.startsWith(`${home}/`) ? `~/${path.slice(home.length + 1)}` : path;
+            }}
+          />
+        </div>
+      ) : null}
       {status && !unreachable ? (
         <div className="border-t pt-3">
           <SyncConflicts
