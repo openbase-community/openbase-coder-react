@@ -76,6 +76,13 @@ export const fallbackOverview = (status: SyncDaemonStatus): SyncOverview => {
     pending_fetches: roots.reduce((sum, root) => sum + root.pending_fetches, 0),
     entries: roots.reduce((sum, root) => sum + root.entries, 0),
   };
+  const heldDeletes = roots
+    .filter((root) => root.held_deletes)
+    .map((root) => ({
+      id: root.id,
+      path: root.path,
+      count: root.held_deletes ?? 0,
+    }));
   const state = !peers.length
     ? status.role === "hub"
       ? "waiting"
@@ -96,7 +103,8 @@ export const fallbackOverview = (status: SyncDaemonStatus): SyncOverview => {
     attention: {
       conflicts: status.open_conflicts ?? 0,
       stale_locks: null,
-      needed: Boolean(status.open_conflicts),
+      held_deletes: heldDeletes,
+      needed: Boolean(status.open_conflicts || heldDeletes.length),
     },
   };
 };
@@ -177,12 +185,21 @@ export type SyncHealth = {
   progress: number | null;
 };
 
-const attentionTitle = (conflicts: number, staleLocks: number | null) => {
+const attentionTitle = (
+  conflicts: number,
+  staleLocks: number | null,
+  heldDeletes = 0,
+) => {
   const parts: string[] = [];
+  if (heldDeletes) parts.push(`${plural(heldDeletes, "held deletion")} to confirm`);
   if (conflicts) parts.push(plural(conflicts, "conflict"));
   if (staleLocks) parts.push(plural(staleLocks, "stale git lock"));
   return parts.join(" and ");
 };
+
+/** Deletions held by the mass-delete guard, across folders. */
+export const heldDeleteTotal = (overview: SyncOverview | null) =>
+  (overview?.attention.held_deletes ?? []).reduce((sum, entry) => sum + entry.count, 0);
 
 /** The banner: is sync healthy, and what needs the user. */
 export const describeHealth = ({
@@ -209,7 +226,11 @@ export const describeHealth = ({
     };
   }
   const { totals, attention } = overview;
-  const needs = attentionTitle(attention.conflicts, attention.stale_locks);
+  const needs = attentionTitle(
+    attention.conflicts,
+    attention.stale_locks,
+    heldDeleteTotal(overview),
+  );
   const lines: string[] = [];
   const lastSeen = (role: string) => {
     const peer = overview.offline_peers.find((entry) => entry.role === role);

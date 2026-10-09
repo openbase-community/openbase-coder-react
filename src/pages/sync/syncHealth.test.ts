@@ -48,6 +48,21 @@ describe("fallbackOverview", () => {
     expect(overview.attention).toEqual({
       conflicts: 194,
       stale_locks: null,
+      held_deletes: [],
+      needed: true,
+    });
+  });
+
+  it("carries held deletions when the API overview is absent", () => {
+    const overview = fallbackOverview({
+      ...status,
+      open_conflicts: 0,
+      roots: [{ ...status.roots[0], held_deletes: 3 }],
+    });
+    expect(overview.attention).toEqual({
+      conflicts: 0,
+      stale_locks: null,
+      held_deletes: [{ id: "projects", path: "/Users/x/Projects", count: 3 }],
       needed: true,
     });
   });

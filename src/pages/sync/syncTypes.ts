@@ -109,6 +109,16 @@ export type SyncDaemonRoot = {
   seq: number;
   pending_fetches: number;
   scanning: boolean;
+  /** Deletions held by the mass-delete guard (absent: older Openbase). */
+  held_deletes?: number;
+};
+
+/** A folder whose deletions the mass-delete guard holds back. */
+export type SyncHeldDeleteFolder = { id: string; path: string; count: number };
+
+/** `GET /api/sync/daemon/held-deletes/`. */
+export type SyncHeldDeletesResponse = {
+  roots: (SyncHeldDeleteFolder & { sample: string[] })[];
 };
 
 export type SyncHeadline = "in_sync" | "syncing" | "scanning" | "offline" | "waiting";
@@ -151,6 +161,8 @@ export type SyncOverview = {
     stale_locks: number | null;
     /** Folders whose disk is below the free-space floor (absent: older Openbase). */
     low_disk?: string[];
+    /** Folders whose deletions the mass-delete guard holds (absent: older Openbase). */
+    held_deletes?: SyncHeldDeleteFolder[];
     needed: boolean;
   };
   versions?: {
