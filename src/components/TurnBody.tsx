@@ -10,6 +10,7 @@ import type { ReactNode, Ref } from "react";
 import { memo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { normalizeChatMarkdown } from "@/lib/chat-markdown";
 
 /**
  * A user-authored message (prompt, steer, or queued follow-up) rendered as a
@@ -147,7 +148,7 @@ function TurnBodyImpl({
         <div ref={outputRef} className="max-h-[36rem] overflow-auto">
           <article className="prose prose-sm max-w-none break-words dark:prose-invert [&>:first-child]:mt-0 [&>:last-child]:mb-0">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {turn.accumulated_output}
+              {normalizeChatMarkdown(turn.accumulated_output)}
             </ReactMarkdown>
           </article>
         </div>
