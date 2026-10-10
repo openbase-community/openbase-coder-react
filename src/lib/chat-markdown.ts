@@ -10,7 +10,7 @@ const LONE_ORDERED_LIST_ITEM = /^(\d{1,9})([.)])(?=\s|$)/;
  */
 export function normalizeChatMarkdown(text: string): string {
   const body = text.trim();
-  if (body.includes("\n")) return text;
+  if (body.includes("\n") || body.includes("\r")) return text;
   const match = LONE_ORDERED_LIST_ITEM.exec(body);
   if (!match) return text;
   const delimiterIndex = match[1].length;

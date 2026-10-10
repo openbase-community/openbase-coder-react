@@ -1,7 +1,22 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import ReactMarkdown from "react-markdown";
 import { normalizeChatMarkdown } from "./chat-markdown";
 
 describe("normalizeChatMarkdown", () => {
+  it.each(["\n", "\r\n", "\r"])("preserves lists separated by %j", (newline) => {
+    const source = `5. five${newline}6. six`;
+    const normalized = normalizeChatMarkdown(source);
+    expect(normalized).toBe(source);
+    const html = renderToStaticMarkup(
+      createElement(ReactMarkdown, { children: normalized }),
+    );
+    expect(html).toContain('<ol start="5">');
+    expect(html).toContain("<li>five</li>");
+    expect(html).toContain("<li>six</li>");
+  });
+
   it("keeps a bare number reply a paragraph", () => {
     // Field test modern-voice-UX-1: "62." parsed as a one-item ordered list.
     expect(normalizeChatMarkdown("62.")).toBe("62\\.");
