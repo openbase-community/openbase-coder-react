@@ -298,6 +298,14 @@
   }
 }
 
+/* Hidden or unfocused window (see src/window-activity.ts): freeze looping
+   animations so an idle app does not repaint every frame. */
+html[data-window-inactive="true"] *,
+html[data-window-inactive="true"] *::before,
+html[data-window-inactive="true"] *::after {
+  animation-play-state: paused !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
