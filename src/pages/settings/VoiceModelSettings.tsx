@@ -9,9 +9,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiFetch } from "@/lib/api";
+import { useVoiceModel } from "@/contexts/voice-model";
 import { cn } from "@/lib/utils";
 import { RefreshCw, Save } from "lucide-react";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   extractErrorMessage,
   type VoiceEngine,
@@ -44,6 +45,8 @@ const DefaultBadge: React.FC = () => (
 );
 
 export const VoiceModelSettings: React.FC<Props> = ({ onEngineChange }) => {
+  const sharedVoice = useVoiceModel();
+  const lastSharedModel = useRef<string | null>(null);
   const [settings, setSettings] = useState<VoiceModelSettingsResponse | null>(
     null,
   );
@@ -61,6 +64,14 @@ export const VoiceModelSettings: React.FC<Props> = ({ onEngineChange }) => {
     },
     [onEngineChange],
   );
+
+  useEffect(() => {
+    const data = sharedVoice?.settings;
+    if (data && data.model !== lastSharedModel.current) {
+      lastSharedModel.current = data.model;
+      applySettings(data);
+    }
+  }, [sharedVoice?.settings, applySettings]);
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
@@ -113,6 +124,7 @@ export const VoiceModelSettings: React.FC<Props> = ({ onEngineChange }) => {
       }
       const data = (await res.json()) as VoiceModelSettingsResponse;
       applySettings(data);
+      window.dispatchEvent(new Event("openbase:voice-model-changed"));
       setMessage(`Voice model saved. ${data.applies_hint}`);
     } catch {
       setError("Unable to reach the local API.");

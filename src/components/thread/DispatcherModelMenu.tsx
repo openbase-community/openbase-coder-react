@@ -1,4 +1,6 @@
 import { ModelBadge } from "@/components/ModelBadge";
+import { GptLiveMenuToggle } from "./GptLiveMenuToggle";
+import { useVoiceModel } from "@/contexts/voice-model";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import {
   DropdownMenu,
@@ -31,6 +33,7 @@ let cachedSettings: BackendModelSettingsResponse | null = null;
  * API's restart hint.
  */
 export function DispatcherModelMenu() {
+  const voice = useVoiceModel();
   const navigate = useNavigate();
   const [settings, setSettings] = useState<BackendModelSettingsResponse | null>(cachedSettings);
   const [loading, setLoading] = useState(false);
@@ -106,7 +109,12 @@ export function DispatcherModelMenu() {
   const currentUnavailable = currentOption?.available === false;
 
   return (
-    <DropdownMenu onOpenChange={(open) => { if (open) void load({ quiet: true }); }}>
+    <DropdownMenu onOpenChange={(open) => {
+      if (open) {
+        void load({ quiet: true });
+        void voice?.refresh();
+      }
+    }}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -138,6 +146,8 @@ export function DispatcherModelMenu() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
+        <GptLiveMenuToggle />
+        <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">
           Dispatcher model
         </DropdownMenuLabel>
