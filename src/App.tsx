@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
+import { VoiceModelProvider } from "@/contexts/voice-model";
 import { LoaderCircle } from "lucide-react";
 import { AuthProvider, useAuth } from "@/contexts/auth";
 import { NotificationsProvider } from "@/contexts/notifications";
@@ -373,12 +374,17 @@ function WorkspaceApp() {
     getRuntimeShell() === "electron" ? HashRouter : Router;
   const { isAuthenticated } = useAuth();
   return (
-    <WorkspaceTabsProvider key={isAuthenticated ? "signed-in" : "signed-out"}>
-      <RouterComponent basename={getRouterBasename()}>
-        <WorkspaceWindow />
-      </RouterComponent>
-      <WorkspaceSurface components={workspaceComponents} />
-    </WorkspaceTabsProvider>
+    <VoiceModelProvider
+      key={isAuthenticated ? "voice-in" : "voice-out"}
+      enabled={isAuthenticated}
+    >
+      <WorkspaceTabsProvider key={isAuthenticated ? "signed-in" : "signed-out"}>
+        <RouterComponent basename={getRouterBasename()}>
+          <WorkspaceWindow />
+        </RouterComponent>
+        <WorkspaceSurface components={workspaceComponents} />
+      </WorkspaceTabsProvider>
+    </VoiceModelProvider>
   );
 }
 
