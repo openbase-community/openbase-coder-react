@@ -2,12 +2,19 @@ export type ThreadStatus = "idle" | "waiting" | "running" | "completed" | "error
 
 export interface TurnSteer {
   text: string;
+  /** ``text`` as the user said or typed it (newer backends). */
+  display_text?: string;
+  /** Whether the steer arrived as a live speech transcript. */
+  spoken?: boolean;
   created_at?: string | null;
 }
 
 export interface QueuedTurn {
   queue_id?: string | null;
   prompt: string;
+  /** ``prompt`` as the user typed it (newer backends). */
+  display_prompt?: string;
+  spoken?: boolean;
   queued_at?: string | null;
 }
 
@@ -19,7 +26,12 @@ export interface TurnInfo {
   accumulated_output: string;
   accumulated_stderr: string;
   return_code: number | null;
+  /** Raw prompt as the agent received it, with any injected scaffolding. */
   prompt: string;
+  /** What the user said or typed, for transcript bubbles (newer backends). */
+  display_prompt?: string;
+  /** Whether the prompt arrived as a live speech transcript. */
+  spoken?: boolean;
   model?: string | null;
   reasoning_effort?: string | null;
   steers?: TurnSteer[];

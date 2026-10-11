@@ -547,6 +547,7 @@ const SessionDetail = ({
                   <UserBubble
                     key={queued.queue_id ?? index}
                     text={queued.prompt}
+                    display={queued.display_prompt}
                     hint="Queued"
                   />
                 ))

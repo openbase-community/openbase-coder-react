@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { voicePromptForDisplay } from "../voice-display";
+import { userPromptForDisplay, voicePromptForDisplay } from "../voice-display";
 
 describe("voicePromptForDisplay", () => {
   it("removes a complete voice transport envelope", () => {
@@ -38,6 +38,40 @@ describe("voicePromptForDisplay", () => {
     );
     expect(voicePromptForDisplay("<VOICE>case matters</VOICE>")).toBe(
       "<VOICE>case matters</VOICE>",
+    );
+  });
+});
+
+// Spoken dispatcher turns as stored (QA, 2026-10-10: desktop showed these raw).
+const SCOPE_NOTE =
+  "[Openbase system note: answer only what the caller just said in this spoken request.]";
+const ONBOARDING_NOTE =
+  "[Openbase system note: onboarding is pending on this machine — ask them to choose [now] or [later].]";
+
+describe("userPromptForDisplay", () => {
+  it("prefers the server-cleaned display text", () => {
+    expect(userPromptForDisplay(`${SCOPE_NOTE}\n\n<voice>hi</voice>`, "hi")).toBe("hi");
+    expect(userPromptForDisplay("raw", "")).toBe("");
+  });
+
+  it("falls back to stripping stacked notes and the voice envelope behind them", () => {
+    expect(
+      userPromptForDisplay(
+        `${ONBOARDING_NOTE}\n\n${SCOPE_NOTE}\n\n<voice>Please transfer me to Cooper</voice>`,
+      ),
+    ).toBe("Please transfer me to Cooper");
+    expect(userPromptForDisplay(`${ONBOARDING_NOTE}\n\ntyped request`)).toBe(
+      "typed request",
+    );
+  });
+
+  it("keeps typed text and replaces note-only previews with a placeholder", () => {
+    expect(userPromptForDisplay("what is [Openbase system note: x]?")).toBe(
+      "what is [Openbase system note: x]?",
+    );
+    expect(userPromptForDisplay(SCOPE_NOTE)).toMatch(/only a system note/);
+    expect(userPromptForDisplay("[Openbase system note: cut off")).toMatch(
+      /truncated system note/,
     );
   });
 });

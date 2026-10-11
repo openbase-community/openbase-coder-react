@@ -45,18 +45,44 @@ export function voicePromptForDisplay(text: string): string {
 
 const SYSTEM_NOTE_OPEN = "[Openbase system note:";
 
+/** End index (exclusive) of a bracketed note starting at 0, or -1. */
+function systemNoteEnd(text: string): number {
+  let depth = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === "[") depth += 1;
+    if (text[index] === "]") {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+    }
+  }
+  return -1;
+}
+
 /**
- * Strip a leading runtime-injected system note (e.g. the onboarding
- * reminder the CLI prepends to Dispatcher messages) so the bubble shows
- * what the user actually typed. If the stored prompt is only the note (the
- * backend keeps a truncated preview for Claude threads, which can cut the
- * user's text off entirely), fall back to a short placeholder.
+ * The text a user bubble shows. The API sends ``display`` (the prompt with
+ * injected system notes, harness reminders and the voice envelope removed)
+ * so every client renders the same answer; prefer it whenever present.
+ *
+ * Backends older than that field only send the raw prompt. The fallback
+ * strips the leading ``[Openbase system note: …]`` blocks the dispatcher
+ * prepends (several may stack, and they nest brackets) and then the voice
+ * envelope behind them. If the stored prompt is only a note (a truncated
+ * preview), show a short placeholder instead of the note.
  */
-export function userPromptForDisplay(text: string): string {
-  const shown = voicePromptForDisplay(text);
-  if (!shown.startsWith(SYSTEM_NOTE_OPEN)) return shown;
-  const close = shown.indexOf("]");
-  if (close === -1) return "(message not recorded — only a truncated system note was stored)";
-  const rest = shown.slice(close + 1).trim();
-  return rest || "(message not recorded — only a system note was stored)";
+export function userPromptForDisplay(
+  text: string,
+  display?: string | null,
+): string {
+  if (typeof display === "string") return display;
+  let rest = text;
+  while (rest.trimStart().startsWith(SYSTEM_NOTE_OPEN)) {
+    const trimmed = rest.trimStart();
+    const end = systemNoteEnd(trimmed);
+    if (end === -1) {
+      return "(message not recorded — only a truncated system note was stored)";
+    }
+    rest = trimmed.slice(end).trimStart();
+    if (!rest) return "(message not recorded — only a system note was stored)";
+  }
+  return voicePromptForDisplay(rest);
 }

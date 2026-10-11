@@ -20,10 +20,13 @@ import { normalizeChatMarkdown } from "@/lib/chat-markdown";
  */
 export function UserBubble({
   text,
+  display,
   steer = false,
   hint,
 }: {
   text: string;
+  /** Server-cleaned text; falls back to cleaning ``text`` locally. */
+  display?: string | null;
   steer?: boolean;
   hint?: string;
 }) {
@@ -45,7 +48,7 @@ export function UserBubble({
             />
           ) : null}
           <span className="whitespace-pre-wrap break-words">
-            {userPromptForDisplay(text)}
+            {userPromptForDisplay(text, display)}
           </span>
         </div>
       </div>
@@ -182,11 +185,16 @@ function TurnBodyImpl({
             />
           </button>
         ) : null}
-        <UserBubble text={turn.prompt} />
+        <UserBubble text={turn.prompt} display={turn.display_prompt} />
       </div>
 
       {(turn.steers ?? []).map((steer, index) => (
-        <UserBubble key={steer.created_at ?? index} text={steer.text} steer />
+        <UserBubble
+          key={steer.created_at ?? index}
+          text={steer.text}
+          display={steer.display_text}
+          steer
+        />
       ))}
 
       {open && (hasResponse || showStatusIcon) ? (
