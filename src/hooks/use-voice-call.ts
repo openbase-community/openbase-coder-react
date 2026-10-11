@@ -80,6 +80,8 @@ export function useVoiceCall() {
   // call UI shows it so a full-duplex call is recognizable.
   const [voiceEngine, setVoiceEngine] = useState<VoiceEngine | null>(null);
   const [roomName, setRoomName] = useState<string | null>(null);
+  // The connected room, for features layered on the call (screen share).
+  const [room, setRoomState] = useState<Room | null>(null);
   const [error, setError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
   const audioContainerRef = useRef<HTMLDivElement | null>(null);
@@ -108,6 +110,7 @@ export function useVoiceCall() {
 
   const teardown = useCallback(() => {
     roomRef.current = null;
+    setRoomState(null);
     setStatus("idle");
     setAgentState(null);
     setVoiceEngine(null);
@@ -238,6 +241,7 @@ export function useVoiceCall() {
 
       await room.connect(getLiveKitServerUrl(), payload.token);
       setRoomName(payload.room_name ?? room.name ?? null);
+      setRoomState(room);
 
       try {
         await room.localParticipant.setMicrophoneEnabled(true);
@@ -295,6 +299,7 @@ export function useVoiceCall() {
     agentState,
     voiceEngine,
     roomName,
+    room,
     error,
     audioContainerRef,
     start,
