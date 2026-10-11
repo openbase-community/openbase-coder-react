@@ -16,6 +16,14 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type ScreenShareStatus = {
+  /**
+   * Whether this backend can share a screen, as it advertises through
+   * livekit-companion-status. null until asked; false hides the control
+   * (for example a cloud workspace without a display).
+   */
+  available: boolean | null;
+  /** Why the backend cannot share, when `available` is false. */
+  unavailableDetail: string | null;
   /** Waiting for the computer's video after "Share screen". */
   starting: boolean;
   /** Waiting for the computer to unpublish after Stop. */
@@ -28,6 +36,8 @@ export type ScreenShareStatus = {
 };
 
 const IDLE: ScreenShareStatus = {
+  available: null,
+  unavailableDetail: null,
   starting: false,
   stopping: false,
   message: null,
@@ -51,6 +61,34 @@ export function useScreenShare(room: Room | null, roomName: string | null) {
   const [track, setTrack] = useState<RemoteVideoTrack | null>(null);
   const [status, setStatus] = useState<ScreenShareStatus>(IDLE);
   const activityRef = useRef(false);
+
+  useEffect(() => {
+    if (!room) return;
+    // Ask the backend whether it can share at all, so the control appears
+    // only where it works (never guessed from the host type here).
+    let cancelled = false;
+    apiFetch("/api/livekit-companion-status/")
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+        if (cancelled) return;
+        const available = response.ok && payload.supported !== false;
+        setStatus((previous) => ({
+          ...previous,
+          available,
+          unavailableDetail: available
+            ? null
+            : typeof payload.detail === "string"
+              ? payload.detail
+              : "Screen sharing is not available on this computer.",
+        }));
+      })
+      .catch(() => {
+        if (!cancelled) setStatus((previous) => ({ ...previous, available: null }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [room]);
 
   useEffect(() => {
     if (!room) {
@@ -134,7 +172,7 @@ export function useScreenShare(room: Room | null, roomName: string | null) {
 
   const start = useCallback(async () => {
     if (!roomName || activityRef.current) return;
-    setStatus({ ...IDLE, starting: true });
+    setStatus((previous) => ({ ...IDLE, available: previous.available, unavailableDetail: previous.unavailableDetail, starting: true }));
     try {
       const response = await apiFetch("/api/livekit-companion-start/", {
         method: "POST",
@@ -142,12 +180,13 @@ export function useScreenShare(room: Room | null, roomName: string | null) {
       });
       const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
       const message = startFailureMessage(response.status, payload);
-      if (message) setStatus({ ...IDLE, message });
+      if (message) setStatus((previous) => ({ ...previous, starting: false, message }));
     } catch (error) {
-      setStatus({
-        ...IDLE,
+      setStatus((previous) => ({
+        ...previous,
+        starting: false,
         message: error instanceof Error ? error.message : "Couldn't reach the computer to start screen sharing.",
-      });
+      }));
     }
   }, [roomName]);
 

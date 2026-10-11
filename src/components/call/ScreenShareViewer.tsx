@@ -37,6 +37,14 @@ export function ScreenShareViewer({ track, status, onStart, onStop, onSetControl
     };
   }, [track]);
 
+  if (!track && status.available === false) {
+    return (
+      <p className="text-[12px] text-muted-foreground" data-testid="call-share-screen-unavailable">
+        {status.unavailableDetail}
+      </p>
+    );
+  }
+
   if (!track) {
     const label = status.starting ? "Starting screen share…" : status.stopping ? "Stopping screen share…" : "Share screen";
     return (
