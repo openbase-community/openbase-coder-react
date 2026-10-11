@@ -100,7 +100,6 @@ const Call = () => {
                 <ScreenShareViewer
                   track={screenShare.track}
                   status={screenShare.status}
-                  onStart={() => void screenShare.start()}
                   onStop={() => void screenShare.stop()}
                   onSetControlEnabled={(enabled) => void screenShare.setControlEnabled(enabled)}
                   onInput={(inputs) => void screenShare.sendInput(inputs)}

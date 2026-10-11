@@ -8,24 +8,23 @@ import {
   type RemoteControlInput,
 } from "@/lib/screen-share-control";
 import type { RemoteVideoTrack } from "livekit-client";
-import { MonitorUp, MousePointerClick, Square } from "lucide-react";
+import { MousePointerClick, Square } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 type Props = {
   track: RemoteVideoTrack | null;
   status: ScreenShareStatus;
-  onStart: () => void;
   onStop: () => void;
   onSetControlEnabled: (enabled: boolean) => void;
   onInput: (inputs: RemoteControlInput[]) => void;
 };
 
 /**
- * The backend computer's shared screen in the console call, with a Share
- * screen / Stop control and, when remote control is on, click, type and
- * scroll straight on the video.
+ * The backend computer's shared screen in the console call (shown while an
+ * agent-started share is active), with Stop and, when remote control is on,
+ * click, type and scroll straight on the video.
  */
-export function ScreenShareViewer({ track, status, onStart, onStop, onSetControlEnabled, onInput }: Props) {
+export function ScreenShareViewer({ track, status, onStop, onSetControlEnabled, onInput }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -37,37 +36,7 @@ export function ScreenShareViewer({ track, status, onStart, onStop, onSetControl
     };
   }, [track]);
 
-  if (!track && status.available === false) {
-    return (
-      <p className="text-[12px] text-muted-foreground" data-testid="call-share-screen-unavailable">
-        {status.unavailableDetail}
-      </p>
-    );
-  }
-
-  if (!track) {
-    const label = status.starting ? "Starting screen share…" : status.stopping ? "Stopping screen share…" : "Share screen";
-    return (
-      <div className="flex flex-col items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 px-3 text-[12px]"
-          onClick={onStart}
-          disabled={status.starting || status.stopping}
-          data-testid="call-share-screen"
-        >
-          <MonitorUp className="h-3.5 w-3.5" />
-          {label}
-        </Button>
-        {status.message ? (
-          <p className="max-w-md text-[12px] text-destructive" data-testid="call-share-screen-message">
-            {status.message}
-          </p>
-        ) : null}
-      </div>
-    );
-  }
+  if (!track) return null;
 
   const controlOn = status.controlEnabled;
 
