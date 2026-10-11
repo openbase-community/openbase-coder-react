@@ -1,6 +1,8 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import { ScreenShareViewer } from "@/components/call/ScreenShareViewer";
+import { useScreenShare } from "@/hooks/use-screen-share";
 import { useVoiceCall, type VoiceAgentState } from "@/hooks/use-voice-call";
 import { Mic, MicOff, Phone, PhoneOff } from "lucide-react";
 
@@ -26,12 +28,20 @@ const Call = () => {
     agentState,
     voiceEngine,
     roomName,
+    room,
     error,
     audioContainerRef,
     start,
     end,
     toggleMute,
   } = useVoiceCall();
+  const screenShare = useScreenShare(room, roomName);
+
+  const endCall = async () => {
+    // End the computer's screen share while the room is still up.
+    await screenShare.stopForLeave("call_ended");
+    end();
+  };
 
   const inCall = status === "connected";
   const connecting = status === "connecting";
@@ -80,11 +90,21 @@ const Call = () => {
                   variant="destructive"
                   size="sm"
                   className="h-8 px-3 text-[12px]"
-                  onClick={end}
+                  onClick={() => void endCall()}
                 >
                   <PhoneOff className="h-3.5 w-3.5" />
                   End call
                 </Button>
+              </div>
+              <div className="mt-6">
+                <ScreenShareViewer
+                  track={screenShare.track}
+                  status={screenShare.status}
+                  onStart={() => void screenShare.start()}
+                  onStop={() => void screenShare.stop()}
+                  onSetControlEnabled={(enabled) => void screenShare.setControlEnabled(enabled)}
+                  onInput={(inputs) => void screenShare.sendInput(inputs)}
+                />
               </div>
             </>
           ) : (
