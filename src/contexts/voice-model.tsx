@@ -160,8 +160,7 @@ export function VoiceModelProvider({
           <AlertDialogDescription>
             You have 10% or less of your{" "}
             {warning?.shared ? "shared Cloud" : "GPT Live"} allowance left.{" "}
-            Consider switching to the classic voice pipeline to reduce voice
-            usage.
+            Subscribe to a Pro plan on app.openbase.cloud for expanded access.
             {warning?.shared
               ? " Cloud speech providers also draw from this shared allowance."
               : ""}{" "}
