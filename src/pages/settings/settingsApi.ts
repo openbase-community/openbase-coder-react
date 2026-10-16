@@ -163,10 +163,20 @@ export type VoiceModelSettingsResponse = {
   // False when GPT-Live is selected: the STT/TTS provider pickers below
   // only drive the classic pipeline.
   pipeline_settings_relevant: boolean;
+  // Set while the runtime moved this install to the classic pipeline on its
+  // own (GPT-Live credits ran out); any explicit choice clears it.
+  auto_switch?: VoiceModelAutoSwitch | null;
   config_path: string;
   changed: boolean;
   restart_required: boolean;
   applies_hint: string;
+};
+
+export type VoiceModelAutoSwitch = {
+  reason: string;
+  from_model: string;
+  at: string | null;
+  note: string;
 };
 
 export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";

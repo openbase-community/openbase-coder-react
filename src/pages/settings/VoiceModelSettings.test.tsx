@@ -118,3 +118,21 @@ it("surfaces API errors", async () => {
 
   expect(await screen.findByText("Voice settings unavailable.")).toBeTruthy();
 });
+
+it("explains when the runtime switched to the classic pipeline on its own", async () => {
+  vi.mocked(apiFetch).mockResolvedValueOnce(
+    response({
+      ...pipelineSettings,
+      auto_switch: {
+        reason: "live_credits_exhausted",
+        from_model: "gpt-live-1",
+        at: "2026-10-16T12:00:00+00:00",
+        note: "Switched to Classic because GPT-Live credits ran out. Switch back to GPT-Live here when credits return.",
+      },
+    }),
+  );
+  renderSettings();
+  expect(
+    (await screen.findByTestId("voice-model-auto-switch")).textContent,
+  ).toContain("GPT-Live credits ran out");
+});
