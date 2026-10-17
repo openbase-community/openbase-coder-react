@@ -221,6 +221,14 @@ export const VoiceModelSettings: React.FC<Props> = ({ onEngineChange }) => {
               {settings.applies_hint}
             </p>
           ) : null}
+          {settings?.auto_switch ? (
+            <p
+              className="text-[11px] text-muted-foreground"
+              data-testid="voice-model-auto-switch"
+            >
+              {settings.auto_switch.note}
+            </p>
+          ) : null}
         </div>
         <Button
           variant="outline"
