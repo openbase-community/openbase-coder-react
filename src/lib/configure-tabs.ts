@@ -3,16 +3,17 @@ import {
   CalendarClock,
   type LucideIcon,
   PackageOpen,
+  Users,
   Zap,
 } from "lucide-react";
 
 /**
- * The four destinations grouped under the "Configure" sidebar entry. Each
+ * The destinations grouped under the "Configure" sidebar entry. Each
  * keeps its own route (deep links and workspace tabs are unchanged); the
  * pages render a shared tab strip to move between them.
  */
 export type ConfigureTab = {
-  key: "loops" | "skills" | "memories" | "templates";
+  key: "loops" | "skills" | "memories" | "templates" | "contacts";
   path: string;
   icon: LucideIcon;
   title: string;
@@ -28,6 +29,7 @@ export const CONFIGURE_TABS: readonly ConfigureTab[] = [
     icon: PackageOpen,
     title: "Templates",
   },
+  { key: "contacts", path: "/dashboard/contacts", icon: Users, title: "Contacts" },
 ];
 
 /** Default landing tab when the sidebar entry is clicked. */

@@ -16,6 +16,7 @@ const FIND_IN_PAGE_ROUTE_PREFIXES = [
   "/dashboard/approvals",
   "/dashboard/skills",
   "/dashboard/memories",
+  "/dashboard/contacts",
 ];
 
 export function findInPageEnabledForPath(pathname: string): boolean {

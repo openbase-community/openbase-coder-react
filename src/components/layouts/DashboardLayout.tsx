@@ -1,4 +1,5 @@
 import FindInPageBar from "@/components/FindInPageBar";
+import { ContactReviewPrompt } from "@/components/ContactReviewPrompt";
 import HealthWarningsBanner from "@/components/HealthWarningsBanner";
 import { RuntimeFreshnessWarning } from "@/components/RuntimeFreshnessWarning";
 import { useHealthWarnings } from "@/hooks/useHealthWarnings";
@@ -204,6 +205,7 @@ function ShellHeader({ insetWindowControls }: { insetWindowControls: boolean }) 
         </div>
       </header>
       <HealthWarningsBanner warnings={health.warnings} onRefresh={health.refresh} />
+      <ContactReviewPrompt />
     </>
   );
 }

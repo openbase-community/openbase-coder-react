@@ -28,6 +28,7 @@ import {
 import AgentsMd from "./pages/AgentsMd";
 import ApprovalRequests from "./pages/ApprovalRequests";
 import BoilerSync from "./pages/BoilerSync";
+import Contacts from "./pages/Contacts";
 import DispatchChat from "./pages/DispatchChat";
 import Reports from "./pages/Reports";
 import Diff from "./pages/Diff";
@@ -245,6 +246,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <BoilerSync />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/contacts"
+        element={
+          <ProtectedRoute>
+            <Contacts />
           </ProtectedRoute>
         }
       />
