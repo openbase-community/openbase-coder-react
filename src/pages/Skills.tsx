@@ -5,17 +5,21 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { extractErrorMessage } from "@/lib/api-errors";
+import { officialSkillsCatalog } from "@/lib/official-skills-catalog";
 import {
   ArrowLeft,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Download,
   Link2,
   Loader2,
+  LockKeyhole,
   Plus,
   RefreshCw,
   Save,
   Search,
+  ShieldCheck,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -113,9 +117,9 @@ const Skills = () => {
   const projectPath = searchParams.get("path") || "";
   const editingSkill = searchParams.get("skill") || "";
   const editingScope = searchParams.get("scope") || "home";
-  const [activeView, setActiveView] = useState<"installed" | "printing-press">(
-    "installed",
-  );
+  const [activeView, setActiveView] = useState<
+    "official" | "installed" | "printing-press"
+  >(projectPath ? "installed" : "official");
 
   const [skills, setSkills] = useState<SkillEntry[]>([]);
   const [sections, setSections] = useState<SkillSection[]>([]);
@@ -150,6 +154,9 @@ const Skills = () => {
     useState(["home", "openbase_codex", "openbase_claude"]);
   const [installingPrintingPressSkill, setInstallingPrintingPressSkill] =
     useState("");
+  const [officialSetupStates, setOfficialSetupStates] = useState<
+    Record<string, "idle" | "running" | "ready">
+  >({});
 
   const listApiParams = projectPath
     ? `?path=${encodeURIComponent(projectPath)}`
@@ -187,6 +194,12 @@ const Skills = () => {
   useEffect(() => {
     void fetchSkills();
   }, [fetchSkills]);
+
+  useEffect(() => {
+    if (projectPath && activeView === "official") {
+      setActiveView("installed");
+    }
+  }, [activeView, projectPath]);
 
   const fetchPrintingPressCatalog = useCallback(async () => {
     setPrintingPressLoading(true);
@@ -526,6 +539,24 @@ const Skills = () => {
     setInstallingPrintingPressSkill("");
   };
 
+  const startOfficialSkillSetup = (skillSlug: string) => {
+    const skill = officialSkillsCatalog.find((entry) => entry.slug === skillSlug);
+    if (!skill) return;
+    setOfficialSetupStates((current) => ({
+      ...current,
+      [skill.slug]: "running",
+    }));
+    window.setTimeout(() => {
+      setOfficialSetupStates((current) => ({
+        ...current,
+        [skill.slug]: "ready",
+      }));
+      toast.success(`${skill.name} setup pathway selected`, {
+        description: `${skill.setup.label} is ready for ${skill.setup.integrationTarget} integration.`,
+      });
+    }, 450);
+  };
+
   if (editingSkill) {
     return (
       <DashboardLayout>
@@ -619,6 +650,16 @@ const Skills = () => {
             </p>
           </div>
           <div className="flex gap-1">
+            {!projectPath ? (
+              <Button
+                variant={activeView === "official" ? "default" : "outline"}
+                size="sm"
+                className="h-7 px-2.5 text-[12px]"
+                onClick={() => setActiveView("official")}
+              >
+                Official Skills
+              </Button>
+            ) : null}
             <Button
               variant={activeView === "installed" ? "default" : "outline"}
               size="sm"
@@ -653,7 +694,137 @@ const Skills = () => {
           </div>
         </div>
 
-        {activeView === "printing-press" && !projectPath ? (
+        {activeView === "official" && !projectPath ? (
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded border border-border bg-surface">
+              <div className="grid gap-4 border-b border-border bg-surface-muted/50 px-4 py-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,.9fr)]">
+                <div>
+                  <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-info">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Official and endorsed skills
+                  </div>
+                  <h2 className="mt-2 text-xl font-semibold tracking-tight text-foreground">
+                    A small curated catalog, not an open marketplace
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
+                    Openbase lists only official skills and skills Openbase has
+                    reviewed or endorsed. Each entry has a specific setup
+                    pathway so one click can eventually start the right auth,
+                    pairing, permission, import, or agent-guided flow.
+                  </p>
+                </div>
+                <div className="rounded border border-info/20 bg-info/5 p-3">
+                  <div className="flex items-center gap-2 text-[12px] font-medium text-foreground">
+                    <LockKeyhole className="h-3.5 w-3.5 text-info" />
+                    Private-data skills are hardened first
+                  </div>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">
+                    Gmail, iMessage, and WhatsApp model approved sender or
+                    contact boundaries, metadata-first browsing, Openbase
+                    approval prompts, and audit/revoke behavior.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">
+                {officialSkillsCatalog.map((skill) => {
+                  const setupState = officialSetupStates[skill.slug] ?? "idle";
+                  const privateData = skill.category === "Private data";
+                  const setupAction =
+                    skill.setup.primaryAction.charAt(0).toLowerCase() +
+                    skill.setup.primaryAction.slice(1);
+                  return (
+                    <article
+                      key={skill.slug}
+                      className={`flex min-h-[20rem] flex-col rounded border p-3 ${
+                        privateData
+                          ? "border-info/25 bg-info/5"
+                          : "border-border bg-background"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-primary text-[12px] font-semibold text-primary-foreground">
+                            {skill.name.slice(0, 1)}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="truncate text-[14px] font-semibold text-foreground">
+                              {skill.name}
+                            </h3>
+                            <p className="truncate text-[11.5px] text-muted-foreground">
+                              {skill.tagline}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={privateData ? "default" : "secondary"}
+                          className="shrink-0 px-1.5 py-0 text-[10px]"
+                        >
+                          {skill.status}
+                        </Badge>
+                      </div>
+
+                      <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
+                        {skill.description}
+                      </p>
+
+                      <div className="mt-3 rounded border border-border bg-surface px-2.5 py-2">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Setup pathway
+                        </div>
+                        <div className="mt-1 text-[12px] font-medium text-foreground">
+                          {skill.setup.label}
+                        </div>
+                        <div className="mt-0.5 font-mono text-[10.5px] text-muted-foreground">
+                          {skill.setup.kind} / {skill.setup.integrationTarget}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 space-y-1.5">
+                        {skill.trustModel.slice(0, 3).map((item) => (
+                          <div
+                            key={item}
+                            className="flex gap-2 text-[11.5px] leading-snug text-muted-foreground"
+                          >
+                            <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-success" />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-auto pt-4">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 w-full text-[12px]"
+                          disabled={setupState === "running"}
+                          onClick={() => startOfficialSkillSetup(skill.slug)}
+                        >
+                          {setupState === "running" ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : setupState === "ready" ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          ) : (
+                            <Download className="h-3.5 w-3.5" />
+                          )}
+                          {setupState === "ready"
+                            ? "Setup pathway ready"
+                            : `Install and ${setupAction}`}
+                        </Button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded border border-border bg-surface px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
+              Backend integration still needs dedicated handlers for each
+              setup target. This UI intentionally avoids using the generic
+              Printing Press installer for private-data skills.
+            </div>
+          </div>
+        ) : activeView === "printing-press" && !projectPath ? (
           <div className="grid gap-3 lg:grid-cols-[13rem_minmax(0,1fr)_18rem]">
             <div className="overflow-hidden rounded border border-border bg-surface">
               <button
